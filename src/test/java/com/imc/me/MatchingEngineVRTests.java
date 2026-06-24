@@ -1,4 +1,4 @@
-package com.imc.svc.controller;
+package com.imc.me;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
