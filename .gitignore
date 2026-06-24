@@ -1,0 +1,10 @@
+# Maven build output
+target/
+
+# Eclipse / m2e / jdtls generated project metadata
+.classpath
+.project
+.settings/
+
+# OS / editor cruft
+.DS_Store
