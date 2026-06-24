@@ -1,4 +1,4 @@
-package com.imc.svc.model;
+package com.imc.me.domain;
 
 /**
  * The side of the order. Clients can either buy or sell.

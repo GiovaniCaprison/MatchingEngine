@@ -1,4 +1,4 @@
-package com.imc.svc.model;
+package com.imc.me.domain;
 
 /**
  * The type of the order. Clients can choose any-one of the these.

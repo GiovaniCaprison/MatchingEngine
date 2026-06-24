@@ -1,4 +1,4 @@
-package com.imc.svc.model;
+package com.imc.me.domain;
 
 /**
  * The status of the order. Each order will be one of these.
