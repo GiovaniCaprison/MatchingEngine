@@ -1,4 +1,4 @@
-package svc.core;
+package com.imc.svc.core;
 
 import java.util.HashMap;
 import java.util.Map;

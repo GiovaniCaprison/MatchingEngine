@@ -1,4 +1,4 @@
-package svc.model;
+package com.imc.svc.model;
 
 public class OrderNode<T> {
   public OrderNode<T> head;

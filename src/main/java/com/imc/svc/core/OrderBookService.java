@@ -1,11 +1,11 @@
-package svc.core;
+package com.imc.svc.core;
 
+import com.imc.svc.model.Order;
+import com.imc.svc.model.OrderNode;
+import com.imc.svc.model.OrderSide;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import svc.model.Order;
-import svc.model.OrderNode;
-import svc.model.OrderSide;
 
 public class OrderBookService {
   private static final TreeMap<Long, OrderNode<Order>> buySideBook = new TreeMap<>();

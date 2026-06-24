@@ -1,4 +1,4 @@
-package svc.model;
+package com.imc.svc.model;
 
 /**
  * The side of the order. Clients can either buy or sell.

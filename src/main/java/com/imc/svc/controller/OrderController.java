@@ -1,10 +1,10 @@
-package svc.controller;
+package com.imc.svc.controller;
 
-import svc.core.OrderBookService;
-import svc.core.OrderIdentifierService;
-import svc.model.Order;
-import svc.model.OrderSide;
-import svc.model.OrderType;
+import com.imc.svc.core.OrderBookService;
+import com.imc.svc.core.OrderIdentifierService;
+import com.imc.svc.model.Order;
+import com.imc.svc.model.OrderSide;
+import com.imc.svc.model.OrderType;
 
 public class OrderController {
   // For now we only support Market and Limit orders

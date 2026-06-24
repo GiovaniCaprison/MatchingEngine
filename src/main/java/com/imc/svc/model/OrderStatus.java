@@ -1,4 +1,4 @@
-package svc.model;
+package com.imc.svc.model;
 
 /**
  * The status of the order. Each order will be one of these.

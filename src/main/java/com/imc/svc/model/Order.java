@@ -1,6 +1,6 @@
-package svc.model;
+package com.imc.svc.model;
 
-import svc.util.Validator;
+import com.imc.svc.util.Validator;
 
 /** The Order entity */
 public class Order {

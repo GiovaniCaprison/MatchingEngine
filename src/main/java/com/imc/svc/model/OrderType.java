@@ -1,4 +1,4 @@
-package svc.model;
+package com.imc.svc.model;
 
 /**
  * The type of the order. Clients can choose any-one of the these.
