@@ -9,25 +9,22 @@ public final class Order {
 
   private Order next, prev;
   private long filledQty;
+  private long withdrawnQty;
 
   private Order(
       final long orderId,
       final long price,
       final long initialQty,
       final OrderSide side,
-      final OrderType type,
-      final Order next,
-      final Order prev) {
+      final OrderType type) {
     this.orderId = orderId;
     this.price = price;
     this.initialQty = initialQty;
     this.side = side;
     this.type = type;
 
-    this.next = next;
-    this.prev = prev;
-
     this.filledQty = 0;
+    this.withdrawnQty = 0;
   }
 
   public long orderId() {
@@ -54,8 +51,12 @@ public final class Order {
     return filledQty;
   }
 
+  public long withdrawnQty() {
+    return withdrawnQty;
+  }
+
   public long getRemainingQty() {
-    return initialQty - filledQty;
+    return initialQty - filledQty - withdrawnQty;
   }
 
   public Order next() {
@@ -74,14 +75,11 @@ public final class Order {
     this.prev = prev;
   }
 
-  public boolean applyFill(long qty) {
-    if (qty > getRemainingQty()) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Order {} cannot be filled by more than its remaining quantity", orderId()));
-    }
-
+  public void applyFill(long qty) {
     filledQty += qty;
-    return filledQty == initialQty;
+  }
+
+  public void reduceQty(long qty) {
+    withdrawnQty += qty;
   }
 }
