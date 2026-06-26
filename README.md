@@ -9,6 +9,30 @@ domain types, public API, and matching logic are the next work.
 
 ---
 
+## How to contribute
+
+So while this is likely not something anyone else is ever going to contribute to as it is 
+intentionally a personal project which I am building for my own personal enjoyment, 
+I am still going to document this process for anyone (including myself 100 months from now) 
+such that reading through commits doesn't look like a scene from Apocalypse Now.
+
+I like to do something like `(broad term/catagory of whatever this is): what I am actually doing`
+for commit messages. I have not been doing from the first couple of commits as I was still trying
+to ensure that I did not accidentally explode by hippocampus from all of the new financial concepts
+that I was learning. However, that is how you should expect to see the things being committed.
+
+The beauty of this project is that TDD is natural. A ME is deterministic which means invariants
+can be black box tested and so long as they are held, we dgaf what implementation is sitting
+beneath the abstraction. So that is the approach we are taking, tests are defined as invariants
+which we use as guides for what we are actually building. 
+
+**AI USAGE** is something which I do not want in this project apart from documentation (md files), 
+quality and design guidance, or as a learning guide for financial topics like "WTAF is a LIMIT IOC. 
+The code itself, should absolutely be something I do myself. The entire point of this is for me 
+to learn and so AI does not work well as far as implementation in concerned.
+
+That is about it for now - or forever - I have no clue ))
+
 ## Design in one minute
 
 - **Single-writer per book.** One thread mutates the book, ids are minted at one ordered
