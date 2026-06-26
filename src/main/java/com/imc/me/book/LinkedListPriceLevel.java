@@ -3,11 +3,18 @@ package com.imc.me.book;
 import com.imc.me.domain.Order;
 
 public final class LinkedListPriceLevel implements PriceLevel {
+  private final long price;
   private long totalQty;
   private Order tail;
   private Order head;
 
-  public LinkedListPriceLevel() {}
+  public LinkedListPriceLevel(long price) {
+    this.price = price;
+  }
+
+  public long price() {
+    return price;
+  }
 
   public long totalQty() {
     return totalQty;
@@ -50,6 +57,7 @@ public final class LinkedListPriceLevel implements PriceLevel {
 
   public void fillFirst(long qty) {
     head.applyFill(qty);
+    totalQty -= qty;
   }
 
   public void reduce(Order order, long qty) {

@@ -2,7 +2,9 @@ package com.imc.me.book;
 
 import com.imc.me.domain.Order;
 
-public sealed interface PriceLevel permits LinkedListPriceLevel {
+public interface PriceLevel {
+  long price();
+
   long totalQty();
 
   Order first();
