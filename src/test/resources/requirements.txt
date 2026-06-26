@@ -1,0 +1,85 @@
+# =============================================================================
+# Format:  ID | layer | description
+# Layer:   explicit | golden | property | structural | benchmark | trimmed
+#
+# explicit/golden/property/structural  -> Must be claimed by a @Requirement
+# benchmark                            -> Not required to have a JUnit test.
+# trimmed                              -> Must not be claimed by any test.
+# any @Requirement ID not listed here  -> Fails (typo / orphaned claim).
+#
+# To add a requirement: add a line here, then add a test that claims it.
+# The build stays red until both exist. That is the whole point.
+# =============================================================================
+
+# --- Explicit layer
+FR-1.1 | explicit | Engine accepts orders specifying side, type, qty, price
+FR-1.2 | explicit | Engine rejects invalid orders and communicates the reason
+FR-1.3 | explicit | Accepted orders are assigned a UID returned to the client
+FR-2.1 | explicit | Limit order rests in book at its price if not fully matched
+FR-2.2 | explicit | Market order does not rest in book
+FR-4.1 | explicit | Resting order can be cancelled by its UID
+FR-4.2 | explicit | Cancellation is idempotent; re-cancel fails explicitly
+FR-4.3 | explicit | Resting order qty and/or price can be amended
+FR-5.1 | explicit | Best bid/ask exposed with price and aggregate qty
+FR-5.2 | explicit | Empty side is clearly indicated
+FR-5.4 | explicit | Order state retrievable by UID incl remaining qty
+VR-1.1 | explicit | Zero/negative qty is rejected
+VR-2.1 | explicit | Non-positive price is rejected
+VR-2.2 | explicit | Off-tick / over-precision price is rejected
+VR-3.1 | explicit | Every order type handles an empty book without corruption
+VR-3.2 | explicit | Unknown/malformed order type is rejected
+API-1.1 | explicit | submit returns a typed outcome carrying UID and fills
+API-1.2 | explicit | rejection outcome carries a machine-readable reason
+API-1.3 | explicit | client order id is echoed back on the outcome
+API-2.1 | explicit | cancel returns found vs not-found (never throws)
+API-4.1 | explicit | top-of-book query returns price + aggregate qty
+API-5.1 | explicit | depth query returns levels by priority
+API-6.1 | explicit | status query returns current order state by UID
+API-7.1 | explicit | an event consumer can register and receive events
+API-8.1 | explicit | invalid input is rejected at the boundary (no state change)
+API-8.2 | explicit | boundary validation leaves the book unmodified on reject
+API-9.1 | explicit | accept vs reject outcomes are distinguishable types
+API-10.1 | explicit | public API surface is the only mutation entry point
+
+# --- Golden / snapshot layer 
+FR-3.1 | golden | Matching follows price priority (best price first)
+FR-3.2 | golden | Time priority at equal prices (FIFO)
+FR-3.3 | golden | Aggressing order matches resting liquidity
+FR-3.4 | golden | A trade record is produced per match (orders, qty, price)
+FR-3.5 | golden | Price improvement accrues to aggressor at resting price
+FR-2.3 | golden | Market order unfilled remainder handled per cancel policy
+FR-2.4 | golden | IOC matches available liquidity, remainder cancelled
+FR-2.5 | golden | FOK executes in full immediately or not at all
+FR-2.6 | golden | POST never crosses; rejects or reprices instead
+FR-4.4 | golden | Amend increasing qty / changing price loses time priority
+FR-4.5 | golden | Amend only decreasing qty keeps time priority
+API-3.1 | golden | amend API applies the documented priority semantics
+VR-4.1 | golden | Full sweep across multiple levels stays consistent
+VR-4.2 | golden | Sweep that exhausts a side leaves a clean empty book
+NFR-1.1 | golden | Determinism: identical input -> identical trades
+NFR-1.2 | golden | Determinism: identical input -> identical final book
+FR-6.1 | golden | Engine emits acceptance, fills, placement, terminal state
+
+# --- Property-based layer
+NFR-3.1 | property | Aggregate depth == sum of resting qty after any stream
+NFR-3.2 | property | No empty levels / orphaned orders remain
+VR-6.1 | property | Per-level resting totals reconcile with raw orders
+NFR-6.1 | property | Internal invariants hold under randomized load
+FR-5.3 | property | Depth aggregation matches per-level totals under load
+
+# --- Structural layer
+NFR-5.1 | structural | Core engine depends only on itself and the JDK
+API-11.1 | structural | No public method leaks a mutable collection
+FR-5.5 | structural | Query methods return only immutable types
+NFR-4.1 | structural | Single-writer: matching mutation confined to one package
+
+# --- Benchmark layer
+NFR-2.1 | benchmark | Submission is sub-linear in resting order count
+NFR-2.2 | benchmark | Cancellation is constant time by UID
+NFR-2.3 | benchmark | Top-of-book query is constant time per side
+
+# --- Trimmed
+FR-1.4 | trimmed | Duplicate of NFR-1 determinism (give determinism one home)
+FR-6.2 | trimmed | "Consumer can compute positions" - untestable as phrased
+API-10.2 | trimmed | "Ordering/threading documented" - a docs check, not behaviour
+VR-5.1 | trimmed | Self-trade policy undecided - vacuous until a policy is chosen

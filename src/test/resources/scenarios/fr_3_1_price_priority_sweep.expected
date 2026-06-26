@@ -1,0 +1,4 @@
+TRADE price=100 qty=5
+TRADE price=101 qty=3
+BOOK BID empty
+BOOK ASK 101 qty=2
