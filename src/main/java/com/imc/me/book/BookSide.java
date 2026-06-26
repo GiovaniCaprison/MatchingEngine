@@ -5,15 +5,15 @@ import com.imc.me.domain.OrderSide;
 import java.util.List;
 
 public sealed interface BookSide permits TreeMapBookSide {
-  boolean isEmpty();
-
   OrderSide side();
 
-  PriceLevel bestLevel();
+  boolean isEmpty();
 
   PriceLevel levelAt(long price);
 
-  List<PriceLevel> depth();
+  PriceLevel bestLevel();
+
+  List<Long> depth();
 
   void addOrder(Order order);
 
