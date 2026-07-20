@@ -134,6 +134,10 @@ class CoverageMatrixTest {
     String ann = Requirement.class.getName();
     try (ScanResult scan =
         new ClassGraph()
+            // JUnit test classes and methods are package-private by convention; without these
+            // ClassGraph silently skips them and every requirement reads as unclaimed.
+            .ignoreClassVisibility()
+            .ignoreMethodVisibility()
             .enableClassInfo()
             .enableMethodInfo()
             .enableAnnotationInfo()
