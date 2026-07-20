@@ -1,4 +1,4 @@
-# matching-engine
+# MatchingEngine
 
 A single-symbol limit order-book matching engine in Java, built test-first as the
 foundation for a full exchange. Long-term target: 20M ops/sec on the matching hot path.
@@ -6,8 +6,6 @@ foundation for a full exchange. Long-term target: 20M ops/sec on the matching ho
 Status: scaffolding complete, engine not yet implemented. The build, package layout,
 layered test suite, and coverage matrix are in place; `mvn test` is green vacuously. The
 domain types, public API, and matching logic are the next work.
-
----
 
 ## How to contribute
 
@@ -74,3 +72,12 @@ requirement has no test, and writes a report to `target/coverage-matrix.md`.
 
 ---
 
+## Documentation
+
+- **[ENGINEERING_GUIDE.md](ENGINEERING_GUIDE.md)** — the model, the matching algorithm, the
+  project layout, and the measurement road (JMH benchmarking + profiling).
+- **[TESTING.md](TESTING.md)** — the TDD roadmap and the test-suite reference: the five test
+  layers, the requirement→layer map, cost lanes, the coverage matrix, and the step-by-step
+  build order.
+
+New here? Read this file, then `TESTING.md` for what to do next.
