@@ -3,7 +3,6 @@ package com.imc.me.book;
 import com.imc.me.domain.OrderSide;
 import com.imc.me.domain.OrderType;
 import com.imc.me.event.dto.Depth;
-import com.imc.me.event.dto.OrderStatus;
 import com.imc.me.event.dto.TopOfBook;
 import com.imc.me.event.result.AmendOutcome;
 import com.imc.me.event.result.CancelResult;
@@ -258,13 +257,6 @@ public final class TreeMapOrderBook implements OrderBook {
     final CollectingDepthSink collector = new CollectingDepthSink(maxLevels);
     sideFor(side).depth(maxLevels, collector);
     return new Depth(side, collector.levels());
-  }
-
-  @Override
-  public OrderStatus orderStatus(final long orderId) {
-    // TODO(FR-5.4): filled/cancelled orders leave the resting set, so status isn't answerable
-    // from bids/asks alone — this needs an order registry that outlives the book.
-    throw new UnsupportedOperationException("orderStatus not implemented yet");
   }
 
   /**

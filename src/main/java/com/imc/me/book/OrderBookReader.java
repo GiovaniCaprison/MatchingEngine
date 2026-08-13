@@ -2,7 +2,6 @@ package com.imc.me.book;
 
 import com.imc.me.domain.OrderSide;
 import com.imc.me.event.dto.Depth;
-import com.imc.me.event.dto.OrderStatus;
 import com.imc.me.event.dto.TopOfBook;
 
 /**
@@ -23,5 +22,4 @@ public interface OrderBookReader {
    */
   Depth depth(final OrderSide side, final int maxLevels);
 
-  OrderStatus orderStatus(final long orderId);
 }
