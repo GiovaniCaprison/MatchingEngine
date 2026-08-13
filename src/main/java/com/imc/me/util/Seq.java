@@ -125,6 +125,7 @@ public final class Seq<T> implements Iterable<T> {
     }
 
     public Builder<T> add(final T item) {
+      if (items == null) throw new IllegalStateException("builder already spent by build()");
       if (size == items.length) items = Arrays.copyOf(items, size * 2);
       items[size++] = item;
       return this;
@@ -135,6 +136,7 @@ public final class Seq<T> implements Iterable<T> {
     }
 
     public Seq<T> build() {
+      if (items == null) throw new IllegalStateException("builder already spent by build()");
       if (size == 0) return empty();
       final Object[] exact = (size == items.length) ? items : Arrays.copyOf(items, size);
       items = null; // spent: any later add() fails loudly rather than mutating a published Seq

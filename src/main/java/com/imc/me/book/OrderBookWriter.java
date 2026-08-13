@@ -3,7 +3,7 @@ package com.imc.me.book;
 import com.imc.me.event.result.AmendOutcome;
 import com.imc.me.event.result.CancelResult;
 import com.imc.me.event.result.SubmitOutcome;
-import com.imc.me.matching.TradeSink;
+import com.imc.me.event.sink.TradeEventSink;
 
 /**
  * The mutating half of a book. Exactly one thread ever holds one of these (OOD-2).
@@ -30,7 +30,7 @@ public interface OrderBookWriter {
    * (OOD-5). Submitting an off-tick or non-positive-quantity order here is a programming error, not
    * a rejection.
    */
-  SubmitOutcome submit(final Order order, final TradeSink sink);
+  SubmitOutcome submit(final Order order, final TradeEventSink sink);
 
   /**
    * Amends a resting order to a new quantity and price.
@@ -44,7 +44,7 @@ public interface OrderBookWriter {
    * cancel.
    */
   AmendOutcome amend(
-      final long orderId, final long newQty, final long newPrice, final TradeSink sink);
+      final long orderId, final long newQty, final long newPrice, final TradeEventSink sink);
 
   CancelResult cancel(final long orderId);
 }

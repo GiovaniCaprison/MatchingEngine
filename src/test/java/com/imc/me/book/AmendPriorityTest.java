@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.imc.me.domain.OrderSide;
 import com.imc.me.domain.OrderType;
 import com.imc.me.event.result.AmendOutcome;
+import com.imc.me.event.sink.TradeEventSink;
 import com.imc.me.matching.Matcher;
 import com.imc.me.matching.TradeSink;
 import com.imc.me.support.Requirement;
@@ -48,7 +49,7 @@ class AmendPriorityTest {
     }
   }
 
-  private static final TradeSink IGNORE = (a, r, p, q) -> {};
+  private static final TradeEventSink IGNORE = (s, a, r, p, q) -> {};
 
   private final ConfigurableMatcher matcher = new ConfigurableMatcher();
   private final TreeMapOrderBook book = new TreeMapOrderBook(matcher);

@@ -11,8 +11,10 @@ import com.imc.me.event.result.Cancelled;
 import com.imc.me.event.result.NotFound;
 import com.imc.me.event.result.SubmitOutcome;
 import com.imc.me.event.sink.CollectingDepthSink;
+import com.imc.me.event.sink.TradeEventSink;
 import com.imc.me.matching.Matcher;
 import com.imc.me.matching.TradeSink;
+import com.imc.me.sequencer.Sequencer;
 
 /**
  * The single writer. Owns both sides (each with its own id index) and holds the Matcher as a
@@ -24,9 +26,49 @@ public final class TreeMapOrderBook implements OrderBook {
   private final BookSide bids = new TreeMapBookSide(OrderSide.BUY);
   private final BookSide asks = new TreeMapBookSide(OrderSide.SELL);
   private final Matcher matcher;
+  private final Sequencer sequencer;
+
+  /**
+   * The one stamping sink, reused for every command.
+   *
+   * <p>Reused rather than allocated per submit so the write path stays inside its allocation budget
+   * (OOD-11). Safe because there is exactly one writer (OOD-2) and its lifetime is a single
+   * synchronous call — the retarget happens, the matcher walks, the walk returns.
+   */
+  private final SequencingTradeSink stamper = new SequencingTradeSink();
 
   public TreeMapOrderBook(final Matcher matcher) {
+    this(matcher, new Sequencer());
+  }
+
+  /** Takes an existing sequencer so a whole engine shares one total order (OOD-13). */
+  public TreeMapOrderBook(final Matcher matcher, final Sequencer sequencer) {
     this.matcher = matcher;
+    this.sequencer = sequencer;
+  }
+
+  /**
+   * Turns the matcher's executions into the engine's sequenced events.
+   *
+   * <p>This is the seam that keeps the matching algorithm ignorant of sequencing. The matcher reports
+   * "these two orders executed"; the book decides where that sits in the total order. Handing the
+   * matcher a sequencer instead would give the algorithm a responsibility with nothing to do with
+   * matching, and would let two matchers disagree about numbering.
+   */
+  private final class SequencingTradeSink implements TradeSink {
+    private TradeEventSink target;
+
+    @Override
+    public void onTrade(
+        final long aggressorId, final long restingId, final long price, final long qty) {
+      target.onTrade(sequencer.next(), aggressorId, restingId, price, qty);
+    }
+  }
+
+  /** Points the stamper at this command's consumer and hands it to the matcher. */
+  private TradeSink stampingInto(final TradeEventSink sink) {
+    stamper.target = sink;
+    return stamper;
   }
 
   /**
@@ -43,7 +85,7 @@ public final class TreeMapOrderBook implements OrderBook {
    * you find all of them, and it is the payoff for making variation data instead of subtypes.
    */
   @Override
-  public SubmitOutcome submit(final Order order, final TradeSink sink) {
+  public SubmitOutcome submit(final Order order, final TradeEventSink sink) {
     final BookSide opposing = opposingSide(order.side());
 
     // --- PHASE 1: GATE. Type-dependent, pre-trade, and the book is untouched if it fires. ---
@@ -51,7 +93,7 @@ public final class TreeMapOrderBook implements OrderBook {
     if (gated != null) return gated;
 
     // --- PHASE 2: WALK. Type-agnostic. The hot path. ---
-    matcher.match(order, opposing, sink);
+    matcher.match(order, opposing, stampingInto(sink));
 
     // --- PHASE 3: REMAINDER. Type-dependent, post-trade. ---
     if (order.remainingQty() == 0) return SubmitOutcome.FILLED;
@@ -108,7 +150,7 @@ public final class TreeMapOrderBook implements OrderBook {
    */
   @Override
   public AmendOutcome amend(
-      final long orderId, final long newQty, final long newPrice, final TradeSink sink) {
+      final long orderId, final long newQty, final long newPrice, final TradeEventSink sink) {
     final BookSide side = sideHolding(orderId);
     if (side == null) return AmendOutcome.NOT_FOUND;
 

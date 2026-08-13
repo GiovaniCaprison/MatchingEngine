@@ -1,7 +1,6 @@
 package com.imc.me.event.sink;
 
 import com.imc.me.domain.Trade;
-import com.imc.me.matching.TradeSink;
 import com.imc.me.util.Seq;
 
 /**
@@ -11,17 +10,18 @@ import com.imc.me.util.Seq;
  * expense (OOD-3). It is correct here — a caller using this is about to serialise the trades to a
  * client, hand them to an assertion, or put them in a request/response DTO, so the objects are
  * needed anyway. It is <i>not</i> correct on a publishing path: a sink writing into a ring buffer
- * implements {@link TradeSink} directly and allocates nothing.
+ * implements {@link TradeEventSink} directly and allocates nothing.
  *
  * <p>Note the direction of the dependency: the edge depends on the core's port, never the reverse
- * (OOD-3). {@code matching} does not know this class exists.
+ * (OOD-3). Neither {@code matching} nor {@code book} knows this class exists.
  *
  * <p>Single-use and not thread-safe, like everything on the writer thread (OOD-2). Build one per
  * command, drain it with {@link #fills()}, discard it.
  */
-public final class CollectingTradeSink implements TradeSink {
+public final class CollectingTradeSink implements TradeEventSink {
 
   private final Seq.Builder<Trade> fills;
+  private Seq<Trade> built;
   private long executedQty;
 
   public CollectingTradeSink() {
@@ -30,8 +30,12 @@ public final class CollectingTradeSink implements TradeSink {
 
   @Override
   public void onTrade(
-      final long aggressorId, final long restingId, final long price, final long qty) {
-    fills.add(new Trade(aggressorId, restingId, price, qty));
+      final long sequence,
+      final long aggressorId,
+      final long restingId,
+      final long price,
+      final long qty) {
+    fills.add(new Trade(sequence, aggressorId, restingId, price, qty));
     executedQty += qty;
   }
 
@@ -45,8 +49,15 @@ public final class CollectingTradeSink implements TradeSink {
     return executedQty;
   }
 
-  /** The collected trades, in execution order. Spends the underlying builder. */
+  /**
+   * The collected trades, in execution order.
+   *
+   * <p>Memoised, so this reads like the accessor it looks like: calling it twice returns the same
+   * sequence rather than failing on a spent builder. Trades collected after the first call are not
+   * included — the sequence is a snapshot, and a sink that is still receiving has not finished.
+   */
   public Seq<Trade> fills() {
-    return fills.build();
+    if (built == null) built = fills.build();
+    return built;
   }
 }

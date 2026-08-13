@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.imc.me.domain.OrderSide;
 import com.imc.me.domain.OrderType;
 import com.imc.me.event.result.SubmitOutcome;
+import com.imc.me.event.sink.TradeEventSink;
 import com.imc.me.matching.Matcher;
 import com.imc.me.matching.TradeSink;
 import com.imc.me.support.Requirement;
@@ -62,13 +63,19 @@ class OrderTypePolicyTest {
   }
 
   /** Counts callbacks so a test can assert the walk emitted, without materialising trades. */
-  private static final class CountingSink implements TradeSink {
+  private static final class CountingSink implements TradeEventSink {
     private int trades;
+    private long lastSequence;
 
     @Override
     public void onTrade(
-        final long aggressorId, final long restingId, final long price, final long qty) {
+        final long sequence,
+        final long aggressorId,
+        final long restingId,
+        final long price,
+        final long qty) {
       trades++;
+      lastSequence = sequence;
     }
   }
 
