@@ -60,4 +60,17 @@ public interface BookSide {
   void addOrder(final Order order);
 
   void remove(final Order order);
+
+  /**
+   * Reduces a resting order's quantity in place, keeping its position in the queue (FR-4.5).
+   *
+   * <p>Goes through the side rather than through the level directly so that the order's quantity and
+   * the level's running total move together (OOD-1) — the same reason {@code fillFirst} takes both
+   * sides of an execution.
+   *
+   * <p>Precondition: the order is resting on this side and {@code qty} is less than its remaining
+   * quantity. Reducing <i>to</i> zero is a cancel, and the boundary rejects it as an amend (OOD-5),
+   * so this method never has to decide whether to unlink.
+   */
+  void reduce(final Order order, final long qty);
 }

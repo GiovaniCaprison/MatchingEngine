@@ -1,6 +1,6 @@
 package com.imc.me.book;
 
-import com.imc.me.event.result.AmendResult;
+import com.imc.me.event.result.AmendOutcome;
 import com.imc.me.event.result.CancelResult;
 import com.imc.me.event.result.SubmitOutcome;
 import com.imc.me.matching.TradeSink;
@@ -32,7 +32,19 @@ public interface OrderBookWriter {
    */
   SubmitOutcome submit(final Order order, final TradeSink sink);
 
-  AmendResult amend(final long orderId);
+  /**
+   * Amends a resting order to a new quantity and price.
+   *
+   * <p>Carries the full new state rather than a delta, so "unchanged" is never ambiguous with "set to
+   * zero" and no per-field sentinel is needed. Takes a sink because a reprice can cross the spread and
+   * execute — an amend is not necessarily a book-only operation.
+   *
+   * <p>Assumes both values are already validated (OOD-5). In particular a non-positive quantity is
+   * rejected at the boundary, so this method never has to decide whether an amend-to-zero means
+   * cancel.
+   */
+  AmendOutcome amend(
+      final long orderId, final long newQty, final long newPrice, final TradeSink sink);
 
   CancelResult cancel(final long orderId);
 }

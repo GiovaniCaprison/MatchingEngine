@@ -49,6 +49,10 @@ public final class TreeMapBookSide implements BookSide {
     ordersById.put(order.orderId(), order);
   }
 
+  public void reduce(final Order order, final long qty) {
+    levels.get(order.price()).reduce(order, qty);
+  }
+
   public void remove(final Order order) {
     final PriceLevel level = levels.get(order.price());
     if (level == null) return;

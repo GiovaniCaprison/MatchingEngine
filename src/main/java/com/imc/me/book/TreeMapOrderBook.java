@@ -5,7 +5,7 @@ import com.imc.me.domain.OrderType;
 import com.imc.me.event.dto.Depth;
 import com.imc.me.event.dto.OrderStatus;
 import com.imc.me.event.dto.TopOfBook;
-import com.imc.me.event.result.AmendResult;
+import com.imc.me.event.result.AmendOutcome;
 import com.imc.me.event.result.CancelResult;
 import com.imc.me.event.result.Cancelled;
 import com.imc.me.event.result.NotFound;
@@ -47,22 +47,8 @@ public final class TreeMapOrderBook implements OrderBook {
     final BookSide opposing = opposingSide(order.side());
 
     // --- PHASE 1: GATE. Type-dependent, pre-trade, and the book is untouched if it fires. ---
-    switch (order.type()) {
-      case FOK -> {
-        // FOK cannot be expressed as a remainder policy: by the time the remainder is known, the
-        // executions have already happened and there is no un-trading. So fillability has to be
-        // decided before the walk, from the same crossing logic the walk uses (FR-2.5).
-        if (matcher.fillableQty(order, opposing) < order.remainingQty()) return SubmitOutcome.KILLED;
-      }
-      case POST -> {
-        // Post-only must never take liquidity, so "would this cross at all" is the question, and it
-        // is the same probe (FR-2.6).
-        if (matcher.fillableQty(order, opposing) > 0) return SubmitOutcome.REJECTED_WOULD_CROSS;
-      }
-      case LIMIT, MARKET, IOC -> {
-        // No pre-trade constraint: these are free to take whatever is available.
-      }
-    }
+    final SubmitOutcome gated = gate(order, opposing);
+    if (gated != null) return gated;
 
     // --- PHASE 2: WALK. Type-agnostic. The hot path. ---
     matcher.match(order, opposing, sink);
@@ -92,26 +78,121 @@ public final class TreeMapOrderBook implements OrderBook {
     };
   }
 
+  /**
+   * Amends a resting order to a new quantity and price, carrying the client's full intent.
+   *
+   * <p>The client sends the complete new state rather than a delta, which is how FIX models it
+   * ({@code OrderCancelReplaceRequest} carries the whole replacement order). A delta would make
+   * "unchanged" ambiguous with "set to zero" and would need a sentinel per field.
+   *
+   * <p><b>Two paths, and the priority rule is the reason they differ</b> (FR-4.4, FR-4.5):
+   *
+   * <ul>
+   *   <li><b>Quantity decrease at the same price</b> — reduced in place, priority kept. Safe because
+   *       reducing takes nothing from anyone else: every order queued behind this one is strictly
+   *       better off, so there is no fairness argument for re-queueing.
+   *   <li><b>Anything else</b> — increase, or any price change — unlinked and treated as a fresh
+   *       arrival, so priority is lost. Otherwise a client could hold a good queue position with a
+   *       token order and inflate it on seeing flow, which is the abuse price-time priority exists to
+   *       prevent.
+   * </ul>
+   *
+   * <p>The second path is implemented as remove-then-submit, which is not a shortcut but the correct
+   * model — it is literally cancel/replace. It also means a reprice automatically gets the three
+   * things a hand-rolled reprice tends to get wrong: priority loss, execution if the new price
+   * crosses, and the order's own type-appropriate remainder policy (OOD-8).
+   *
+   * <p>It is also why {@code Order.price} stays {@code final}. Mutating the price in place would
+   * break the invariant that an order's price identifies the level holding it — which {@code
+   * TreeMapBookSide.remove} depends on to find that level (OOD-14).
+   */
   @Override
-  public AmendResult amend(final long orderId) {
-    // TODO(FR-4.3/4.4/4.5): qty-decrease reduces in place and keeps priority; increase/reprice
-    // unlinks and re-appends (loses priority).
-    throw new UnsupportedOperationException("amend not implemented yet");
+  public AmendOutcome amend(
+      final long orderId, final long newQty, final long newPrice, final TradeSink sink) {
+    final BookSide side = sideHolding(orderId);
+    if (side == null) return AmendOutcome.NOT_FOUND;
+
+    final Order order = side.get(orderId);
+    final long remaining = order.remainingQty();
+
+    if (newPrice == order.price() && newQty < remaining) {
+      side.reduce(order, remaining - newQty);
+      return AmendOutcome.REDUCED_KEPT_PRIORITY;
+    }
+
+    final Order replacement = Order.of(orderId, newPrice, newQty, order.side(), order.type());
+
+    // Gate the replacement BEFORE unlinking the original, so that a refused amend leaves the
+    // original resting exactly as it was (API-8.2). Doing it the other way round -- remove, then
+    // discover the gate refuses -- would silently cancel an order the client asked to keep, which is
+    // the worst possible interpretation of "your amend was rejected".
+    //
+    // Only reachable for POST, since a resting order can only be LIMIT or POST: MARKET, IOC and FOK
+    // never rest. Reusing gate() rather than re-testing the condition here is deliberate -- two
+    // copies of a crossing check that can drift apart is exactly the bug the shared probe avoids.
+    final SubmitOutcome gated = gate(replacement, opposingSide(order.side()));
+    if (gated != null) return AmendOutcome.REJECTED_WOULD_CROSS;
+
+    side.remove(order);
+
+    return switch (submit(replacement, sink)) {
+      case RESTED -> AmendOutcome.REQUEUED_LOST_PRIORITY;
+      case FILLED -> AmendOutcome.FILLED_ON_AMEND;
+      case REMAINDER_CANCELLED -> AmendOutcome.REMAINDER_CANCELLED_ON_AMEND;
+      // Unreachable: the gate above already ran on this exact order against this exact side, so a
+      // refusal here would mean the probe is not a pure function of (order, side).
+      case KILLED, REJECTED_WOULD_CROSS ->
+          throw new IllegalStateException(
+              "amend " + orderId + " passed the gate then failed it; probe is not deterministic");
+    };
+  }
+
+  /**
+   * Phase 1 for any order: the pre-trade, type-dependent constraint. Returns the outcome that
+   * refuses the order, or {@code null} if it may proceed to the walk.
+   *
+   * <p>Shared by {@code submit} and {@code amend} so there is one crossing check rather than two that
+   * can drift apart. {@code null}-as-pass rather than an {@code Optional} because this is the hot path
+   * and an {@code Optional} would allocate per order (OOD-11).
+   */
+  private SubmitOutcome gate(final Order order, final BookSide opposing) {
+    return switch (order.type()) {
+      // FOK cannot be expressed as a remainder policy: by the time the remainder is known the
+      // executions have already happened and there is no un-trading. So fillability is decided
+      // before the walk, from the same crossing logic the walk uses (FR-2.5).
+      case FOK ->
+          matcher.fillableQty(order, opposing) < order.remainingQty() ? SubmitOutcome.KILLED : null;
+      // Post-only must never take liquidity, so "would this cross at all" is the question, and it is
+      // the same probe (FR-2.6).
+      case POST ->
+          matcher.fillableQty(order, opposing) > 0 ? SubmitOutcome.REJECTED_WOULD_CROSS : null;
+      // No pre-trade constraint: free to take whatever is available.
+      case LIMIT, MARKET, IOC -> null;
+    };
   }
 
   @Override
   public CancelResult cancel(final long orderId) {
-    Order order = bids.get(orderId);
-    BookSide side = bids;
-    if (order == null) {
-      order = asks.get(orderId);
-      side = asks;
-    }
-    if (order == null) return new NotFound(orderId);
+    final BookSide side = sideHolding(orderId);
+    if (side == null) return new NotFound(orderId);
 
-    side.remove(order);
+    side.remove(side.get(orderId));
     // TODO: per-order fill history isn't tracked yet, so fills-before-cancellation is empty.
     return Cancelled.unfilled(orderId);
+  }
+
+  /**
+   * The side currently resting this order, or {@code null} if neither is.
+   *
+   * <p>Two lookups because each side owns its own id index — which is what keeps an order's
+   * membership managed entirely by the side holding it (OOD-1/OOD-14) rather than by a book-level map
+   * that could disagree with the sides. The cost is one extra failed hash lookup on the cancel path;
+   * the alternative costs a class of state-divergence bug.
+   */
+  private BookSide sideHolding(final long orderId) {
+    if (bids.get(orderId) != null) return bids;
+    if (asks.get(orderId) != null) return asks;
+    return null;
   }
 
   @Override
@@ -144,7 +225,12 @@ public final class TreeMapOrderBook implements OrderBook {
     throw new UnsupportedOperationException("orderStatus not implemented yet");
   }
 
-  private BookSide sideFor(final OrderSide side) {
+  /**
+   * Package-private rather than private so that same-package tests can assert on the FIFO structure
+   * inside a level — which is the only way to verify time priority (FR-3.2, FR-4.4/4.5), since the
+   * public API exposes aggregates and an aggregate cannot distinguish queue order.
+   */
+  BookSide sideFor(final OrderSide side) {
     return (side == OrderSide.BUY) ? bids : asks;
   }
 
