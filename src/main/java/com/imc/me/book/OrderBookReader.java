@@ -5,7 +5,14 @@ import com.imc.me.event.dto.Depth;
 import com.imc.me.event.dto.OrderStatus;
 import com.imc.me.event.dto.TopOfBook;
 
-public sealed interface OrderBookReader permits OrderBook {
+/**
+ * The read-only half of a book: queries only, no mutation.
+ *
+ * <p>This split exists for capability narrowing, not for symmetry (OOD-17). A market-data publisher
+ * or a status endpoint is handed one of these and is <i>unable</i> to mutate the book — enforced by
+ * the type, so it needs no review discipline and no defensive copying.
+ */
+public interface OrderBookReader {
   TopOfBook topOfBook(final OrderSide side);
 
   /**

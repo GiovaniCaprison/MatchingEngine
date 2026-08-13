@@ -4,7 +4,14 @@ import com.imc.me.event.result.AmendResult;
 import com.imc.me.event.result.CancelResult;
 import com.imc.me.matching.TradeSink;
 
-public sealed interface OrderBookWriter permits OrderBook {
+/**
+ * The mutating half of a book. Exactly one thread ever holds one of these (OOD-2).
+ *
+ * <p>Every method here assumes its input has already been validated at the boundary and never
+ * re-checks (OOD-5), which is what makes "was the book modified?" answerable: a rejected command
+ * never reaches this interface at all.
+ */
+public interface OrderBookWriter {
 
   /**
    * Matches the order against the opposing side, then applies its type's remainder policy.
