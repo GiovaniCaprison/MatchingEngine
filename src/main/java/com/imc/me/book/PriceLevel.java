@@ -6,6 +6,13 @@ public interface PriceLevel {
 
   long totalQty();
 
+  /**
+   * The order at the front of the FIFO queue — the next one to be filled (FR-3.2).
+   *
+   * <p>Returns {@code null} on an empty level. A level only exists while it holds at least one order
+   * (the side removes it otherwise, NFR-3.2), so within the book a non-null result is guaranteed;
+   * the null case is reachable only for a level held directly, as tests do.
+   */
   Order first();
 
   boolean isEmpty();

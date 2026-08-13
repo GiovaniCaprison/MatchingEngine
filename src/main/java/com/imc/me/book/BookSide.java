@@ -13,8 +13,30 @@ public interface BookSide {
 
   boolean isEmpty();
 
+  /**
+   * The resting order with this id, or {@code null} if this side is not holding one.
+   *
+   * <p>{@code null} rather than {@code Optional} on purpose: this is called on the cancel/amend
+   * path, an {@code Optional} would allocate per lookup (OOD-11), and "not resting here" is checked
+   * immediately by the caller rather than propagated. The typed outcome lives one layer up, where
+   * {@code cancel} turns a null into {@link com.imc.me.event.result.NotFound} (OOD-6).
+   */
   Order get(final long orderId);
 
+  /**
+   * The best-priced level on this side: highest bid, or lowest ask.
+   *
+   * <p><b>Precondition: the side is non-empty.</b> Calling this on an empty side throws {@link
+   * NullPointerException}, and that is the documented contract rather than a bug (OOD-16). Guard
+   * with {@link #isEmpty()}, as {@code topOfBook} does, or know from context that liquidity exists,
+   * as the matching walk does after its own crossing check.
+   *
+   * <p>A defensive null-check here would be a branch that always goes one way, evaluated once per
+   * level per aggressing order on the hottest path in the system — and it would also be a lie about
+   * the contract, implying callers may legitimately ask an empty side for its best price. An empty
+   * side has no best price; asking is a programming error, not an outcome (contrast OOD-6, where
+   * genuinely expected outcomes like "no such order" are typed values).
+   */
   PriceLevel bestLevel();
 
   /**
