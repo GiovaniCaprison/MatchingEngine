@@ -1,10 +1,8 @@
 package com.imc.me.book;
 
 import com.imc.me.domain.OrderSide;
-import com.imc.me.event.dto.Depth;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -38,11 +36,10 @@ public final class TreeMapBookSide implements BookSide {
     return levels.firstEntry().getValue();
   }
 
-  public List<Depth.Level> depth() {
-    return List.copyOf(
-        levels.entrySet().stream()
-            .map(e -> new Depth.Level(e.getKey(), e.getValue().totalQty()))
-            .toList());
+  public void depth(final DepthSink sink) {
+    for (final PriceLevel level : levels.values()) {
+      sink.onLevel(level.price(), level.totalQty());
+    }
   }
 
   public void addOrder(final Order order) {
