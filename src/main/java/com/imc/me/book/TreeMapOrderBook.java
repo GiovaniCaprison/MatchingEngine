@@ -1,6 +1,5 @@
 package com.imc.me.book;
 
-import com.imc.me.domain.Order;
 import com.imc.me.domain.OrderSide;
 import com.imc.me.domain.Trade;
 import com.imc.me.event.dto.Depth;
@@ -35,7 +34,7 @@ public final class TreeMapOrderBook implements OrderBook {
 
     // TODO(Step 4): per-type remainder policy belongs here; LIMIT rests, MARKET/IOC cancel,
     // FOK is all-or-nothing, POST rejects if it would cross. Only LIMIT is in scope for now.
-    if (order.getRemainingQty() > 0) {
+    if (order.remainingQty() > 0) {
       sideFor(order.side()).addOrder(order);
     }
     return new Accepted(order.orderId(), fills);

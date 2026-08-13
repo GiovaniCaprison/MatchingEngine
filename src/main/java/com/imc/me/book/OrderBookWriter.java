@@ -1,6 +1,5 @@
 package com.imc.me.book;
 
-import com.imc.me.domain.Order;
 import com.imc.me.event.result.AmendResult;
 import com.imc.me.event.result.CancelResult;
 import com.imc.me.event.result.SubmitResult;
