@@ -8,7 +8,7 @@ public final class LinkedListPriceLevel implements PriceLevel {
   private Order tail;
   private Order head;
 
-  public LinkedListPriceLevel(long price) {
+  public LinkedListPriceLevel(final long price) {
     this.price = price;
   }
 
@@ -28,7 +28,7 @@ public final class LinkedListPriceLevel implements PriceLevel {
     return head == null;
   }
 
-  public void add(Order order) {
+  public void add(final Order order) {
     order.setNext(null);
 
     if (head == null) {
@@ -42,7 +42,7 @@ public final class LinkedListPriceLevel implements PriceLevel {
     totalQty += order.getRemainingQty();
   }
 
-  public void remove(Order order) {
+  public void remove(final Order order) {
     Order prev = order.prev(), next = order.next();
 
     if (prev == null) head = next;
@@ -55,12 +55,12 @@ public final class LinkedListPriceLevel implements PriceLevel {
     totalQty -= order.getRemainingQty();
   }
 
-  public void fillFirst(long qty) {
+  public void fillFirst(final long qty) {
     head.applyFill(qty);
     totalQty -= qty;
   }
 
-  public void reduce(Order order, long qty) {
+  public void reduce(final Order order, final long qty) {
     order.reduceQty(qty);
     totalQty -= qty;
   }

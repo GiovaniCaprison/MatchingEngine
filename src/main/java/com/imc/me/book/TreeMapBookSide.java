@@ -14,12 +14,12 @@ public final class TreeMapBookSide implements BookSide {
   private final TreeMap<Long, PriceLevel> levels;
   private final Map<Long, Order> ordersById = new HashMap<>();
 
-  TreeMapBookSide(OrderSide side) {
+  TreeMapBookSide(final OrderSide side) {
     this.side = side;
     this.levels = resolveLevelOrder(side);
   }
 
-  private static TreeMap<Long, PriceLevel> resolveLevelOrder(OrderSide side) {
+  private static TreeMap<Long, PriceLevel> resolveLevelOrder(final OrderSide side) {
     return (side == OrderSide.BUY) ? new TreeMap<>(Comparator.reverseOrder()) : new TreeMap<>();
   }
 
@@ -31,7 +31,7 @@ public final class TreeMapBookSide implements BookSide {
     return levels.isEmpty();
   }
 
-  public Order get(long orderId) {
+  public Order get(final long orderId) {
     return ordersById.get(orderId);
   }
 
@@ -40,18 +40,19 @@ public final class TreeMapBookSide implements BookSide {
   }
 
   public List<Depth.Level> depth() {
-    return levels.entrySet().stream()
-        .map(e -> new Depth.Level(e.getKey(), e.getValue().totalQty()))
-        .toList();
+    return List.copyOf(
+        levels.entrySet().stream()
+            .map(e -> new Depth.Level(e.getKey(), e.getValue().totalQty()))
+            .toList());
   }
 
-  public void addOrder(Order order) {
+  public void addOrder(final Order order) {
     levels.computeIfAbsent(order.price(), LinkedListPriceLevel::new).add(order);
     ordersById.put(order.orderId(), order);
   }
 
-  public void remove(Order order) {
-    PriceLevel level = levels.get(order.price());
+  public void remove(final Order order) {
+    final PriceLevel level = levels.get(order.price());
     if (level == null) return;
     level.remove(order);
     ordersById.remove(order.orderId());

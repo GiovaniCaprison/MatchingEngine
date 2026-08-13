@@ -6,7 +6,7 @@ import com.imc.me.domain.Trade;
 import java.util.List;
 
 public final class PriceTimeMatcher implements Matcher {
-  public List<Trade> match(Order aggressor, BookSide opposing) {
+  public List<Trade> match(final Order aggressor, final BookSide opposing) {
     throw new UnsupportedOperationException("PriceTimeMatcher.match not implemented yet");
   }
 }
