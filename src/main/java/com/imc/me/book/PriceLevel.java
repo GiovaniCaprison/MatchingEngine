@@ -11,11 +11,11 @@ public interface PriceLevel {
 
   boolean isEmpty();
 
-  void add(Order order);
+  void add(final Order order);
 
-  void remove(Order order);
+  void remove(final Order order);
 
-  void fillFirst(long qty);
+  void fillFirst(final long qty);
 
-  void reduce(Order order, long qty);
+  void reduce(final Order order, final long qty);
 }

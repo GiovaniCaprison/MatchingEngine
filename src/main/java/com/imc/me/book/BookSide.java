@@ -16,13 +16,13 @@ public interface BookSide {
 
   boolean isEmpty();
 
-  Order get(long orderId);
+  Order get(final long orderId);
 
   PriceLevel bestLevel();
 
   List<Depth.Level> depth();
 
-  void addOrder(Order order);
+  void addOrder(final Order order);
 
-  void remove(Order order);
+  void remove(final Order order);
 }

@@ -6,9 +6,9 @@ import com.imc.me.event.dto.OrderStatus;
 import com.imc.me.event.dto.TopOfBook;
 
 public sealed interface OrderBookReader permits OrderBook {
-  TopOfBook topOfBook(OrderSide side);
+  TopOfBook topOfBook(final OrderSide side);
 
-  Depth depth(OrderSide side);
+  Depth depth(final OrderSide side);
 
-  OrderStatus orderStatus(long orderId);
+  OrderStatus orderStatus(final long orderId);
 }

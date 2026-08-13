@@ -6,5 +6,5 @@ import com.imc.me.domain.Trade;
 import java.util.List;
 
 public interface Matcher {
-  List<Trade> match(Order aggressor, BookSide opposing);
+  List<Trade> match(final Order aggressor, final BookSide opposing);
 }
