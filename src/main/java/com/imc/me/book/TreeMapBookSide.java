@@ -36,8 +36,10 @@ public final class TreeMapBookSide implements BookSide {
     return levels.firstEntry().getValue();
   }
 
-  public void depth(final DepthSink sink) {
+  public void depth(final int maxLevels, final DepthSink sink) {
+    int emitted = 0;
     for (final PriceLevel level : levels.values()) {
+      if (emitted++ == maxLevels) return;
       sink.onLevel(level.price(), level.totalQty());
     }
   }
