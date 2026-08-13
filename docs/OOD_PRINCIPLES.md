@@ -31,22 +31,22 @@ Every principle has the same five parts:
 
 | ID | Principle | Status |
 |----|-----------|--------|
-| [OOD-1](#ood-1--mutation-follows-ownership) | Mutation follows ownership | partial |
-| [OOD-2](#ood-2--one-writer-per-book) | One writer per book | aspirational |
-| [OOD-3](#ood-3--the-core-edge-border) | The core/edge border | partial |
-| [OOD-4](#ood-4--values-are-immutable-entities-are-confined) | Values are immutable, entities are confined | partial |
-| [OOD-5](#ood-5--validate-at-the-boundary-trust-inside) | Validate at the boundary, trust inside | aspirational |
+| [OOD-1](#ood-1--mutation-follows-ownership) | Mutation follows ownership | enforced |
+| [OOD-2](#ood-2--one-writer-per-book) | One writer per book | enforced |
+| [OOD-3](#ood-3--the-core-edge-border) | The core/edge border | enforced |
+| [OOD-4](#ood-4--values-are-immutable-entities-are-confined) | Values are immutable, entities are confined | enforced |
+| [OOD-5](#ood-5--validate-at-the-boundary-trust-inside) | Validate at the boundary, trust inside | enforced |
 | [OOD-6](#ood-6--outcomes-are-types-not-booleans-nulls-or-exceptions) | Outcomes are types | enforced |
-| [OOD-7](#ood-7--seal-for-exhaustiveness-not-for-access-control) | Seal for exhaustiveness, not access control | partial |
-| [OOD-8](#ood-8--variation-by-data-not-by-subtype) | Variation by data, not by subtype | aspirational |
-| [OOD-9](#ood-9--push-dont-pull) | Push, don't pull | aspirational |
-| [OOD-10](#ood-10--every-output-is-bounded) | Every output is bounded | aspirational |
+| [OOD-7](#ood-7--seal-for-exhaustiveness-not-for-access-control) | Seal for exhaustiveness, not access control | enforced |
+| [OOD-8](#ood-8--variation-by-data-not-by-subtype) | Variation by data, not by subtype | enforced |
+| [OOD-9](#ood-9--push-dont-pull) | Push, don't pull | enforced |
+| [OOD-10](#ood-10--every-output-is-bounded) | Every output is bounded | enforced |
 | [OOD-11](#ood-11--allocation-is-a-design-property) | Allocation is a design property | partial |
 | [OOD-12](#ood-12--no-floating-point-anywhere-near-a-price) | No floating point near a price | enforced |
-| [OOD-13](#ood-13--identity-and-order-come-from-one-place) | Identity and order come from one place | aspirational |
-| [OOD-14](#ood-14--one-concept-one-home) | One concept, one home | partial |
-| [OOD-15](#ood-15--removal-means-detachment) | Removal means detachment | partial |
-| [OOD-16](#ood-16--preconditions-over-defensive-checks) | Preconditions over defensive checks | partial |
+| [OOD-13](#ood-13--identity-and-order-come-from-one-place) | Identity and order come from one place | enforced |
+| [OOD-14](#ood-14--one-concept-one-home) | One concept, one home | enforced |
+| [OOD-15](#ood-15--removal-means-detachment) | Removal means detachment | enforced |
+| [OOD-16](#ood-16--preconditions-over-defensive-checks) | Preconditions over defensive checks | enforced |
 | [OOD-17](#ood-17--abstract-for-planned-substitution-only) | Abstract for planned substitution only | partial |
 | [OOD-18](#ood-18--indirection-is-provisional) | Indirection is provisional | aspirational |
 
@@ -99,8 +99,9 @@ rather than exposing its `TreeMap`.
   this is the concrete meaning of NFR-4.1, which is currently only a TODO comment in
   `ArchitectureTest`.
 
-**Status.** `partial` — the pattern is followed by `PriceLevel`, but `Order`'s mutators are
-`public` and it lives in `domain`, so nothing prevents a violation today.
+**Status.** `enforced` — the order entity lives in `com.imc.me.book` and its mutators are
+package-private, so outside that package a mutator cannot be *named*, let alone called. Read-only
+consumers use `OrderView`. See PR NFR-4.1.
 
 ---
 
@@ -135,9 +136,9 @@ point.
 * Documentation: the threading contract is stated on the public API surface. Every public
   engine method is documented as "single-writer; not thread-safe by design."
 
-**Status.** `aspirational` — true by construction today because there is no threading at
-all. The ArchUnit rule is what stops it decaying the first time someone reaches for
-`ConcurrentHashMap` to fix a symptom.
+**Status.** `enforced` — `no_thread_safety_machinery_in_the_core` bans `java.util.concurrent`
+and `java.lang.ref` outright, so the first reach for a `ConcurrentHashMap` to paper over a symptom
+fails the build. `Sequencer` uses a plain `long++` for the same reason.
 
 ---
 
@@ -179,8 +180,8 @@ objects. See OOD-9.
   returns `List<Depth.Level>`, both of which drag edge types into the core.
 * API-11.1 / FR-5.5 in the structural layer enforce the edge half (immutable outputs only).
 
-**Status.** `partial` — the zones exist implicitly in the package layout, but core types
-currently traffic in edge DTOs.
+**Status.** `enforced` — `matching_does_not_depend_on_edge_dtos` holds the border, and the
+crossings are named types: sinks outbound, `NewOrder` inbound, `Seq` for materialised sequences.
 
 ---
 
@@ -224,8 +225,8 @@ outranks locality of data.
   an `enum` (no mutable state at the edge).
 * Review: a new mutable class outside `book` needs a written justification.
 
-**Status.** `partial` — `Order` is correctly a mutable class, but is in the wrong package
-with public mutators and no read-only view.
+**Status.** `enforced` — one mutable class in the system, confined; `dto_types_are_immutable`
+holds every DTO to records, enums and interfaces.
 
 ---
 
@@ -259,7 +260,10 @@ reasons is what's missing.
 * Review: a `if (qty <= 0) throw` appearing in `book..` or `matching..` is a defect even
   though it looks defensive. It means the boundary is not trusted, and it costs latency.
 
-**Status.** `aspirational` — `RejectReason` exists, no validator does.
+**Status.** `enforced` — `OrderValidator` is called only from `MatchingEngine`, and
+`only_the_boundary_validates` bans `book`/`matching` from depending on the validation package at
+all. API-8.2 is true by construction: validation runs before anything is touched, so there is no
+partial mutation to undo.
 
 ---
 
@@ -297,7 +301,9 @@ collections (API-11.1, see OOD-9).
   type breaks every incomplete consumer at compile time — that's the feature.
 * Test: API-9.1 (accept/reject distinguishable as types), API-2.1 (cancel never throws).
 
-**Status.** `enforced` for the shape; the identity-on-failure obligation is open.
+**Status.** `enforced` — `Rejected` now carries both the client order id and the engine uid, so a
+pipelining client can correlate a refusal. `SealingTest` pins the exhaustiveness that makes the
+`switch` above safe.
 
 ---
 
@@ -330,7 +336,8 @@ narrowing via types, which is real. It just doesn't need sealing.
 **Enforcement.** Review only. A one-line heuristic that decides it: *"is there, or will
 there be, a `switch` over this type?"* If no, don't seal.
 
-**Status.** `partial` — sealed is right on results, wrong on the book hierarchy.
+**Status.** `enforced` — the book hierarchy is unsealed, results stay sealed, and `SealingTest`
+asserts both directions so neither mistake can creep back.
 
 ---
 
@@ -402,7 +409,10 @@ design.
 * Test: FR-2.1 through FR-2.6 cover one type each; VR-3.1 runs every type against an empty
   book.
 
-**Status.** `aspirational` — only LIMIT exists, phase 1 has no home, no probe exists.
+**Status.** `enforced` — all five types are handled by two `default`-less switches in
+`TreeMapOrderBook.submit`, the gate has a home, and `Matcher.fillableQty` is the shared probe FOK and
+POST both use. `OrderTypePolicyTest` covers every arm with the walk stubbed out — which is itself the
+proof the split worked.
 
 ---
 
@@ -461,7 +471,8 @@ events out, sealed DTOs at the edge.
 * ArchUnit (to add): no type in `matching..` or `book..` may reference `java.util.stream..`.
   A stream on the hot path is an allocation cascade.
 
-**Status.** `aspirational`, and currently the one **failing** structural test.
+**Status.** `enforced` — `List` is gone from every signature, `Collection` is banned alongside it,
+and `java.util.stream` is banned in `book`/`matching`. `Seq` is the sanctioned outbound sequence.
 
 ---
 
@@ -484,7 +495,8 @@ copies twice (`Stream.toList()` already returns an unmodifiable list, so the wra
 **Enforcement.** Review, plus a benchmark: NFR-2.3 asserts top-of-book is constant time,
 and a bounded-depth benchmark should show depth cost independent of resting order count.
 
-**Status.** `aspirational`.
+**Status.** `enforced` — `depth` takes a required `maxLevels` on both `BookSide` and
+`OrderBookReader`.
 
 ---
 
@@ -525,8 +537,9 @@ solved — an honest budget beats a pretty one.
 * Deferred until the engine is correct (`TESTING.md` Step 7) — a fast wrong answer is
   worthless.
 
-**Status.** `partial` — the principle is stated in the guide, the budget is new here, and
-nothing measures it yet.
+**Status.** `partial` — the write path is now shaped for it (sinks, primitives, enum outcomes, a
+reused stamping sink, a listener array rather than a `List`), but **nothing measures it yet**. This
+stays `partial` until JMH reports `gc.alloc.rate.norm`, because a budget nobody checks is a wish.
 
 ---
 
@@ -554,8 +567,8 @@ which is what `Instrument.priceScale` is for.
   never regress.
 * Test: VR-2.2 rejects over-precision prices at the boundary.
 
-**Status.** `enforced` by practice throughout; the ArchUnit rule that guarantees it is
-still to be written.
+**Status.** `enforced` — `no_floating_point_in_the_core` and `no_floating_point_fields` make it
+absolute. Two incidental `Math.max` calls were rewritten as ternaries rather than weaken the rule.
 
 ---
 
@@ -586,7 +599,10 @@ current shape.
   `System.nanoTime`, `Instant.now`, or `Math.random` / `Random`. Clock and randomness are
   the two ways determinism dies quietly.
 
-**Status.** `aspirational` — no sequencer exists yet.
+**Status.** `enforced` — one `Sequencer` per engine, `Trade` carries its `sequence`, and
+`no_clock_or_randomness_in_the_core` bans `java.time`, `Random`, `UUID` and `Math`.
+`SequenceDeterminismTest` replays the same input and asserts identical trades, sequence numbers
+included.
 
 ---
 
@@ -622,8 +638,9 @@ FR-5.4 as written ("incl remaining qty") — it currently carries neither.
 ask?* If the answer is "either of two", fix it. NFR-3.2 (no orphaned orders) catches the
 book half at runtime.
 
-**Status.** `partial` — the principle is respected today only because the registry doesn't
-exist and `orderStatus` throws.
+**Status.** `enforced` — `orderStatus` was **removed** from the book and `OrderRegistry` owns
+session-lifetime state. It also refuses to duplicate derivable state: quantities are read through to
+a live `OrderView`, and only non-derivable terminal states are recorded.
 
 ---
 
@@ -657,7 +674,8 @@ re-append, object pooling) safe rather than lucky.
   targeted regression test for remove-then-re-add is what pins this specific bug.
 * Review: every `remove`/`unlink` is read with the question "what still points at this?"
 
-**Status.** `partial` — the intent is visible in the code, the implementation is wrong.
+**Status.** `enforced` — both defects fixed, and `PriceLevelNodeTest` pins them; three of its five
+cases fail against the old implementation.
 
 ---
 
@@ -690,7 +708,9 @@ both ends or it becomes a corruption bug the day stop orders arrive.
 **Enforcement.** Javadoc `@throws`/precondition on every narrow-contract method, plus
 VR-3.1 (every order type against an empty book) as the behavioural net.
 
-**Status.** `partial` — narrow contracts exist and are mostly undocumented.
+**Status.** `enforced` — `bestLevel`, `get`, `first`, `fillFirst` and `reduce` all state their
+preconditions, and `EmptyBookTest` verifies them, since a documented-not-checked contract has no
+runtime enforcement.
 
 ---
 
@@ -723,7 +743,9 @@ interface.** Beyond two, convert to data plus a `switch` per OOD-8.
 **Enforcement.** Review. The question to ask of a new interface: *name the second
 implementation.* If you can't, write the class.
 
-**Status.** `partial` — current abstractions are justified; the ≤2 rule is new.
+**Status.** `partial` — every abstraction still earns its place, and `MatchingEngine` now takes a
+`Matcher` rather than hardwiring one, which is what made the boundary testable without a working
+walk. Stays `partial` because the ≤2-implementations rule is review-only.
 
 ---
 
@@ -772,15 +794,27 @@ why. A principle nobody follows is worse than no principle, because it teaches r
 the documented design is fiction. `partial` and `aspirational` above are honest labels for
 work queued, not permanent excuses — each one has a requirement ID and a branch.
 
-**Enforcement gaps to close** (each is a small ArchUnit rule, and cheap insurance):
+**Enforcement, as it now stands.** `ArchitectureTest` holds 13 rules:
 
-| Rule to add | Principle | Requirement |
-|-------------|-----------|-------------|
-| No `double`/`float`/`BigDecimal` in `com.imc.me..` | OOD-12 | NFR-5.1 |
-| No `java.util.concurrent`, `Thread` in core | OOD-2 | NFR-4.1 |
-| No clock or randomness in core | OOD-13 | NFR-1.1 |
-| Entity mutators uncallable outside `book..` | OOD-1 | NFR-4.1 |
-| `event..`/`domain..` contain only records and enums | OOD-4 | FR-5.5 |
-| `matching..` does not depend on `event..` | OOD-3 | NFR-5.1 |
+| Rule | Principle | Requirement |
+|------|-----------|-------------|
+| Core depends only on itself and the JDK | — | NFR-5.1 |
+| No public method returns `List`/`Map`/`Set`/`Collection` | OOD-9 | API-11.1 |
 | No `java.util.stream` in `book..`/`matching..` | OOD-9 | NFR-5.1 |
-| Extend the no-collection rule to `Collection`, `Iterator`, arrays | OOD-9 | API-11.1 |
+| No `java.util.concurrent`/`java.lang.ref` in core | OOD-2 | NFR-4.1 |
+| DTO packages contain only records, enums, interfaces | OOD-4 | FR-5.5 |
+| No `Double`/`Float`/`BigDecimal` dependency | OOD-12 | NFR-5.1 |
+| No `double`/`float` fields | OOD-12 | NFR-5.1 |
+| No clock, `Random`, `UUID` or `Math` in core | OOD-13 | NFR-1.1 |
+| `matching..` does not depend on edge DTOs | OOD-3 | NFR-5.1 |
+| Only the boundary depends on `validation..` | OOD-5 | API-8.1 |
+
+Plus two things ArchUnit cannot express, held by ordinary tests: **sealedness in both directions**
+(`SealingTest`, via `Class.isSealed()`), and **entity mutators uncallable outside `book..`**, which
+needs no test at all — package-private means a violation does not compile.
+
+**What is deliberately still open.** `Iterator` is not banned as a return type (it is `Iterable`'s
+contract, and a rule bent around one class is worse than the narrower true rule). Arrays are not
+banned either — ArchUnit expresses it awkwardly and the real defence is review. And the allocation
+budget (OOD-11) is unmeasured until JMH lands, which is why it is the one principle still labelled
+`partial` on grounds of evidence rather than design.

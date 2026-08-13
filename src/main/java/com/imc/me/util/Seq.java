@@ -106,7 +106,7 @@ public final class Seq<T> implements Iterable<T> {
   }
 
   public static <T> Builder<T> builder(final int expectedSize) {
-    return new Builder<>(Math.max(expectedSize, 1));
+    return new Builder<>(expectedSize > 1 ? expectedSize : 1);
   }
 
   /**

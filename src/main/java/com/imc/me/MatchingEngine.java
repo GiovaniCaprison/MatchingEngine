@@ -110,8 +110,11 @@ public final class MatchingEngine {
     if (invalid != null) {
       // Registered even though it was refused, so "I sent that, what happened?" is answerable for
       // every order a client ever sent, not only the ones that made it into the book.
+      // Clamped because the rejected quantity may be the very thing that was invalid, and an order
+      // entity with a negative quantity would report a nonsensical remainder to a status query.
+      final long registeredQty = command.qty() > 0 ? command.qty() : 0L;
       registry.rejected(
-          Order.of(orderId, command.price(), Math.max(command.qty(), 0L), sideOf(command), typeOf(command)));
+          Order.of(orderId, command.price(), registeredQty, sideOf(command), typeOf(command)));
       return reject(command.clientOrderId(), orderId, invalid);
     }
 

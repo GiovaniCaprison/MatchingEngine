@@ -3,6 +3,7 @@ package com.imc.me.structural;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import com.imc.me.support.Requirement;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -115,6 +116,73 @@ class ArchitectureTest {
           .beInterfaces()
           .allowEmptyShould(true);
 
-  // TODO (Step 1+), once packages exist:
-  //  API-8.* : nothing outside the gateway/validation package calls the matcher
+  // NFR-5.1 (OOD-12): no floating point anywhere near a price. Binary floating point cannot
+  // represent most decimal prices exactly, which splits a price level in two the first time two
+  // "equal" prices fail to compare equal. BigDecimal is exact but allocates per operation and is an
+  // order of magnitude slower -- unacceptable in the walk. Scaled longs are exact AND fast.
+  //
+  // This is the cheapest rule in the file and the one most worth having: absolute, and it can never
+  // regress once it passes.
+  @ArchTest
+  static final ArchRule no_floating_point_in_the_core =
+      noClasses()
+          .that()
+          .resideInAPackage("com.imc.me..")
+          .should()
+          .dependOnClassesThat()
+          .haveNameMatching("java\\.lang\\.(Double|Float)|java\\.math\\.BigDecimal")
+          .allowEmptyShould(true);
+
+  @ArchTest
+  static final ArchRule no_floating_point_fields =
+      noFields()
+          .that()
+          .areDeclaredInClassesThat()
+          .resideInAPackage("com.imc.me..")
+          .should()
+          .haveRawType(double.class)
+          .orShould()
+          .haveRawType(float.class)
+          .allowEmptyShould(true);
+
+  // NFR-1.1 (OOD-13): no clock and no randomness in the core. These are the two ways determinism
+  // dies quietly -- a replay that consults a clock cannot reproduce its own output, and neither
+  // failure announces itself. Time priority needs no timestamp at all: arrival order IS sequence
+  // order, and FIFO within a price level encodes it structurally.
+  @ArchTest
+  static final ArchRule no_clock_or_randomness_in_the_core =
+      noClasses()
+          .that()
+          .resideInAPackage("com.imc.me..")
+          .should()
+          .dependOnClassesThat()
+          .haveNameMatching(
+              "java\\.time\\..*|java\\.util\\.Random|java\\.util\\.UUID|java\\.lang\\.Math")
+          .allowEmptyShould(true);
+
+  // OOD-3: the matcher must not know about edge DTOs. It emits primitives into a sink; the moment it
+  // imports a DTO it has acquired an opinion about how its output will be presented, and the core/edge
+  // border stops meaning anything.
+  @ArchTest
+  static final ArchRule matching_does_not_depend_on_edge_dtos =
+      noClasses()
+          .that()
+          .resideInAPackage("com.imc.me.matching..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage("com.imc.me.event.dto..", "com.imc.me.event.result..")
+          .allowEmptyShould(true);
+
+  // API-8.1 (OOD-5): validation is called only from the boundary. If the book or the matcher
+  // validated too, some rejections would happen after partial mutation and "was the book modified?"
+  // would stop being answerable.
+  @ArchTest
+  static final ArchRule only_the_boundary_validates =
+      noClasses()
+          .that()
+          .resideInAnyPackage("com.imc.me.book..", "com.imc.me.matching..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("com.imc.me.validation..")
+          .allowEmptyShould(true);
 }
