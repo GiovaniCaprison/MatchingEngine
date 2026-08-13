@@ -74,6 +74,9 @@ requirement has no test, and writes a report to `target/coverage-matrix.md`.
 
 ## Documentation
 
+- **[OOD_PRINCIPLES.md](docs/OOD_PRINCIPLES.md)** — the design rules the engine is built on:
+  mutation ownership, the core/edge border, order-type variation, the allocation budget, and
+  how each rule is enforced. Read this before changing a signature.
 - **[ENGINEERING_GUIDE.md](ENGINEERING_GUIDE.md)** — the model, the matching algorithm, the
   project layout, and the measurement road (JMH benchmarking + profiling).
 - **[TESTING.md](TESTING.md)** — the TDD roadmap and the test-suite reference: the five test
