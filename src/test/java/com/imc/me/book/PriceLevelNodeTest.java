@@ -1,10 +1,7 @@
-package com.imc.me.explicit;
+package com.imc.me.book;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.imc.me.book.LinkedListPriceLevel;
-import com.imc.me.book.PriceLevel;
-import com.imc.me.domain.Order;
 import com.imc.me.domain.OrderSide;
 import com.imc.me.domain.OrderType;
 import com.imc.me.support.Requirement;
@@ -16,12 +13,17 @@ import org.junit.jupiter.api.Test;
 /**
  * Node-level regression tests for the intrusive FIFO list inside a price level.
  *
+ * <p>This test lives in {@code com.imc.me.book} rather than under a test layer because the node
+ * links it asserts on are package-private (OOD-1/OOD-4): only a same-package caller can see them.
+ * That is the cost of compiler-enforced confinement, and it is worth paying — the alternative is
+ * public mutators that any caller can use to corrupt the book.
+ *
  * <p>These sit in the fast lane rather than the property lane on purpose: the corruption they pin
  * (a removed node keeping live links) is only reachable through a remove-then-re-add sequence, and
  * a randomised generator finds it slowly and reports it as a confusing aggregate mismatch.
  */
 @Tag(TestTags.FAST)
-@DisplayName("Explicit | Price level node linkage")
+@DisplayName("Book | Price level node linkage")
 class PriceLevelNodeTest {
 
   private static Order order(final long id, final long qty) {
@@ -40,7 +42,7 @@ class PriceLevelNodeTest {
     level.add(second);
     assertThat(level.totalQty()).isEqualTo(17L);
 
-    level.fillFirst(4L);
+    level.fillFirst(order(99L, 4L), 4L);
     assertThat(level.totalQty()).isEqualTo(13L);
 
     level.remove(first);

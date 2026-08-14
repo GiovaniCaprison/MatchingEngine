@@ -1,6 +1,5 @@
 package com.imc.me.book;
 
-import com.imc.me.domain.Order;
 
 public final class LinkedListPriceLevel implements PriceLevel {
   private final long price;
@@ -48,7 +47,7 @@ public final class LinkedListPriceLevel implements PriceLevel {
     }
 
     tail = order;
-    totalQty += order.getRemainingQty();
+    totalQty += order.remainingQty();
   }
 
   /**
@@ -73,11 +72,12 @@ public final class LinkedListPriceLevel implements PriceLevel {
     order.setNext(null);
     order.setPrev(null);
 
-    totalQty -= order.getRemainingQty();
+    totalQty -= order.remainingQty();
   }
 
-  public void fillFirst(final long qty) {
+  public void fillFirst(final Order aggressor, final long qty) {
     head.applyFill(qty);
+    aggressor.applyFill(qty);
     totalQty -= qty;
   }
 
