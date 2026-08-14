@@ -11,6 +11,24 @@ public final class Order {
   private long filledQty;
   private long withdrawnQty;
 
+  /**
+   * The only way to build an order. A static factory rather than a public constructor because the
+   * entity is destined for a pool/slab (OOD-18): call sites that say {@code Order.of(...)} keep
+   * working when this starts handing back recycled instances, call sites that say {@code new Order}
+   * would all have to change.
+   *
+   * <p>Performs no validation, deliberately — the boundary validates and everything below it trusts
+   * (OOD-5). An invalid order must be rejected before it ever reaches here.
+   */
+  public static Order of(
+      final long orderId,
+      final long price,
+      final long initialQty,
+      final OrderSide side,
+      final OrderType type) {
+    return new Order(orderId, price, initialQty, side, type);
+  }
+
   private Order(
       final long orderId,
       final long price,
