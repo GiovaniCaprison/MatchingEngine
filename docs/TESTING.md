@@ -1,354 +1,95 @@
-# Matching Engine: Testing
+# Testing
 
-The TDD roadmap and the test-suite reference, in one place. Companion to
-`ENGINEERING_GUIDE.md` (model, algorithm, benchmarking, profiling).
-
----
+The engine is a deterministic function from an ordered input log to an ordered output log.
+Almost everything worth proving about it can therefore be proved by diffing text, which is the
+one idea this document is built on.
 
 ## Current state
 
-The full layered test suite exists and `mvn test` is GREEN, vacuously. Example
-bodies are empty (each carries a `// TODO` naming its requirement), the golden factory
-discovers fixtures and skips them until the engine is wired, ArchUnit rules pass with no
-production classes, and jqwik properties run with no assertion. The build, the package
-layout, the coverage matrix, and the cost lanes are all in place.
+There are no tests. The suite that existed was written before the engine and asserted very
+little; it was removed rather than repaired. What remains is the scenario harness, and its runner
+is still a stub.
 
-What does not exist yet: the domain types, the engine API, and the matching logic.
-The remaining work is to make those real and turn empty bodies into red->green cycles.
+## What we test, and how
 
----
+The scenario corpus is the primary gate. A fixture is a command sequence and the blessed
+output: an ordered trade stream plus the resulting book. Fixtures live in
+`src/test/resources/scenarios` as `.input` and `.expected` pairs, carry their requirement id in
+the filename, and are discovered by a test factory, so adding a scenario means adding two text
+files. This layer owns the order types, the matching rules, amend priority, sweeps, the event
+stream and determinism. It is also the only layer that survives a rewrite: the grammar is the
+contract, so a second implementation in another language runs the same corpus behind a thin
+runner.
 
-## The core principle: infrastructure -> correctness -> measurement
+A reference model catches what the corpus does not. The plan is a second matching engine that
+is obviously correct and far too slow to ship: a flat list of resting orders, linear scan for the
+best price, no intrusive lists. Randomised command sequences run through both and the complete
+output is diffed. A priority bug is defined by disagreement with the right answer, and no
+invariant captures it, so this is the only mechanism that finds one. Invariant properties catch
+aggregate drift and leaks; the model catches "it matched the wrong order".
 
-You cannot test what doesn't compile, you cannot trust a fix you have not first seen fail,
-and you cannot profile a matcher that doesn't match. The step order is fixed:
+Unit tests are a thin surface. At the boundary they are the atomic "yes, this does this"
+statements: an invalid quantity is refused, a re-cancel reports not-found, an empty side reads as
+empty. They live in `com.imc.me.boundary` so the compiler stops them reaching past the public
+API. A small number live in `com.imc.me.book` instead, because the intrusive list links and entity
+mutators they assert on are package-private, and each one of those carries a written reason why
+the boundary was insufficient.
 
-```
-Step 0  Build + layout            -> done: mvn test runs the suite
-Step 1  Domain types + API        -> tests have something to call (compiles)
-Step 2  First red test            -> prove a real behavior is missing
-Step 3  Minimal explicit surface  -> the atomic "yes, full-stop" tests
-Step 4  Matching core (red->green) -> you write the algorithm
-Step 5  Golden harness            -> done (scaffold): fill fixtures
-Step 6  Property + structural      -> done (scaffold): fill assertions
-Step 7  JMH                       -> the performance numbers (much later)
-```
+Structural rules are absolute bans only. No floating point in the core, no clock or randomness,
+no concurrency machinery, no streams on the hot path, no mutable collection returned from a public
+method, no validation below the boundary. A rule earns its place only if it constrains code that
+does not exist yet, a violation would survive review, and it says something the compiler does not.
 
-The gate: once the domain + API compile and you have one test failing for a *real*
-reason, you are clear to write the engine. Everything before that is setup; everything
-after is the project.
+Performance is measured, not asserted. Latency percentiles from JMH in a forked JVM, allocation
+from `gc.alloc.rate.norm`, and the asymptotic claims from a deterministic probe that counts node
+visits and shows the count does not grow with book size. Wall-clock assertions inside the unit
+suite are the flakiest thing available and contradict the project's own measurement discipline.
 
----
+## What we do not test
 
-## The TDD structure: organise by layer, trace by id
+If the compiler already guarantees it, there is no test. Sealedness, exhaustive switches over
+an enum with no default arm, and mutators that cannot be named outside their package are enforced
+at build time, and a test that restates a declaration is a worse copy of the source text. The
+suite previously asserted `SubmitResult.class.isSealed()`, which is the trap this rule exists to
+avoid.
 
-Requirement families (FR/VR/NFR/API) and the test *mechanism* (example, golden, property,
-structural, benchmark) are two different axes. A single FR needs different mechanisms
-(FR-3.1 is golden, FR-5.3 is a property, FR-5.5 is structural), so you can't file by both
-at once.
+Judgement calls are reviewed, not tested. OOD-17 and OOD-18 are about not foreclosing a future,
+and encoding today's class list in an assertion is the mistake they warn against.
 
-The deciding question for *which mechanism* is the oracle: can you state the expected
-output as a literal, without computing it the way the system does?
+## What we do not build yet
 
-* If yes, and the output is small -> explicit example.
-* If yes, but the output is rich (trade streams, full book) -> golden / snapshot.
-* If no, the only expectation is an invariant or "same as a reference run" -> property.
-* If it's not a behavior at all (structure, dependencies) -> structural.
-* If it's a number (throughput, latency) -> benchmark (JMH, not JUnit).
+There is nothing to integrate. No I/O, no transport, no persistence, no process boundary. What
+would be an integration test here is the boundary test. Creating empty integration and end-to-end
+packages now would recreate the problem that removing the old suite solved, so the trigger
+conditions are written down instead:
 
-The resolution used here:
+- an integration lane when a second component exists to wire to, such as a wire decoder, a
+  journal-fed sequencer, or a recovery path
+- an end-to-end lane when there is a transport and a client, at which point the test is a client
+  sending encoded messages over the real path, plus fuzzing at the decode boundary
+- a soak lane once a requirement names a book size
 
-* Physical files follow the layer, the mechanism dictates the tooling, the runner,
-  and the cost lane. A jqwik `@Property`, an ArchUnit `@ArchTest`, and a JUnit `@Test`
-  cannot live cleanly in one class.
-* Requirement identity rides on every test via `@DisplayName("FR-3.1: …")` (humans)
-  and `@Requirement("FR-3.1")` (machine-readable, for the coverage matrix).
+## Choosing a mechanism
 
-You keep both views: browse by layer in the tree, report/filter by ID via the annotation.
+Four questions, in order. The first that applies decides it.
 
-| Layer | Job | Tooling |
+1. Is it observable at the public boundary? If not, go to 4.
+2. Can the expectation be written as a literal? Small, one or two calls: a unit example. Rich,
+   a trade stream plus book state: a scenario fixture.
+3. No literal oracle? If a slow reference implementation can produce the answer, differential.
+   If the only expectation is an invariant over any stream, property. If it is a number, benchmark.
+4. Otherwise: guaranteed by the compiler, no test. A dependency or type-shape rule over a
+   package, structural. An internal defect genuinely unreachable from the boundary, a white-box
+   unit test with a written justification. A judgement call, review.
+
+## Lanes
+
+Placement says what a test can see. Tags say what it costs.
+
+| Tag | Contents | Run |
 |---|---|---|
-| Explicit example | Atomic, small output, 1:1 to a requirement; intent-revealing; *existence* proof | JUnit + AssertJ |
-| Golden / snapshot | Explicit but *rich* deterministic output; tedious to hand-assert; spans requirements | JUnit `@TestFactory` + fixtures |
-| Property-based | No literal oracle, invariants over random streams; shrinks failures to a minimal case | jqwik |
-| Structural | Non-behavioral architecture rules | ArchUnit |
-| Benchmark | Throughput / latency numbers | JMH (separate from JUnit) |
-
-Two rules that keep the layers honest:
-
-* An explicit example proves the requirement for that example, existence, not
-  universality. The property layer covers "everywhere." They stack; they don't substitute.
-* Golden tests are for rich output. Do not point them at the atomic validation
-  surface, a snapshot records what the output *is*, not what the requirement *means*, and
-  it localizes failures poorly. Keep VR-1/VR-2/API-9 as hand assertions that say the
-  requirement out loud.
-
----
-
-## Directory layout
-
-```
-src/test/java/com/imc/me/
-  support/     Requirement, TestTags, Orders (builders), ScenarioRunner, BookInvariants
-  explicit/    EXAMPLE layer, atomic, one requirement per test, hand assertions
-  golden/      SNAPSHOT layer, rich deterministic output diffed vs fixtures
-  property/    jqwik, invariants over random streams (STRESS lane)
-  structural/  ArchUnit, architecture rules (dependency-free core, no leaks)
-  coverage/    CoverageMatrixTest, traceability guard
-src/test/resources/scenarios/        golden fixture pairs (*.input / *.expected)
-src/test/resources/requirements.txt  canonical spec inventory (source of truth)
-benchmarks/    JMH lives here later (Step 7), not JUnit
-```
-
-## Requirement -> layer -> file map
-
-| Layer | File(s) | Requirement IDs |
-|---|---|---|
-| Explicit | `OrderLifecycleTest` | FR-1.1, FR-1.2, FR-1.3, FR-2.1, FR-2.2, FR-4.1, FR-4.2, FR-4.3 |
-| Explicit | `ValidationTest` | VR-1.1, VR-2.1, VR-2.2, VR-3.1, VR-3.2, API-8.1, API-8.2 |
-| Explicit | `QueryTest` | FR-5.1, FR-5.2, FR-5.4, API-4.1, API-5.1, API-6.1 |
-| Explicit | `OutcomeAndEventTest` | API-1.1, API-1.2, API-1.3, API-2.1, API-9.1, API-10.1, API-7.1 |
-| Golden | `GoldenScenarioTest` (+ fixtures) | FR-3.1..3.5, FR-2.3, FR-2.4, FR-2.5, FR-2.6, FR-4.4, FR-4.5, API-3.1, VR-4.1, VR-4.2, NFR-1.1, NFR-1.2, FR-6.1 |
-| Property | `BookInvariantPropertyTest` | NFR-3.1, NFR-3.2, VR-6.1, NFR-6.1, FR-5.3 |
-| Structural | `ArchitectureTest` | NFR-5.1, API-11.1, FR-5.5, NFR-4.1 |
-| Benchmark | `benchmarks/` (JMH, deferred) | NFR-2.1, NFR-2.2, NFR-2.3 |
-
-Trimmed (do not test as written): FR-1.4 (dup of NFR-1, give determinism one home,
-the golden/NFR-1 tests), FR-6.2 (untestable as phrased, a property of a hypothetical
-consumer; make it concrete as "the event stream reconstructs final book state" or drop it),
-API-10.2 (docs, not behavior, put it in the README), VR-5.1 (undecided self-trade policy, decide first, the test follows).
-
-Two placement notes (where implementation refined the earlier plan):
-* API-8.1/8.2 are tested *behaviorally* in the explicit layer (invalid in -> typed
-  rejection + zero state change), which is how you actually observe "validation at the
-  boundary." An ArchUnit reinforcement is a TODO.
-* NFR-6.2 ("invariants are assertable") is not its own test. It is the capability that
-  `BookInvariants` + the property layer consume.
-
----
-
-## Cost lanes (JUnit tags)
-
-| Tag | Where | Run with |
-|---|---|---|
-| `fast` | explicit, structural, coverage | `mvn test` (default) |
-| `golden` | golden | `mvn test` (default) |
-| `stress` | property (jqwik) | `mvn test -Pstress` |
-
-Default `mvn test` excludes `stress` so the inner loop stays fast; CI runs `-Pstress`
-pre-merge/nightly.
-
----
-
-## Coverage matrix (traceability guard)
-
-`coverage/CoverageMatrixTest` closes the loop between the spec and the tests. It reads the
-canonical inventory `requirements.txt` and scans the classpath (via ClassGraph) for every
-`@Requirement`, then enforces:
-
-1. everyRequirementHasATest, a claimable requirement (explicit/golden/property/
-   structural) with no test FAILS the build.
-2. noTrimmedRequirementIsTested, a deliberately-cut ID that gains a test FAILS (regression guard).
-3. noUnknownRequirementClaimed, a test claiming an ID absent from the inventory FAILS (typo/orphan guard).
-
-It writes `target/coverage-matrix.md` on every run. "Coverage" means a test *claims* the
-requirement, not that its body is implemented, correct for a TDD blank slate, and why your
-red->green discipline (not the matrix) is what proves behavior.
-
-How IDs are claimed per layer:
-* explicit, `@Requirement("FR-1.1")` on each method.
-* golden / property / structural, one class-level `@Requirement({...})` listing every
-  ID that class owns.
-* benchmark (NFR-2.x), listed as `benchmark` in the inventory; deferred to JMH, reported
-  but not required to have a JUnit test.
-
-ClassGraph reads class files on the classpath regardless of which tests *execute*, so even
-though the property layer is `stress`-tagged and skipped by default, the matrix still sees
-its claimed IDs. To add a requirement: add a line to `requirements.txt` and a test that
-claims it, the build stays red until both exist.
-
----
-
-## Step 1: Domain types + API surface
-
-Several requirements *dictate* these shapes, so this is design, not boilerplate.
-
-Value types (immutable -> `record`):
-```java
-public enum Side { BUY, SELL }
-public enum OrderType { LIMIT, MARKET, IOC, FOK, POST }
-
-// Reference data. Needed even for one symbol, VR-2.2 (tick/precision) can't be
-// validated without it. Prices are scaled longs, never double/float.
-public record Instrument(int symbolId, String ticker,
-                         long tickSize, long lotSize, int priceScale) {}
-
-public record Trade(long aggressorId, long restingId, long price, long qty) {}  // FR-3.4
-```
-
-Typed outcomes (sealed -> exhaustive, no nulls, no booleans): this one decision satisfies
-API-1.1, API-1.2, API-9.1, FR-1.3, and API-2.1 at once, and makes "not found" a *type*, not an NPE.
-```java
-public sealed interface SubmitResult permits Accepted, Rejected {}
-public record Accepted(long orderId, List<Trade> fills) implements SubmitResult {}
-public record Rejected(RejectReason reason) implements SubmitResult {}
-
-public sealed interface CancelResult permits Cancelled, NotFound {}
-public enum RejectReason { NON_POSITIVE_QTY, NON_POSITIVE_PRICE, TICK_VIOLATION, WOULD_CROSS }
-```
-
-Entity (mutable lifecycle -> class, identity is a primitive `long`):
-```java
-public final class Order {
-    final long orderId;        // assigned by the sequencer, NOT self-generated
-    final long clientOrderId;
-    final int  symbolId;
-    final Side side;
-    final OrderType type;
-    final long price;          // scaled long
-    long remainingQty;         // shrinks on partial fill, so it is an entity
-    Order prev, next;          // intrusive list pointers (used by PriceLevel later)
-}
-```
-
-Public API (the observable surface tests assert against, designing for testability and
-a clean API are the same task):
-```java
-public final class MatchingEngine {
-    public SubmitResult submit(NewOrder cmd);     // FR-1, API-1
-    public CancelResult cancel(long orderId);     // FR-4.1, API-2
-    public AmendResult  amend(AmendOrder cmd);    // FR-4.3, API-3
-    public TopOfBook    topOfBook(Side side);     // FR-5.1, API-4
-    public Depth        depth(Side side);         // FR-5.3, API-5
-    public OrderStatus  status(long orderId);     // FR-5.4, API-6
-    // event stream for FR-6 / API-7, a consumer registers, never polls internals
-}
-```
-
-UID assignment lives in the sequencer (the single writer) rather than on `Order`, which keeps
-determinism (NFR-1) and the future LMAX single-writer model intact. Compile before moving on.
-
----
-
-## Step 2: The first red test (the gate)
-
-Prove the harness can fail for a real reason before you trust any green. Pick the most
-central behavior, an aggressor crossing resting liquidity (FR-3.3):
-
-```java
-@Test
-@Requirement("FR-3.3")
-@DisplayName("FR-3.3: an aggressing order matches resting liquidity")
-void crossingBuyMatchesRestingSell() {
-    var engine = new MatchingEngine(instrument);
-    engine.submit(Orders.restingSell(100, 10));
-
-    var result = engine.submit(Orders.aggressingBuy(100, 10));
-
-    assertThat(result).isInstanceOf(Accepted.class);
-    assertThat(((Accepted) result).fills()).singleElement()
-        .satisfies(t -> { assertThat(t.qty()).isEqualTo(10);
-                          assertThat(t.price()).isEqualTo(100); });
-    assertThat(engine.topOfBook(Side.SELL).isEmpty()).isTrue();   // book cleared
-}
-```
-
-It fails (no matching logic yet). That red is the green light to write the engine.
-
----
-
-## Step 3: The minimal explicit surface
-
-The "yes, this does this, full-stop" layer: small, unambiguous, one requirement per test,
-intent-revealing, highest clarity-per-line in the suite. Fill these with hand-written AssertJ:
-
-* VR-1.1 zero/negative qty -> `Rejected(NON_POSITIVE_QTY)`
-* VR-2.1 non-positive limit price -> `Rejected(NON_POSITIVE_PRICE)`
-* VR-2.2 off-tick / over-precision price -> `Rejected(TICK_VIOLATION)` (parameterize over a small table)
-* API-2.1 / FR-4.2 cancel unknown UID -> `NotFound`, never an exception
-* FR-1.3 accepted order carries a returned UID
-* FR-5.2 empty side is clearly indicated by `topOfBook`
-* FR-2.2 a fully-unmatched market order does not rest
-
-Use `@ParameterizedTest` (`@EnumSource(OrderType.class)`, `@CsvSource`) wherever a requirement
-is really a small grid rather than a single case.
-
----
-
-## Step 4: The matching core
-
-You write this, since it is the point of the project. Drive it with the Step 2 test, then add
-behaviors one red->green cycle at a time. The full algorithm, data structures, and the
-PriceLevel/node split are in `ENGINEERING_GUIDE.md` ("The matching algorithm"). Build order,
-each step gated by a test: exact-price match -> best-price sweep -> trades -> per-type remainder.
-
----
-
-## Step 5: The golden harness
-
-The engine's rich output, an *ordered* trade stream plus the resulting book, is the single
-best snapshot target in the suite. Hand-asserting a twelve-trade sweep is itself where bugs
-hide; a blessed fixture you eyeball once is clearer and more thorough. This layer covers
-FR-3.x, the order-type behaviors, VR-4.x, amend-priority (FR-4.4/4.5), and *is* the
-determinism tests (NFR-1.1/1.2) by construction.
-
-Fixture naming = traceability: encode the requirement ID in the filename, e.g.
-`fr_3_1_price_priority_sweep.input` -> FR-3.1. The `@TestFactory` discovers it automatically;
-no code change to add a scenario.
-
-```
-src/test/resources/scenarios/
-  fr_3_1_price_priority_sweep.input        # a sequence of commands
-  fr_3_1_price_priority_sweep.expected     # blessed trades + final book
-```
-
-Keep `.expected` plain text so diffs are reviewable. When output changes legitimately,
-regenerate the file but review the diff before committing, exactly like a Jest snapshot.
-Blind re-blessing bakes in bugs.
-
----
-
-## Step 6: Property and structural layers
-
-Property (jqwik), for invariants with no literal oracle. jqwik shrinks a failure to its
-minimal reproducing sequence, which is gold for a matcher:
-* NFR-3.1 / VR-6.1 / NFR-6.1, after any random valid stream, aggregate depth at each
-  level equals the sum of resting quantities.
-* NFR-3.2, no resting orders leak after a full randomized run.
-
-Structural (ArchUnit), for non-behavioral rules:
-* NFR-5.1, core package depends only on `com.imc.me..` and `java..`.
-* API-11.1, no public method returns a mutable collection / leaks internals.
-
-All three (jqwik, ArchUnit, AssertJ) are `<scope>test</scope>`, so they never touch the
-runtime classpath, so they do not violate NFR-5; the ArchUnit rule above is what *proves* it.
-
----
-
-## Step 7: JMH (defer until the engine is correct)
-
-The performance requirements are not JUnit tests. Wall-clock assertions inside the unit
-suite are the flakiest thing you can write (JIT, GC, CI noise) and contradict the project's
-own measurement discipline. Split the claim from the number:
-
-* The number (ops/sec, p50/p99/p99.9, SG-4) -> JMH in a clean forked JVM with warmup and
-  `Blackhole`. Setup, annotations, and coordinated-omission guidance are in
-  `ENGINEERING_GUIDE.md` ("Benchmarking").
-* The asymptotic guarantee (NFR-2.1 sub-linear submit, NFR-2.2 O(1) cancel, NFR-2.3 O(1)
-  top-of-book) -> if you want it in JUnit, count operations (node visits / comparator
-  calls) and assert the count doesn't grow with book size. Deterministic rather than timing-based, which is how you express "sub-linear" without a stopwatch.
-
-Do this only after Steps 4-6. A fast wrong answer is worthless.
-
----
-
-## First-week order
-
-1. Step 1, domain types + `MatchingEngine` API compile.
-2. Step 2, one failing FR-3.3 test (the gate). You may now start the engine.
-3. Step 3, the minimal explicit surface (VR-1, VR-2, API outcomes).
-4. Step 4, matching core, red->green: exact match -> best-price sweep -> trades -> order types.
-5. Steps 5-6, fill golden fixtures, then property + structural assertions.
-6. Step 7, JMH, only once it actually matches.
-
-Don't skip ahead to JMH, and don't write a green test before you've seen it red.
+| `fast` | boundary and white-box unit, structural rules, complexity probes | `mvn test` |
+| `golden` | the scenario corpus | `mvn test` |
+| `stress` | property and differential | `mvn test -Pstress` |
+
+Benchmarks never run under `mvn test`.
