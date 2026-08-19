@@ -200,15 +200,14 @@ public final class TreeMapOrderBook implements OrderBook {
     if (side == null) return new NotFound(orderId);
 
     side.remove(side.get(orderId));
-    // TODO: per-order fill history isn't tracked yet, so fills-before-cancellation is empty.
-    return Cancelled.unfilled(orderId);
+    return new Cancelled(orderId);
   }
 
   /**
    * The side currently resting this order, or {@code null} if neither is.
    *
-   * <p>Two lookups because each side owns its own id index, rather than a book-level map that
-   * could disagree with the sides (OOD-14). Costs one failed hash lookup on the cancel path.
+   * <p>Two lookups because each side owns its own id index, rather than a book-level map that could
+   * disagree with the sides (OOD-14). Costs one failed hash lookup on the cancel path.
    */
   private BookSide sideHolding(final long orderId) {
     if (bids.get(orderId) != null) return bids;
