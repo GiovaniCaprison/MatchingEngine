@@ -16,10 +16,12 @@ import com.imc.me.matching.TradeSink;
 import com.imc.me.sequencer.Sequencer;
 
 /**
- * The single writer. Owns both sides (each with its own id index) and holds the Matcher as a
- * strategy it drives over the opposing side. The MatchingEngine validates/sequences commands and
- * calls in here; it never touches matching mechanics keeping the Matcher inside this boundary,
- * rather than having the engine coordinate the book and the matcher, is the whole point.
+ * The single writer. Owns both sides, each with its own id index, and drives the matcher over the
+ * opposing side.
+ *
+ * <p>The engine validates and sequences a command and then calls in here. Keeping the matcher
+ * behind this boundary, rather than having the engine coordinate a book and a matcher itself, means
+ * every future book implementation inherits the choreography instead of reimplementing it.
  */
 public final class TreeMapOrderBook implements OrderBook {
   private final BookSide bids = new TreeMapBookSide(OrderSide.BUY);
@@ -28,11 +30,9 @@ public final class TreeMapOrderBook implements OrderBook {
   private final Sequencer sequencer;
 
   /**
-   * The one stamping sink, reused for every command.
-   *
-   * <p>Reused rather than allocated per submit so the write path stays inside its allocation budget
-   * (OOD-11). Safe because there is exactly one writer (OOD-2) and its lifetime is a single
-   * synchronous call — the retarget happens, the matcher walks, the walk returns.
+   * The one stamping sink, reused for every command so the write path stays inside its allocation
+   * budget (OOD-11). Safe because there is one writer (OOD-2) and the sink's useful lifetime is a
+   * single synchronous call.
    */
   private final SequencingTradeSink stamper = new SequencingTradeSink();
 
@@ -47,11 +47,11 @@ public final class TreeMapOrderBook implements OrderBook {
   }
 
   /**
-   * Turns the matcher's executions into the engine's sequenced events.
+   * Turns the matcher's executions into sequenced events.
    *
-   * <p>This is the seam that keeps the matching algorithm ignorant of sequencing. The matcher reports
-   * "these two orders executed"; the book decides where that sits in the total order. Handing the
-   * matcher a sequencer instead would give the algorithm a responsibility with nothing to do with
+   * <p>This is the seam that keeps the matching algorithm ignorant of sequencing. The matcher
+   * reports that two orders executed and the book decides where that sits in the total order.
+   * Handing the matcher a sequencer would give the algorithm a job with nothing to do with
    * matching, and would let two matchers disagree about numbering.
    */
   private final class SequencingTradeSink implements TradeSink {
@@ -71,48 +71,42 @@ public final class TreeMapOrderBook implements OrderBook {
   }
 
   /**
-   * Submission in three phases: <b>gate</b>, <b>walk</b>, <b>remainder</b>.
+   * Submission in three phases: gate, walk, remainder.
    *
-   * <p>Only the first and last know about order type; the walk is identical for every type (OOD-8).
-   * That is the whole reason there is one {@code Matcher} rather than one per type — five
-   * implementations behind {@link Matcher} would put a megamorphic call site in the hottest loop in
-   * the system and stop the JIT inlining through it, to vary 10% of the behaviour while duplicating
-   * the other 90%.
+   * <p>Only the first and last know about order type, since the walk is identical for all five,
+   * which is why there is one matcher rather than one per type (OOD-8).
    *
-   * <p>Neither switch has a {@code default} arm, deliberately: adding a constant to {@link OrderType}
-   * then fails compilation here, at every point that has to decide something about it. That is how
-   * you find all of them, and it is the payoff for making variation data instead of subtypes.
+   * <p>Neither switch carries a {@code default} arm, so adding a constant to {@link OrderType}
+   * fails compilation here at every point that has to decide something about it.
    */
   @Override
   public SubmitOutcome submit(final Order order, final TradeEventSink sink) {
     final BookSide opposing = opposingSide(order.side());
 
-    // --- PHASE 1: GATE. Type-dependent, pre-trade, and the book is untouched if it fires. ---
+    // PHASE 1: GATE. Type-dependent, pre-trade, and the book is untouched if it fires.
     final SubmitOutcome gated = gate(order, opposing);
     if (gated != null) return gated;
 
-    // --- PHASE 2: WALK. Type-agnostic. The hot path. ---
+    // PHASE 2: WALK. Type-agnostic, and the hot path.
     matcher.match(order, opposing, stampingInto(sink));
 
-    // --- PHASE 3: REMAINDER. Type-dependent, post-trade. ---
+    // PHASE 3: REMAINDER. Type-dependent, post-trade.
     if (order.remainingQty() == 0) return SubmitOutcome.FILLED;
 
     return switch (order.type()) {
-      // A limit order rests at its own price (FR-2.1). A post-only order rests too -- it reached
-      // here only by passing the gate, which proved it does not cross.
+      // A limit order rests at its own price (FR-2.1). Post-only rests too, since it got here by
+      // passing the gate, which proved it does not cross.
       case LIMIT, POST -> {
         sideFor(order.side()).addOrder(order);
         yield SubmitOutcome.RESTED;
       }
-      // A market order must never rest (FR-2.2) -- it carries a price sentinel, so resting it would
-      // put a meaningless price in the book. Its remainder is cancelled, which is the stated and
-      // consistently enforced policy (FR-2.3). IOC is the same rule made explicit by the client
-      // (FR-2.4).
+      // A market order carries a price sentinel, so resting it would put a meaningless price in the
+      // book. Its remainder is cancelled (FR-2.2, FR-2.3), and IOC is the same rule asked for
+      // explicitly by the client (FR-2.4).
       case MARKET, IOC -> SubmitOutcome.REMAINDER_CANCELLED;
-      // Unreachable by construction: the gate returned KILLED unless the whole quantity was
-      // fillable, and the walk fills everything it said it would. Stated as an exception rather
-      // than folded into another arm so that a matcher whose probe and walk disagree fails loudly
-      // here instead of silently resting or dropping an FOK order.
+      // Unreachable: the gate returned KILLED unless the whole quantity was fillable, and the walk
+      // fills everything it said it would. Left as an exception so that a matcher whose probe and
+      // walk disagree fails loudly here instead of silently resting or dropping an FOK order.
       case FOK ->
           throw new IllegalStateException(
               "FOK order " + order.orderId() + " has a remainder; probe and walk disagree");
@@ -122,30 +116,20 @@ public final class TreeMapOrderBook implements OrderBook {
   /**
    * Amends a resting order to a new quantity and price, carrying the client's full intent.
    *
-   * <p>The client sends the complete new state rather than a delta, which is how FIX models it
-   * ({@code OrderCancelReplaceRequest} carries the whole replacement order). A delta would make
-   * "unchanged" ambiguous with "set to zero" and would need a sentinel per field.
+   * <p>The client sends the complete new state rather than a delta, which is how FIX models it: an
+   * {@code OrderCancelReplaceRequest} carries the whole replacement order.
    *
-   * <p><b>Two paths, and the priority rule is the reason they differ</b> (FR-4.4, FR-4.5):
+   * <p>Two paths, and the priority rule is why they differ (FR-4.4, FR-4.5). A quantity decrease at
+   * the same price is reduced in place and keeps priority, which is safe because reducing takes
+   * nothing from anybody else and every order queued behind is strictly better off. Anything else,
+   * an increase or any price change, is unlinked and treated as a fresh arrival and loses priority.
+   * Without that, a client could hold a good queue position with a token order and inflate it on
+   * seeing flow, which is the abuse price-time priority exists to prevent.
    *
-   * <ul>
-   *   <li><b>Quantity decrease at the same price</b> — reduced in place, priority kept. Safe because
-   *       reducing takes nothing from anyone else: every order queued behind this one is strictly
-   *       better off, so there is no fairness argument for re-queueing.
-   *   <li><b>Anything else</b> — increase, or any price change — unlinked and treated as a fresh
-   *       arrival, so priority is lost. Otherwise a client could hold a good queue position with a
-   *       token order and inflate it on seeing flow, which is the abuse price-time priority exists to
-   *       prevent.
-   * </ul>
-   *
-   * <p>The second path is implemented as remove-then-submit, which is not a shortcut but the correct
-   * model — it is literally cancel/replace. It also means a reprice automatically gets the three
-   * things a hand-rolled reprice tends to get wrong: priority loss, execution if the new price
-   * crosses, and the order's own type-appropriate remainder policy (OOD-8).
-   *
-   * <p>It is also why {@code Order.price} stays {@code final}. Mutating the price in place would
-   * break the invariant that an order's price identifies the level holding it — which {@code
-   * TreeMapBookSide.remove} depends on to find that level (OOD-14).
+   * <p>The second path is remove-then-submit, which is literally cancel and replace, so a reprice
+   * gets the three things a hand-rolled version tends to miss: priority loss, execution if the new
+   * price crosses, and the order's own remainder policy. It is also why {@code Order.price} is
+   * final, since an order's price is what identifies the level holding it (OOD-14).
    */
   @Override
   public AmendOutcome amend(
@@ -163,14 +147,12 @@ public final class TreeMapOrderBook implements OrderBook {
 
     final Order replacement = Order.of(orderId, newPrice, newQty, order.side(), order.type());
 
-    // Gate the replacement BEFORE unlinking the original, so that a refused amend leaves the
-    // original resting exactly as it was (API-8.2). Doing it the other way round -- remove, then
-    // discover the gate refuses -- would silently cancel an order the client asked to keep, which is
-    // the worst possible interpretation of "your amend was rejected".
+    // Gate the replacement before unlinking the original, so a refused amend leaves the original
+    // resting exactly as it was (API-8.2). Removing first and then finding the gate refuses would
+    // silently cancel an order the client asked to keep.
     //
-    // Only reachable for POST, since a resting order can only be LIMIT or POST: MARKET, IOC and FOK
-    // never rest. Reusing gate() rather than re-testing the condition here is deliberate -- two
-    // copies of a crossing check that can drift apart is exactly the bug the shared probe avoids.
+    // Only reachable for POST, since a resting order can only be LIMIT or POST. Reusing gate() here
+    // rather than re-testing the condition keeps one crossing check instead of two that can drift.
     final SubmitOutcome gated = gate(replacement, opposingSide(order.side()));
     if (gated != null) return AmendOutcome.REJECTED_WOULD_CROSS;
 
@@ -180,8 +162,8 @@ public final class TreeMapOrderBook implements OrderBook {
       case RESTED -> AmendOutcome.REQUEUED_LOST_PRIORITY;
       case FILLED -> AmendOutcome.FILLED_ON_AMEND;
       case REMAINDER_CANCELLED -> AmendOutcome.REMAINDER_CANCELLED_ON_AMEND;
-      // Unreachable: the gate above already ran on this exact order against this exact side, so a
-      // refusal here would mean the probe is not a pure function of (order, side).
+      // Unreachable: the gate above already ran on this order against this side, so a refusal here
+      // would mean the probe is not a pure function of (order, side).
       case KILLED, REJECTED_WOULD_CROSS ->
           throw new IllegalStateException(
               "amend " + orderId + " passed the gate then failed it; probe is not deterministic");
@@ -190,21 +172,21 @@ public final class TreeMapOrderBook implements OrderBook {
 
   /**
    * Phase 1 for any order: the pre-trade, type-dependent constraint. Returns the outcome that
-   * refuses the order, or {@code null} if it may proceed to the walk.
+   * refuses the order, or {@code null} if it may go on to the walk.
    *
-   * <p>Shared by {@code submit} and {@code amend} so there is one crossing check rather than two that
-   * can drift apart. {@code null}-as-pass rather than an {@code Optional} because this is the hot path
+   * <p>Shared by {@code submit} and {@code amend} so there is one crossing check rather than two
+   * that can drift apart. Null-as-pass rather than an {@code Optional} because this is the hot path
    * and an {@code Optional} would allocate per order (OOD-11).
    */
   private SubmitOutcome gate(final Order order, final BookSide opposing) {
     return switch (order.type()) {
-      // FOK cannot be expressed as a remainder policy: by the time the remainder is known the
-      // executions have already happened and there is no un-trading. So fillability is decided
-      // before the walk, from the same crossing logic the walk uses (FR-2.5).
+      // FOK cannot be a remainder policy: by the time the remainder is known the executions have
+      // happened and there is no un-trading. So fillability is decided before the walk, from the
+      // same crossing logic the walk uses (FR-2.5).
       case FOK ->
           matcher.fillableQty(order, opposing) < order.remainingQty() ? SubmitOutcome.KILLED : null;
-      // Post-only must never take liquidity, so "would this cross at all" is the question, and it is
-      // the same probe (FR-2.6).
+      // Post-only must never take liquidity, so the question is whether it would cross at all, and
+      // it is the same probe (FR-2.6).
       case POST ->
           matcher.fillableQty(order, opposing) > 0 ? SubmitOutcome.REJECTED_WOULD_CROSS : null;
       // No pre-trade constraint: free to take whatever is available.
@@ -225,10 +207,8 @@ public final class TreeMapOrderBook implements OrderBook {
   /**
    * The side currently resting this order, or {@code null} if neither is.
    *
-   * <p>Two lookups because each side owns its own id index — which is what keeps an order's
-   * membership managed entirely by the side holding it (OOD-1/OOD-14) rather than by a book-level map
-   * that could disagree with the sides. The cost is one extra failed hash lookup on the cancel path;
-   * the alternative costs a class of state-divergence bug.
+   * <p>Two lookups because each side owns its own id index, rather than a book-level map that
+   * could disagree with the sides (OOD-14). Costs one failed hash lookup on the cancel path.
    */
   private BookSide sideHolding(final long orderId) {
     if (bids.get(orderId) != null) return bids;
@@ -245,12 +225,8 @@ public final class TreeMapOrderBook implements OrderBook {
   }
 
   /**
-   * Materialises a depth snapshot for a client.
-   *
-   * <p>This is the boundary paying for its own convenience (OOD-3): the side emits primitives, and
-   * the collecting sink builds the immutable {@link Depth} because the caller is a query consumer
-   * that is about to serialise or assert on it. A publishing consumer skips this and implements
-   * {@link DepthSink} directly, allocating nothing.
+   * Materialises a depth snapshot for a client, which is the edge paying for its own convenience
+   * (OOD-3). A publishing consumer implements {@link DepthSink} directly and allocates nothing.
    */
   @Override
   public Depth depth(final OrderSide side, final int maxLevels) {
@@ -260,9 +236,9 @@ public final class TreeMapOrderBook implements OrderBook {
   }
 
   /**
-   * Package-private rather than private so that same-package tests can assert on the FIFO structure
-   * inside a level — which is the only way to verify time priority (FR-3.2, FR-4.4/4.5), since the
-   * public API exposes aggregates and an aggregate cannot distinguish queue order.
+   * Package-private rather than private so a same-package test can assert on the FIFO structure
+   * inside a level, which is the only way to verify time priority (FR-3.2, FR-4.4, FR-4.5). The
+   * public API exposes aggregates, and an aggregate cannot distinguish queue order.
    */
   BookSide sideFor(final OrderSide side) {
     return (side == OrderSide.BUY) ? bids : asks;
