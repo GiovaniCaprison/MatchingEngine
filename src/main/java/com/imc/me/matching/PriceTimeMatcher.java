@@ -2,11 +2,17 @@ package com.imc.me.matching;
 
 import com.imc.me.book.BookSide;
 import com.imc.me.book.Order;
-import com.imc.me.domain.Trade;
-import java.util.List;
 
+/** Price-then-time priority: best price first, FIFO within a price (FR-3.1, FR-3.2). */
 public final class PriceTimeMatcher implements Matcher {
-  public List<Trade> match(final Order aggressor, final BookSide opposing) {
+
+  @Override
+  public void match(final Order aggressor, final BookSide opposing, final TradeSink sink) {
     throw new UnsupportedOperationException("PriceTimeMatcher.match not implemented yet");
+  }
+
+  @Override
+  public long fillableQty(final Order aggressor, final BookSide opposing) {
+    throw new UnsupportedOperationException("PriceTimeMatcher.fillableQty not implemented yet");
   }
 }

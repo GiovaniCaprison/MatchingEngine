@@ -1,8 +1,6 @@
 package com.imc.me.book;
 
 import com.imc.me.domain.OrderSide;
-import com.imc.me.event.dto.Depth;
-import java.util.List;
 
 /**
  * One side of the book. Owns its price levels AND its id index, so an order's membership in a side
@@ -19,7 +17,14 @@ public interface BookSide {
 
   PriceLevel bestLevel();
 
-  List<Depth.Level> depth();
+  /**
+   * Emits this side's aggregated levels, best price first, into the sink (OOD-9).
+   *
+   * <p>Emitting rather than returning a collection is what keeps a depth query off the allocator:
+   * the caller decides whether anything is materialised, and a counting or top-of-book consumer
+   * materialises nothing at all.
+   */
+  void depth(final DepthSink sink);
 
   void addOrder(final Order order);
 

@@ -9,6 +9,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +47,37 @@ class ArchitectureTest {
   static final ArchRule no_public_mutable_set =
       methods().that().arePublic().should().notHaveRawReturnType(Set.class).allowEmptyShould(true);
 
+  // API-11.1 (OOD-9), widened: Collection is the loophole the three rules above leave open -- it
+  // advertises add/remove just as List does, so returning one leaks the same mutability. Seq is the
+  // sanctioned outbound sequence type; it has no mutator to call, so the guarantee is in the type
+  // rather than in a runtime UnsupportedOperationException.
+  //
+  // Iterator is deliberately NOT banned: Seq.iterator() is Iterable's contract, which is what makes
+  // a Seq usable in a for-each, and Iterator.remove() defaults to throwing. Banning it would force
+  // either a hand-rolled cursor at every call site or an exclusion for Seq -- a rule bent around one
+  // class is worse than the narrower rule that is actually true.
+  @ArchTest
+  static final ArchRule no_public_mutable_collection =
+      methods()
+          .that()
+          .arePublic()
+          .should()
+          .notHaveRawReturnType(Collection.class)
+          .allowEmptyShould(true);
+
+  // NFR-5.1 (OOD-9/OOD-11): no streams in the core. A stream on the hot path is an allocation
+  // cascade -- spliterator, pipeline stages, boxed accumulators -- and it hides that cost behind
+  // very pleasant syntax. The book walks levels with a plain loop into a sink instead.
+  @ArchTest
+  static final ArchRule no_streams_on_the_hot_path =
+      noClasses()
+          .that()
+          .resideInAnyPackage("com.imc.me.book..", "com.imc.me.matching..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("java.util.stream..")
+          .allowEmptyShould(true);
+
   // NFR-4.1 (OOD-2): single-writer per book. The absence of thread-safety machinery is the
   // assertion -- its presence would mean someone assumed a book could be shared. Note the
   // rule is inverted from the usual one: we are BANNING concurrency utilities, because a
@@ -61,14 +93,20 @@ class ArchitectureTest {
           .resideInAnyPackage("java.util.concurrent..", "java.lang.ref..")
           .allowEmptyShould(true);
 
-  // FR-5.5 (OOD-4): values are immutable. Everything at the edge is a record, an enum, or an
-  // interface -- there is exactly ONE mutable class in the system (the order entity) and it is
-  // confined to the book package, where its mutators are package-private (OOD-1).
+  // FR-5.5 (OOD-4): values are immutable. Every DTO is a record, an enum, or an interface -- the
+  // order entity is the one mutable class in the system, and it is confined to the book package
+  // where its mutators are package-private (OOD-1).
+  //
+  // Scoped to the DTO packages rather than all of event.. because event.sink holds the collecting
+  // adapters, which are mutable BY DESIGN: accumulating primitive callbacks into immutable values
+  // is exactly their job (OOD-9). The rule's intent is "the values crossing the boundary cannot be
+  // changed underneath a consumer", and a spent, single-use builder does not cross the boundary.
   @ArchTest
-  static final ArchRule edge_types_are_immutable =
+  static final ArchRule dto_types_are_immutable =
       classes()
           .that()
-          .resideInAnyPackage("com.imc.me.domain..", "com.imc.me.event..")
+          .resideInAnyPackage(
+              "com.imc.me.domain..", "com.imc.me.event.dto..", "com.imc.me.event.result..")
           .should()
           .beRecords()
           .orShould()
