@@ -77,9 +77,9 @@ public final class TreeMapOrderBook implements OrderBook {
    * {@link DepthSink} directly, allocating nothing.
    */
   @Override
-  public Depth depth(final OrderSide side) {
-    final CollectingDepthSink collector = new CollectingDepthSink();
-    sideFor(side).depth(collector);
+  public Depth depth(final OrderSide side, final int maxLevels) {
+    final CollectingDepthSink collector = new CollectingDepthSink(maxLevels);
+    sideFor(side).depth(maxLevels, collector);
     return new Depth(side, collector.levels());
   }
 
