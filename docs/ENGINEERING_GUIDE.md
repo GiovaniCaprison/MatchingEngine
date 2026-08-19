@@ -1,207 +1,132 @@
-# Matching Engine: Engineering Guide
+# Engineering Guide
 
-The model, the algorithm, and the measurement road (benchmarking + profiling).
-For the test scaffolding and TDD roadmap, see `TESTING.md`.
+The model, the algorithm, and the measurement road. `REQUIREMENTS.md` is the specification,
+`OOD_PRINCIPLES.md` is the design rationale, and `TESTING.md` is how any of it gets proved.
 
-Ordering principle for the whole project: infrastructure -> correctness -> measurement.
-You can't profile a matcher that doesn't match, and you can't trust a fix you can't
-test. Build the skeleton, get it matching correctly under test, then measure.
-
----
+The ordering principle for the whole project is infrastructure, then correctness, then
+measurement. You cannot profile a matcher that does not match, and a fast wrong answer is
+worthless.
 
 ## Mental model
 
 A single-symbol matching engine at runtime is three structures:
 
-* Two sorted books (bids, asks) of `price -> PriceLevel`, a `TreeMap` to start.
-* A FIFO doubly-linked list of orders inside each `PriceLevel` (price-time priority).
-* A `uid -> node` map for O(1) cancel/amend by id.
+- two sorted sides, bids and asks, mapping price to a price level, a `TreeMap` to start
+- a FIFO doubly-linked list of orders inside each level, giving price-time priority
+- a map from uid to order, for constant-time cancel and amend
 
-One concept shapes everything else: a production matching engine is single-threaded
-per book. The reason is speed rather than simplicity: a deterministic, lock-free,
-cache-resident single writer beats coordinating threads on shared state, which is the
-LMAX Disruptor insight. Build that single-writer discipline *deliberately* from the
-start: one writer mutates the book, ids are minted at one ordered point (the sequencer),
-and replay of the same input is bit-for-bit reproducible. This is what makes determinism
-(NFR-1) free rather than retrofitted.
+One decision shapes everything else: a production engine is single-threaded per book, for speed
+rather than for simplicity. A deterministic, lock-free, cache-resident single writer beats
+threads coordinating on shared state, which is the LMAX Disruptor insight. Building that
+discipline in from the start is what makes determinism free rather than retrofitted. One writer
+mutates the book, ids are minted at one ordered point, and replaying the same input is
+reproducible bit for bit.
 
-A second decision that ripples everywhere: prices are scaled `long`s, never
-`double`/`float`. `100.25` becomes `1002500` at a fixed scale; you convert at the I/O
-edge using the instrument's `priceScale`. Floating point can't represent decimal prices
-exactly and will cost you equality/correctness bugs long before it costs you latency.
+A second decision that ripples everywhere: prices are scaled longs. `100.25` at scale 4 becomes
+`1002500`, converted at the I/O edge using the instrument's price scale. Floating point cannot
+represent decimal prices exactly and will cost correctness long before it costs latency.
 
----
-
-## Project layout
-
-Java's hard rule: the folder path under the source root equals the package name with
-dots -> slashes. A class declaring `package com.imc.me.book;` must live at
-`src/main/java/com/imc/me/book/`. Maven expects `src/main/java` for code and
-`src/test/java` for tests.
+## Layout
 
 ```
-matching-engine/
-├── pom.xml                         # deps, JDK release, plugins (shade/jmh later)
-├── .gitignore                      # /target, *.iml.idea/, etc.
-├── README.md
-├── docs/
-│   └── nfr-fr.md                   # the NFR/FR spec, in-repo
-│
-├── src/main/java/com/imc/me/       # root package; "me" = matching engine
-│   ├── MatchingEngine.java         # entry point + public API surface
-│   │
-│   ├── domain/                     # core value types, the vocabulary of the system
-│   │   ├── Order.java              # entity (mutable lifecycle), id is a long
-│   │   ├── Side.java               # enum BUY/SELL
-│   │   ├── OrderType.java          # enum LIMIT/MARKET/IOC/FOK/POST
-│   │   ├── Trade.java              # record
-│   │   └── Instrument.java         # record: tick/lot/scale reference data
-│   │
-│   ├── book/                       # the order book data structure(s)
-│   │   ├── OrderBook.java          # interface
-│   │   ├── TreeMapOrderBook.java   # reference impl (correctness)
-│   │   ├── ArrayOrderBook.java     # cache-friendly impl (later, for the hot path)
-│   │   ├── PriceLevel.java         # owns head/tail + running totalQty
-│   │   └── BookSide.java
-│   │
-│   ├── matching/                   # the matching algorithm, your hot path
-│   │   ├── Matcher.java            # interface
-│   │   ├── PriceTimeMatcher.java   # price-time priority impl
-│   │   └── MatchResult.java
-│   │
-│   ├── event/                      # inbound commands + outbound events
-│   │   ├── command/                # NewOrder, CancelOrder, AmendOrder
-│   │   └── outbound/               # OrderAccepted, OrderRejected, TradeExecuted
-│   │
-│   ├── sequencer/                  # ordering/ingress, single-writer, mints uids
-│   │   └── Sequencer.java          # (where a Disruptor ring buffer lands later)
-│   │
-│   ├── gateway/                    # I/O boundary: wire -> command, event -> wire
-│   ├── config/                     # startup config, instrument/symbol setup
-│   └── util/                       # tiny, dependency-free helpers only
-│
-└── (later) benchmarks/             # JMH lives here (Step 7), not the engine classpath
+src/main/java/com/imc/me/
+  MatchingEngine.java     the public API and the validation boundary
+  domain/                 Instrument, OrderSide, OrderType, OrderView, Trade
+  book/                   OrderBook, BookSide, PriceLevel and their TreeMap and
+                          linked-list implementations, plus the Order entity
+  matching/               Matcher, PriceTimeMatcher, TradeSink
+  registry/               OrderRegistry, session-lifetime order state
+  sequencer/              Sequencer, the single source of ids and sequence numbers
+  validation/             OrderValidator
+  event/command/          inbound commands
+  event/dto/              Depth, OrderStatus, TopOfBook
+  event/result/           the sealed submit, cancel and amend outcomes
+  event/sink/             collecting sinks and the outbound listener
+  util/                   Prices, Seq
+
+src/test/java/com/imc/me/
+  boundary/               tests restricted to the public API by the compiler
+  book/                   tests that need to see package-private links
+  golden/                 the scenario corpus
+  support/                harness code
+src/test/resources/scenarios/
 ```
 
-The test tree (`src/test/...`) is organised by test *layer*, not by these packages, see `TESTING.md`.
+The order entity lives in `book` rather than `domain` because it is the book's intrusive list
+node, and that is what allows its mutators to be package-private. See OOD-1 and OOD-4.
 
-`pom.xml` essentials: `maven.compiler.release` = 21, `UTF-8` source encoding, and a
-`groupId/artifactId/version` triple (`com.imc` / `matching-engine` / `0.1.0-SNAPSHOT`).
-Every test dependency is `<scope>test</scope>`, which keeps them off the runtime classpath
-and *enforces* NFR-5 ("no external deps for the core engine"). Verify with `mvn compile`.
-
-> Gradle alternative: `build.gradle` with the `java` plugin, JUnit under
-> `testImplementation`, same `src/main/java` layout. Only the command changes
-> (`./gradlew` vs `mvn`). The build tool makes zero difference to runtime latency.
-
----
+Every test dependency is test-scope, which keeps it off the runtime classpath and is what makes
+the dependency-free core (NFR-5.1) true rather than aspirational.
 
 ## The matching algorithm
 
-This is the engine, write it yourself; that's the point. Drive it with the tests in
-`TESTING.md` (red -> green, one behavior at a time). Algorithm for an incoming buy
-(sell is the mirror):
+For an incoming buy; sell is the mirror.
 
-1. Walk the opposing book from the best price inward. For a buy, best ask = lowest
-   sell price = `askBook.firstEntry()`. Loop while an opposing level exists and the
-   prices cross (`incomingBuyPrice >= bestAskPrice`). A market buy (price `MAX_VALUE`)
-   naturally crosses every level until liquidity runs out, so it needs no special case (FR-3.1).
-2. Within a level, match FIFO from the first real order. Consume
-   `min(incoming.remaining, resting.remaining)` each step. Emit a trade at the resting
-   order's price, because price improvement accrues to the aggressor (FR-3.5). The trade record
-   (both uids, qty, price) is the engine's real output (FR-3.4, FR-6.1).
-3. Maintain invariants as you go:
-   * Resting order fully filled -> unlink the node *and* `uidMap.remove(uid)`.
-   * Level's last order gone -> remove the level key from the `TreeMap`.
-   * Incoming order exhausted -> stop.
-4. After the walk, apply the per-type remainder policy:
-   * LIMIT remainder -> rest it (`uidMap.put` on *every* insert).
-   * MARKET remainder -> cancel; never rests (FR-2.2).
-   * IOC -> cancel remainder (FR-2.4). FOK -> check full fillability *before*
-     matching, all-or-nothing (FR-2.5). POST -> reject if it would cross (FR-2.6).
-5. Cancel is safe by type: `uidMap.get(uid)` may be absent -> return a typed
-   "not found" outcome, never an NPE (FR-4.2).
+1. Walk the opposing side from the best price inward. For a buy the best ask is the lowest sell
+   price. Continue while an opposing level exists and the prices cross. A market buy carries a
+   price sentinel so it crosses every level until liquidity runs out, which is why the walk needs
+   no special case for it (FR-3.1).
+2. Within a level, match FIFO from the first order, consuming the minimum of the two remaining
+   quantities each step. Emit the trade at the resting order's price, since price improvement
+   accrues to the aggressor (FR-3.5). The trade record carrying both uids, quantity and price is
+   the engine's real output (FR-3.4).
+3. Maintain the invariants as you go. A fully filled resting order is unlinked and removed from
+   the uid map. A level whose last order is gone is removed from the side. An exhausted aggressor
+   stops the walk.
+4. Apply the per-type remainder policy. A limit remainder rests. A market or IOC remainder is
+   cancelled. FOK is decided before the walk by a fillability probe, and POST is rejected before
+   the walk if it would cross.
+5. Cancel is safe by type: a uid lookup may find nothing, which returns a typed not-found outcome
+   rather than throwing (FR-4.2).
 
-Structural rule that prevents a whole class of bugs: keep the level container and the
-order node as *separate types*. `PriceLevel` owns `head`, `tail`, and a running `totalQty`;
-the order node owns `next`, `prev`, and its `Order`. One type doing both jobs is how
-state-corruption bugs creep in. Bonus: `PriceLevel.totalQty` gives FR-5.3 depth for
-free and makes the VR-6.1 invariant a one-line assertion.
+Two structural rules that prevent whole bug classes. Keep the level container and the order node
+as separate types: the level owns head, tail and a running total, and the order owns its links.
+One type doing both jobs is how state corruption starts, and it blocks the eventual migration to a
+flat ladder. And detach a node on removal, clearing both links, because a half-detached node is
+the closest thing Java has to a use-after-free.
 
-Amend priority (FR-4.4 / FR-4.5): a qty *decrease* mutates the node in place and keeps
-time priority; a qty *increase* or *reprice* must unlink and re-append to the tail (loses
-priority). This is a concrete constraint on the node design, and it's why amend-priority is
-tested as a scenario, not a one-line example (see `TESTING.md`).
+Amend priority is a constraint on the node design. A quantity decrease mutates in place and keeps
+time priority (FR-4.5). A quantity increase or a reprice unlinks and re-appends at the tail, losing
+priority (FR-4.4).
 
-Build incrementally: exact-price match working + tested -> best-price walk -> trades -> each
-order type. Let the tests catch each step.
+Build order: exact-price match, then the best-price walk, then trades, then each order type.
 
----
+## Benchmarking
 
-## Benchmarking (JMH)
+Not a `nanoTime` loop, because the JVM is a moving target. The JIT optimises while running, so
+the first several thousand iterations are unrepresentative. It also deletes code whose result is
+unused, so a naive benchmark can measure nothing while reporting a number. GC and scheduling add
+noise on top. JMH forks fresh JVMs, runs warmup, and provides `Blackhole` to consume results so
+the JIT cannot elide them.
 
-Why JMH, not a `nanoTime()` loop: the JVM is a moving target. (a) The JIT optimizes
-*while running*, the first ~10k iterations are slow then suddenly fast, so you must warm
-up. (b) The JIT *deletes* code whose result you don't use (dead-code elimination), so a
-naive benchmark can measure nothing while reporting a number. (c) GC + scheduling add noise.
-JMH (from the JDK team) forks fresh JVMs, runs warmup, and gives you `Blackhole` to consume
-results so the JIT can't elide them.
+Mechanically: annotate a method with `@Benchmark` and JMH's annotation processor generates the
+harness at compile time. The canonical run model is an uber-jar, shaded with JMH's runtime and run
+as `java -jar benchmarks.jar`, in a clean JVM outside Maven, which is why the numbers are
+trustworthy. Keep benchmarks in a separate source set so JMH never reaches the engine classpath.
 
-How it works mechanically:
-* Annotate a method with `@Benchmark`. JMH's annotation processor generates the harness
-  (warmup loops, timing, Blackhole plumbing) into `target/generated-sources` at compile time.
-* Canonical run model is an uber-jar: `mvn package` shades benchmarks + JMH runtime into
-  `benchmarks.jar`; run with `java -jar benchmarks.jar`. Running in a clean JVM (not inside
-  Maven) is *why* the numbers are trustworthy.
+The annotations that matter: `Mode.SampleTime` for a latency distribution, `Mode.Throughput` for
+ops per second, `@Warmup` and `@Measurement` and `@Fork` to discard warmup and measure across
+fresh JVMs, and `@State(Scope.Benchmark)` holding a pre-built book so you measure matching rather
+than setup.
 
-Setup: add `jmh-core` + `jmh-generator-annprocess`, plus `maven-shade-plugin` producing
-`benchmarks.jar` with main class `org.openjdk.jmh.Main`. This is exactly what the official
-`jmh-java-benchmark-archetype` generates, read its `pom.xml` as a reference. Keep benchmarks
-in a separate module/source set so JMH deps never reach the engine classpath.
-
-Annotations that matter:
-* `@BenchmarkMode(Mode.Throughput)`, ops/sec (your SG-4 number). `Mode.SampleTime`, a
-  latency *distribution* (percentiles), which for an exchange matters far more than the average.
-* `@Warmup(iterations=5)` / `@Measurement(iterations=10)` / `@Fork(2)`, discard JIT warmup,
-  then measure across fresh JVMs.
-* `@State(Scope.Benchmark)`, holds a pre-built book so you measure *matching*, not setup.
-
-Reading results: report p50 / p99 / p99.9 / max latency and never the mean, because the tail is
-what kills you. Learn coordinated omission: if the benchmark pauses (GC) then "catches up,"
-it silently under-counts the worst latencies, making a bad engine look good. JMH's `SampleTime`
-mode + the HdrHistogram library expose this honestly. This is the #1 way latency benchmarks lie.
-
-Defer all of this until the engine is correct (TESTING.md Step 7). A fast wrong answer is worthless.
-
----
+Report p50, p99, p99.9 and max, never the mean, because the tail is what kills you. Learn
+coordinated omission: a benchmark that pauses and then catches up under-counts its worst
+latencies and makes a bad engine look good. `SampleTime` with HdrHistogram exposes it honestly.
+This is the most common way a latency benchmark lies.
 
 ## Profiling
 
-Benchmarks say *how fast*; profilers say *why*. On the road to millions of ops/sec the enemy
-is usually allocation and GC pauses, not CPU.
+Benchmarks say how fast, profilers say why. On the road to millions of operations per second the
+enemy is usually allocation and GC pauses rather than CPU.
 
-1. JFR (Java Flight Recorder), in JDK 21 already, zero install. Run with
-   `-XX:StartFlightRecording=filename=run.jfr`, open in JDK Mission Control: CPU hot methods,
-   allocation-per-type, GC timeline. Start here.
-2. async-profiler, industry-standard JVM flamegraphs, lower overhead than JFR for CPU.
-   Attach to a running JVM:
-   * `asprof -e cpu -d 30 -f cpu.html <pid>`, 30s CPU flamegraph.
-   * `asprof -e alloc -d 30 -f alloc.html <pid>`, allocation flamegraph (the important one:
-     shows which objects the hot path creates, the input to "zero-allocation hot path" work,
-     the real justification for future off-heap / FFM work). Output is HTML; view in a browser.
-3. GC visibility: `-Xlog:gc*:file=gc.log`. For an exchange a single 50ms pause is a
+1. JFR is in the JDK already. Run with `-XX:StartFlightRecording=filename=run.jfr` and open it in
+   JDK Mission Control for hot methods, allocation per type and a GC timeline. Start here.
+2. async-profiler gives lower-overhead flamegraphs. `asprof -e cpu -d 30 -f cpu.html <pid>` for
+   CPU, and `asprof -e alloc -d 30 -f alloc.html <pid>` for allocation, which is the important one:
+   it shows which objects the hot path creates, and it is the input to any zero-allocation work.
+3. `-Xlog:gc*:file=gc.log` for GC visibility. For an exchange a single 50ms pause is a
    catastrophe, and this log is how you would notice.
 
-The throughline: JMH says "it got slower," async-profiler's alloc view says "because this
-method now allocates a `Long` per match," -> you know what to fix. That loop is what justifies
-each future rewrite: you will have *numbers* proving the step helped.
-
----
-
-## Build order
-
-1. Skeleton + `pom.xml` -> `mvn compile` green (this guide).
-2. Domain types + `MatchingEngine` API compile (TESTING.md Step 1).
-3. One failing crossed-book test, then drive the matching core green (TESTING.md Steps 2-4).
-4. Golden + property + structural layers (TESTING.md Steps 5-6).
-5. JMH + profiling, only once the engine actually matches.
+The loop that justifies each rewrite: JMH says it got slower, the allocation flamegraph says a
+method now allocates per match, and you know what to fix. Each step comes with a number proving it
+helped.
