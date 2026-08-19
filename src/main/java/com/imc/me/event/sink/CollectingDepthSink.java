@@ -8,8 +8,8 @@ import com.imc.me.util.Seq;
  * The edge adapter for depth: turns the book's primitive level callbacks into immutable {@link
  * Depth.Level} values for a query response.
  *
- * <p>Same rationale as {@link CollectingTradeSink} — the core emits primitives, the edge materialises
- * objects only when something is about to serialise or assert on them (OOD-3, OOD-9).
+ * <p>Same rationale as {@link CollectingTradeSink}. The core emits primitives and the edge
+ * materialises objects only when something is about to serialise or assert on them (OOD-3, OOD-9).
  */
 public final class CollectingDepthSink implements DepthSink {
 
