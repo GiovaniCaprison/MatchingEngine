@@ -66,11 +66,9 @@ public final class TreeMapBookSide implements BookSide {
    * level is ever left behind (NFR-3.2).
    *
    * <p>The level is found by {@code order.price()}, which assumes an order's price identifies the
-   * level holding it (OOD-14). A market order carries a price sentinel so that it crosses every
-   * level without a special case in the walk, and that sentinel is not a real level key. It is
-   * harmless only because a market order never rests. Anything else that reaches the book carrying
-   * a sentinel price, stop orders being the obvious candidate, has to be given a real price before
-   * it rests.
+   * level holding it (OOD-14). See {@link com.imc.me.util.Prices} for why a market order's price
+   * sentinel does not break that, and what has to change before anything else carrying a sentinel
+   * is allowed to rest.
    */
   public void remove(final Order order) {
     final PriceLevel level = levels.get(order.price());

@@ -8,26 +8,23 @@ import java.util.NoSuchElementException;
 /**
  * A genuinely immutable indexed sequence, for the outbound edge DTOs.
  *
- * <p><b>Why this exists rather than {@code List.copyOf}.</b> API-11.1 forbids any public method
- * returning {@code List}, and it catches record <i>accessors</i> too — {@code Accepted.fills()},
- * {@code Depth.levels()}. So a defensive copy can never satisfy it: {@code List.copyOf} buys
- * immutability by allocating a <i>second</i> time, and still leaves {@code List} in the signature.
- * The rule is not "copy defensively", it is "{@code List} does not appear at the boundary" (OOD-9).
+ * <p>API-11.1 forbids any public method returning {@code List}, and it catches record accessors
+ * too, so a defensive copy can never satisfy it: {@code List.copyOf} allocates a second time and
+ * still leaves {@code List} in the signature (OOD-9).
  *
- * <p>The stronger reason is honesty. {@code List.copyOf} returns an unmodifiable <i>view type</i>
- * whose interface still advertises {@code add}/{@code remove}, so callers discover immutability by
- * catching {@code UnsupportedOperationException} at runtime. {@code Seq} has no mutator to call —
- * the guarantee is in the type, which is the whole point of FR-5.5.
+ * <p>The stronger reason is honesty. {@code List.copyOf} returns a view whose interface still
+ * advertises {@code add} and {@code remove}, so a caller discovers immutability by catching {@code
+ * UnsupportedOperationException} at runtime. {@code Seq} has no mutator to call, so the guarantee
+ * is in the type, which is what FR-5.5 is asking for.
  *
- * <p>Backed by a private array with no accessor that leaks it, so there is exactly one copy: the one
- * the builder transfers on {@link Builder#build()}.
+ * <p>Backed by a private array that nothing leaks, so there is one copy: the one the builder
+ * transfers on {@link Builder#build()}.
  *
- * <p><b>This is an edge type.</b> Core code does not build one of these; it emits primitives into a
- * sink and lets the edge decide whether to materialise anything (OOD-3, OOD-9). Constructing a
- * {@code Seq} on the matching hot path would defeat its purpose.
+ * <p>An edge type. Core code emits primitives into a sink and lets the edge decide whether to
+ * materialise anything (OOD-3), so building one of these on the hot path would defeat the purpose.
  *
- * <p>{@code equals}/{@code hashCode} are element-wise, which matters because these sit inside
- * records: a golden test comparing two {@code Accepted} values compares their fills through here.
+ * <p>{@code equals} and {@code hashCode} are element-wise, which matters because these sit inside
+ * records: comparing two {@code Accepted} values compares their fills through here.
  */
 public final class Seq<T> implements Iterable<T> {
 
@@ -46,7 +43,9 @@ public final class Seq<T> implements Iterable<T> {
 
   @SafeVarargs
   public static <T> Seq<T> of(final T... items) {
-    return items.length == 0 ? empty() : new Seq<>(Arrays.copyOf(items, items.length, Object[].class));
+    return items.length == 0
+        ? empty()
+        : new Seq<>(Arrays.copyOf(items, items.length, Object[].class));
   }
 
   public static <T> Seq<T> copyOf(final Collection<? extends T> source) {
@@ -113,8 +112,8 @@ public final class Seq<T> implements Iterable<T> {
    * Accumulates elements, then hands its array to the finished {@link Seq} without copying.
    *
    * <p>Single-use: {@link #build()} transfers ownership of the array, so the builder is spent
-   * afterwards. That is what keeps the total cost at one array per sequence rather than the two that
-   * {@code stream().toList()} followed by {@code List.copyOf} pays.
+   * afterwards. That is what keeps the total cost at one array per sequence rather than the two
+   * that {@code stream().toList()} followed by {@code List.copyOf} pays.
    */
   public static final class Builder<T> {
     private Object[] items;
