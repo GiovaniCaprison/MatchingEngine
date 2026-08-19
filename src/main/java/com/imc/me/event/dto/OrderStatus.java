@@ -3,9 +3,8 @@ package com.imc.me.event.dto;
 /**
  * An order's current state, as answered by the order registry (FR-5.4).
  *
- * <p>Carries the quantities and not just the {@link Status} because FR-5.4 asks for remaining
- * quantity explicitly, and because {@code Status} alone is not actionable: a client managing risk
- * needs to know <i>how much</i> is still working, not merely that something is.
+ * <p>Carries the quantities rather than only the {@link Status}, because a client managing risk
+ * needs to know how much is still working and not merely that something is.
  *
  * @param orderId the engine uid
  * @param status derived where derivable, recorded where not
