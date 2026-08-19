@@ -61,12 +61,10 @@ public final class PriceTimeMatcher implements Matcher {
    * total is the sum of the remaining quantity resting in it (VR-6.1). That makes the probe linear
    * in crossing levels rather than in orders.
    *
-   * <p>Known cost: {@link BookSide#depth} emits every level up to its bound, so the probe is handed
-   * levels that do not cross and discards them. It stops accumulating, but it cannot stop the walk,
-   * because the side exposes no way to iterate levels while a condition holds. On a wide book that
-   * is real waste on the FOK and POST gate path, and closing it means giving {@code BookSide} a
-   * predicated walk or letting {@link DepthSink} signal stop. Left as it is until there is a
-   * benchmark saying which.
+   * <p>The probe ends the walk itself, by returning {@code false} from {@link DepthSink#onLevel}
+   * once it has enough or once a level stops crossing. Since levels arrive best price first, a
+   * level that does not cross means none deeper will, so the walk costs crossing levels rather than
+   * the width of the side.
    */
   @Override
   public long fillableQty(final Order aggressor, final BookSide opposing) {
@@ -98,11 +96,12 @@ public final class PriceTimeMatcher implements Matcher {
     }
 
     @Override
-    public void onLevel(final long price, final long qty) {
-      if (found >= wanted) return;
+    public boolean onLevel(final long price, final long qty) {
       final boolean crossing = side == OrderSide.BUY ? limitPrice >= price : limitPrice <= price;
-      if (!crossing) return;
+      if (!crossing) return false;
+
       found += qty;
+      return found < wanted;
     }
 
     private long fillable() {

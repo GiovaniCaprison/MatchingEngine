@@ -25,8 +25,9 @@ public final class CollectingDepthSink implements DepthSink {
   }
 
   @Override
-  public void onLevel(final long price, final long qty) {
+  public boolean onLevel(final long price, final long qty) {
     levels.add(new Depth.Level(price, qty));
+    return true;
   }
 
   /** The collected levels, best price first. Memoised, so it is safe to read more than once. */

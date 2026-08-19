@@ -48,7 +48,7 @@ public final class TreeMapBookSide implements BookSide {
     int emitted = 0;
     for (final PriceLevel level : levels.values()) {
       if (emitted++ == maxLevels) return;
-      sink.onLevel(level.price(), level.totalQty());
+      if (!sink.onLevel(level.price(), level.totalQty())) return;
     }
   }
 
