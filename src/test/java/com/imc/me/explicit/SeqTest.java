@@ -24,26 +24,26 @@ class SeqTest {
   @DisplayName("API-11.1: a Seq cannot be changed through the collection it was built from")
   void source_mutation_does_not_leak_in() {
     final List<Trade> source = new ArrayList<>();
-    source.add(new Trade(1L, 2L, 100L, 5L));
+    source.add(new Trade(1L, 10L, 20L, 100L, 5L));
     final Seq<Trade> seq = Seq.copyOf(source);
 
-    source.add(new Trade(3L, 4L, 101L, 7L));
+    source.add(new Trade(2L, 30L, 40L, 101L, 7L));
     source.clear();
 
     assertThat(seq.size()).isEqualTo(1);
-    assertThat(seq.get(0)).isEqualTo(new Trade(1L, 2L, 100L, 5L));
+    assertThat(seq.get(0)).isEqualTo(new Trade(1L, 10L, 20L, 100L, 5L));
   }
 
   @Test
   @Requirement("API-11.1")
   @DisplayName("API-11.1: a varargs Seq does not alias the caller's array")
   void varargs_array_is_not_aliased() {
-    final Trade[] source = {new Trade(1L, 2L, 100L, 5L)};
+    final Trade[] source = {new Trade(1L, 10L, 20L, 100L, 5L)};
     final Seq<Trade> seq = Seq.of(source);
 
-    source[0] = new Trade(9L, 9L, 999L, 9L);
+    source[0] = new Trade(9L, 90L, 90L, 999L, 9L);
 
-    assertThat(seq.get(0)).isEqualTo(new Trade(1L, 2L, 100L, 5L));
+    assertThat(seq.get(0)).isEqualTo(new Trade(1L, 10L, 20L, 100L, 5L));
   }
 
   @Test
@@ -105,7 +105,10 @@ class SeqTest {
 
     // The builder hands its array to the Seq without copying, so it must be spent afterwards:
     // a later add() has to fail loudly rather than mutate an already-published Seq.
-    assertThatThrownBy(() -> builder.add(99)).isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> builder.add(99))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("already spent");
+    assertThatThrownBy(builder::build).isInstanceOf(IllegalStateException.class);
     assertThat(built.size()).isEqualTo(9);
   }
 

@@ -14,6 +14,7 @@ import com.imc.me.util.Seq;
 public final class CollectingDepthSink implements DepthSink {
 
   private final Seq.Builder<Depth.Level> levels;
+  private Seq<Depth.Level> built;
 
   public CollectingDepthSink() {
     this.levels = Seq.builder();
@@ -28,8 +29,9 @@ public final class CollectingDepthSink implements DepthSink {
     levels.add(new Depth.Level(price, qty));
   }
 
-  /** The collected levels, best price first. Spends the underlying builder. */
+  /** The collected levels, best price first. Memoised, so it is safe to read more than once. */
   public Seq<Depth.Level> levels() {
-    return levels.build();
+    if (built == null) built = levels.build();
+    return built;
   }
 }

@@ -9,9 +9,9 @@ domain types, public API, and matching logic are the next work.
 
 ## How to contribute
 
-So while this is likely not something anyone else is ever going to contribute to as it is 
-intentionally a personal project which I am building for my own personal enjoyment, 
-I am still going to document this process for anyone (including myself 100 months from now) 
+So while this is likely not something anyone else is ever going to contribute to as it is
+intentionally a personal project which I am building for my own personal enjoyment,
+I am still going to document this process for anyone (including myself 100 months from now)
 such that reading through commits doesn't look like a scene from Apocalypse Now.
 
 I like to do something like `(broad term/catagory of whatever this is): what I am actually doing`
@@ -22,25 +22,25 @@ that I was learning. However, that is how you should expect to see the things be
 The beauty of this project is that TDD is natural. A ME is deterministic which means invariants
 can be black box tested and so long as they are held, we dgaf what implementation is sitting
 beneath the abstraction. So that is the approach we are taking, tests are defined as invariants
-which we use as guides for what we are actually building. 
+which we use as guides for what we are actually building.
 
-**AI USAGE** is something which I do not want in this project apart from documentation (md files), 
-quality and design guidance, or as a learning guide for financial topics like "WTAF is a LIMIT IOC. 
-The code itself, should absolutely be something I do myself. The entire point of this is for me 
+AI USAGE is something which I do not want in this project apart from documentation (md files),
+quality and design guidance, or as a learning guide for financial topics like "WTAF is a LIMIT IOC.
+The code itself, should absolutely be something I do myself. The entire point of this is for me
 to learn and so AI does not work well as far as implementation in concerned.
 
 That is about it for now - or forever - I have no clue ))
 
 ## Design in one minute
 
-- **Single-writer per book.** One thread mutates the book, ids are minted at one ordered
+- Single-writer per book. One thread mutates the book, ids are minted at one ordered
   point (the sequencer), and replaying the same input is bit-for-bit reproducible. This is
   what makes determinism free and is the path toward the LMAX-style hot path.
-- **Prices are scaled `long`s, never floats.** `100.25` is stored as `1002500`; conversion
+- Prices are scaled `long`s, never floats. `100.25` is stored as `1002500`; conversion
   happens at the I/O edge.
-- **Typed outcomes, not booleans or exceptions.** `submit`/`cancel`/`amend` return sealed
+- Typed outcomes, not booleans or exceptions. `submit`/`cancel`/`amend` return sealed
   result types, so "rejected" and "not found" are values, not nulls.
-- **Correctness before speed.** `infrastructure → correctness → measurement`. JMH and
+- Correctness before speed. `infrastructure -> correctness -> measurement`. JMH and
   profiling come only once the engine actually matches.
 
 ---
@@ -48,9 +48,9 @@ That is about it for now - or forever - I have no clue ))
 ## Layout
 
 ```
-src/main/java/com/imc/me/    engine code (domain, book, matching, sequencer, ...)
+src/main/java/com/imc/me/    engine code (domain, book, matching, sequencer...)
 src/test/java/com/imc/me/    tests organised by LAYER (explicit, golden, property,
-                             structural, coverage) — see TESTING.md
+                             structural, coverage), see TESTING.md
 src/test/resources/          golden fixtures + requirements.txt (spec source of truth)
 benchmarks/                  JMH (deferred until the engine is correct)
 ```
@@ -74,13 +74,13 @@ requirement has no test, and writes a report to `target/coverage-matrix.md`.
 
 ## Documentation
 
-- **[OOD_PRINCIPLES.md](docs/OOD_PRINCIPLES.md)** — the design rules the engine is built on:
+- [OOD_PRINCIPLES.md](docs/OOD_PRINCIPLES.md), the design rules the engine is built on:
   mutation ownership, the core/edge border, order-type variation, the allocation budget, and
   how each rule is enforced. Read this before changing a signature.
-- **[ENGINEERING_GUIDE.md](ENGINEERING_GUIDE.md)** — the model, the matching algorithm, the
+- [ENGINEERING_GUIDE.md](ENGINEERING_GUIDE.md), the model, the matching algorithm, the
   project layout, and the measurement road (JMH benchmarking + profiling).
-- **[TESTING.md](TESTING.md)** — the TDD roadmap and the test-suite reference: the five test
-  layers, the requirement→layer map, cost lanes, the coverage matrix, and the step-by-step
+- [TESTING.md](TESTING.md), the TDD roadmap and the test-suite reference: the five test
+  layers, the requirement->layer map, cost lanes, the coverage matrix, and the step-by-step
   build order.
 
 New here? Read this file, then `TESTING.md` for what to do next.
