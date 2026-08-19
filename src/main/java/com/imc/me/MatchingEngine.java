@@ -20,8 +20,8 @@ import com.imc.me.event.result.Rejected;
 import com.imc.me.event.result.SubmitOutcome;
 import com.imc.me.event.result.SubmitResult;
 import com.imc.me.event.sink.CollectingTradeSink;
-import com.imc.me.event.sink.TradeEventSink;
 import com.imc.me.event.sink.EngineListener;
+import com.imc.me.event.sink.TradeEventSink;
 import com.imc.me.matching.Matcher;
 import com.imc.me.matching.PriceTimeMatcher;
 import com.imc.me.registry.OrderRegistry;
@@ -36,24 +36,24 @@ import java.util.Optional;
  * <p>Everything a client can do goes through here, and this class is the only place that:
  *
  * <ol>
- *   <li><b>validates</b> — so nothing below it ever re-checks an argument (OOD-5);
- *   <li><b>mints identity</b> — one sequencer, one total order (OOD-13);
- *   <li><b>records lifecycle</b> — the registry, which outlives the book (OOD-14);
- *   <li><b>materialises DTOs</b> — the edge paying for its own convenience (OOD-3).
+ *   <li>validates - so nothing below it ever re-checks an argument (OOD-5);
+ *   <li>mints identity - one sequencer, one total order (OOD-13);
+ *   <li>records lifecycle - the registry, which outlives the book (OOD-14);
+ *   <li>materialises DTOs - the edge paying for its own convenience (OOD-3).
  * </ol>
  *
- * <p>The order of the first two matters and is not the obvious one: <b>the uid is minted before
- * validation.</b> That spends an id on a rejected order, which is free, and buys something valuable —
- * every order the engine has ever seen is addressable and appears in the registry, so a client cannot
- * mistake a rejection for a lost message.
+ * <p>The order of the first two matters as the uid is minted before validation. That spends an id
+ * on a rejected order, which is free, and means that every order the engine has ever seen is
+ * addressable and appears in the registry, so a client cannot mistake a rejection for a lost
+ * message.
  *
- * <p>It does <i>not</i> coordinate matching. It hands a validated order to the book, and the book drives
- * the matcher over the opposing side. An engine that orchestrated book-and-matcher itself would put
- * matching mechanics in the boundary layer, and every future book implementation would have to
- * reimplement the choreography.
+ * <p>It hands a validated order to the book, and the book drives the matcher over the opposing
+ * side. An engine that orchestrated book-and-matcher itself would put matching mechanics in the
+ * boundary layer, and every future book implementation would have to reimplement the choreography.
  *
- * <p><b>Single-writer and not thread-safe by design</b> (OOD-2). One thread calls these methods.
- * Concurrency comes from partitioning instruments across engines, never from sharing one.
+ * <p>Single-writer and not thread-safe by design (OOD-2). One thread calls these methods, and
+ * concurrency comes from partitioning instruments across engines rather than from sharing one,
+ * which is the LMAX Disruptor lesson.
  */
 public final class MatchingEngine {
 
@@ -64,8 +64,8 @@ public final class MatchingEngine {
 
   /**
    * Listeners as a plain array rather than a {@code List} so that publishing iterates without an
-   * iterator allocation per event (OOD-11). Registration is a startup-time operation, so copying the
-   * array on register is the right trade: cheap where it is rare, free where it is hot.
+   * iterator allocation per event (OOD-11). Registration is a startup-time operation, so copying
+   * the array on register is the right trade, cheap where it is rare and free where it is hot.
    */
   private EngineListener[] listeners = new EngineListener[0];
 
@@ -76,12 +76,11 @@ public final class MatchingEngine {
   /**
    * Takes the matching strategy rather than hardwiring it.
    *
-   * <p>This is the substitution that justifies {@link Matcher} existing at all (OOD-17): price-time
-   * versus pro-rata is a real venue-level variation, and the reference {@code TreeMapOrderBook} will
-   * eventually be differential-tested against a faster book using the same matcher. It also means the
-   * boundary's own behaviour -- validation, identity, the registry, event fan-out -- is testable
-   * without a working walk, which is the difference between being able to build this incrementally and
-   * having to finish everything before anything can be verified.
+   * <p>This is the substitution that justifies {@link Matcher} existing at all (OOD-17). Price-time
+   * versus pro-rata is a real venue-level variation, and the reference {@code TreeMapOrderBook}
+   * will eventually be differential-tested against a faster book using the same matcher. It also
+   * means the boundary's own behaviour, meaning validation, identity, the registry and event
+   * fan-out, can be exercised without a working walk.
    */
   public MatchingEngine(final Instrument instrument, final Matcher matcher) {
     this.instrument = instrument;
@@ -101,7 +100,7 @@ public final class MatchingEngine {
    * Places an order (FR-1.1, FR-1.2, FR-1.3).
    *
    * <p>Validation happens strictly before any state is touched, so a rejection leaves the book
-   * bit-identical (API-8.2) — not by cleaning up afterwards, but because nothing was done yet.
+   * bit-identical (API-8.2).
    */
   public SubmitResult submit(final NewOrder command) {
     final long orderId = sequencer.next();
@@ -109,21 +108,19 @@ public final class MatchingEngine {
     final RejectReason invalid = OrderValidator.validate(command, instrument);
     if (invalid != null) {
       // Registered even though it was refused, so "I sent that, what happened?" is answerable for
-      // every order a client ever sent, not only the ones that made it into the book.
-      // Clamped because the rejected quantity may be the very thing that was invalid, and an order
-      // entity with a negative quantity would report a nonsensical remainder to a status query.
+      // every order a client sent rather than only the ones that reached the book. The quantity is
+      // clamped because it may be the very thing that was invalid, and an order entity with a
+      // negative quantity would report a nonsensical remainder to a status query.
       final long registeredQty = command.qty() > 0 ? command.qty() : 0L;
       registry.rejected(
           Order.of(orderId, command.price(), registeredQty, sideOf(command), typeOf(command)));
       return reject(command.clientOrderId(), orderId, invalid);
     }
 
-    // A MARKET order's price is replaced by a sentinel here, at the boundary, after the client's own
-    // price has been checked -- which is why a sentinel can safely take a value no client could send.
+    // A MARKET order's price is replaced by a sentinel here at the boundary, after the client's own
+    // price has been checked, which is why a sentinel can safely take a value no client could send.
     final long price =
-        command.type() == OrderType.MARKET
-            ? Prices.marketPrice(command.side())
-            : command.price();
+        command.type() == OrderType.MARKET ? Prices.marketPrice(command.side()) : command.price();
 
     final Order order = Order.of(orderId, price, command.qty(), command.side(), command.type());
     registry.accepted(order);
@@ -133,7 +130,8 @@ public final class MatchingEngine {
 
     return switch (outcome) {
       case KILLED -> reject(command.clientOrderId(), orderId, RejectReason.FOK_UNFILLABLE);
-      case REJECTED_WOULD_CROSS -> reject(command.clientOrderId(), orderId, RejectReason.WOULD_CROSS);
+      case REJECTED_WOULD_CROSS ->
+          reject(command.clientOrderId(), orderId, RejectReason.WOULD_CROSS);
       case FILLED, RESTED, REMAINDER_CANCELLED -> {
         if (outcome == SubmitOutcome.REMAINDER_CANCELLED) registry.cancelled(orderId);
         notifyAccepted(command.clientOrderId(), orderId);
@@ -155,7 +153,9 @@ public final class MatchingEngine {
     return result;
   }
 
-  /** Amends a resting order (FR-4.3). See {@link AmendOutcome} for what happens to queue priority. */
+  /**
+   * Amends a resting order (FR-4.3). See {@link AmendOutcome} for what happens to queue priority.
+   */
   public AmendOutcome amend(final long orderId, final long newQty, final long newPrice) {
     if (newQty <= 0) return AmendOutcome.NOT_FOUND;
 
@@ -170,7 +170,9 @@ public final class MatchingEngine {
     return outcome;
   }
 
-  /** Best price and aggregate quantity on one side (FR-5.1); empty if the side has none (FR-5.2). */
+  /**
+   * Best price and aggregate quantity on one side (FR-5.1); empty if the side has none (FR-5.2).
+   */
   public TopOfBook topOfBook(final OrderSide side) {
     return book.topOfBook(side);
   }
@@ -183,11 +185,11 @@ public final class MatchingEngine {
   /**
    * An order's current state, including remaining quantity (FR-5.4).
    *
-   * <p>{@code Optional} rather than a nullable return, because this is an edge query rather than the
-   * hot path, and it keeps a null out of the public API (OOD-6). A sealed found/not-found pair would be
-   * the more consistent answer, but Java requires a sealed hierarchy's members to share a package
-   * without modules, and these two types belong in different ones — so this is the honest compromise
-   * rather than a pretend one.
+   * <p>{@code Optional} rather than a nullable return because this is an edge query rather than the
+   * hot path, and it keeps a null out of the public API (OOD-6). A sealed found/not-found pair
+   * would be more consistent with the other outcomes, but without modules Java wants a sealed
+   * hierarchy's members in one package and these two belong in different ones, so this is the
+   * honest compromise.
    */
   public Optional<OrderStatus> status(final long orderId) {
     return Optional.ofNullable(registry.statusOf(orderId));
@@ -207,7 +209,7 @@ public final class MatchingEngine {
   /**
    * A sink that feeds the caller's collector and every registered listener.
    *
-   * <p>One trade, many consumers: the request/response DTO and the outbound feed see the same
+   * <p>One trade, many consumers. The request/response DTO and the outbound feed see the same
    * executions with the same sequence numbers, which is what makes the two views reconcilable.
    */
   private TradeEventSink fanOutTo(final CollectingTradeSink collector) {
