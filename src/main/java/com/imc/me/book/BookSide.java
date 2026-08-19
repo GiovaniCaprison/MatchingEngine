@@ -39,7 +39,9 @@ public interface BookSide {
    * top-of-book consumer materialises nothing.
    *
    * <p>The bound is required rather than defaulted (OOD-10): unbounded, one client asking for depth
-   * on a book with 50,000 levels stalls the single writer and everyone else with it.
+   * on a book with 50,000 levels stalls the single writer and everyone else with it. The sink can
+   * also end the walk early by returning {@code false}, so a caller whose answer arrives before its
+   * bound does pays for neither.
    *
    * @param maxLevels how many levels to emit at most; must be positive. Emits fewer if the side
    *     holds fewer, and nothing if it is empty.
