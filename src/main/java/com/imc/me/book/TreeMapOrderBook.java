@@ -10,64 +10,28 @@ import com.imc.me.event.result.Cancelled;
 import com.imc.me.event.result.NotFound;
 import com.imc.me.event.result.SubmitOutcome;
 import com.imc.me.event.sink.CollectingDepthSink;
-import com.imc.me.event.sink.TradeEventSink;
 import com.imc.me.matching.Matcher;
 import com.imc.me.matching.TradeSink;
-import com.imc.me.sequencer.Sequencer;
 
 /**
  * The single writer. Owns both sides, each with its own id index, and drives the matcher over the
  * opposing side.
  *
- * <p>The engine validates and sequences a command and then calls in here. Keeping the matcher
+ * <p>The engine validates a command, mints its id and stamps its executions. Keeping the matcher
  * behind this boundary, rather than having the engine coordinate a book and a matcher itself, means
  * every future book implementation inherits the choreography instead of reimplementing it.
+ *
+ * <p>Executions go out unsequenced. The engine numbers them, so an implementation here cannot
+ * disagree with another about numbering, which matters because comparing two implementations rests
+ * on identical output for identical input.
  */
 public final class TreeMapOrderBook implements OrderBook {
   private final BookSide bids = new TreeMapBookSide(OrderSide.BUY);
   private final BookSide asks = new TreeMapBookSide(OrderSide.SELL);
   private final Matcher matcher;
-  private final Sequencer sequencer;
-
-  /**
-   * The one stamping sink, reused for every command so the write path stays inside its allocation
-   * budget (OOD-11). Safe because there is one writer (OOD-2) and the sink's useful lifetime is a
-   * single synchronous call.
-   */
-  private final SequencingTradeSink stamper = new SequencingTradeSink();
 
   public TreeMapOrderBook(final Matcher matcher) {
-    this(matcher, new Sequencer());
-  }
-
-  /** Takes an existing sequencer so a whole engine shares one total order (OOD-13). */
-  public TreeMapOrderBook(final Matcher matcher, final Sequencer sequencer) {
     this.matcher = matcher;
-    this.sequencer = sequencer;
-  }
-
-  /**
-   * Turns the matcher's executions into sequenced events.
-   *
-   * <p>This is the seam that keeps the matching algorithm ignorant of sequencing. The matcher
-   * reports that two orders executed and the book decides where that sits in the total order.
-   * Handing the matcher a sequencer would give the algorithm a job with nothing to do with
-   * matching, and would let two matchers disagree about numbering.
-   */
-  private final class SequencingTradeSink implements TradeSink {
-    private TradeEventSink target;
-
-    @Override
-    public void onTrade(
-        final long aggressorId, final long restingId, final long price, final long qty) {
-      target.onTrade(sequencer.next(), aggressorId, restingId, price, qty);
-    }
-  }
-
-  /** Points the stamper at this command's consumer and hands it to the matcher. */
-  private TradeSink stampingInto(final TradeEventSink sink) {
-    stamper.target = sink;
-    return stamper;
   }
 
   /**
@@ -80,7 +44,7 @@ public final class TreeMapOrderBook implements OrderBook {
    * fails compilation here at every point that has to decide something about it.
    */
   @Override
-  public SubmitOutcome submit(final Order order, final TradeEventSink sink) {
+  public SubmitOutcome submit(final Order order, final TradeSink sink) {
     final BookSide opposing = opposingSide(order.side());
 
     // PHASE 1: GATE. Type-dependent, pre-trade, and the book is untouched if it fires.
@@ -88,7 +52,7 @@ public final class TreeMapOrderBook implements OrderBook {
     if (gated != null) return gated;
 
     // PHASE 2: WALK. Type-agnostic, and the hot path.
-    matcher.match(order, opposing, stampingInto(sink));
+    matcher.match(order, opposing, sink);
 
     // PHASE 3: REMAINDER. Type-dependent, post-trade.
     if (order.remainingQty() == 0) return SubmitOutcome.FILLED;
@@ -133,7 +97,7 @@ public final class TreeMapOrderBook implements OrderBook {
    */
   @Override
   public AmendOutcome amend(
-      final long orderId, final long newQty, final long newPrice, final TradeEventSink sink) {
+      final long orderId, final long newQty, final long newPrice, final TradeSink sink) {
     final BookSide side = sideHolding(orderId);
     if (side == null) return AmendOutcome.NOT_FOUND;
 

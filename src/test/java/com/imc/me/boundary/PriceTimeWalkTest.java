@@ -12,36 +12,38 @@ import com.imc.me.event.result.Accepted;
 import com.imc.me.event.result.Rejected;
 import com.imc.me.event.result.SubmitOutcome;
 import com.imc.me.event.result.SubmitResult;
-import org.junit.jupiter.api.Test;
+import com.imc.me.support.AcrossBooks;
+import com.imc.me.support.BookImplementations.Named;
 
 /**
- * The walk, driven through the public API only.
+ * The walk, driven through the public API only, against every book implementation.
  *
  * <p>These are the boundary examples TESTING.md calls for: small, hand-asserted, one behaviour
  * each. They are not a substitute for the scenario corpus, which is where the rich multi-level
- * cases belong, and they are not a substitute for a reference model. They exist because the matcher
- * had no verification at all and shipping it that way would have been worse.
+ * cases belong, and they are not a substitute for a reference model. What they add is a readable
+ * statement of each rule, in a form a new implementation can be held to before anybody measures it.
  */
 class PriceTimeWalkTest {
 
   private static final Instrument INST = new Instrument(1, "TEST", 1L, 1L, 4);
 
-  private MatchingEngine engine() {
-    return new MatchingEngine(INST);
+  private static MatchingEngine engine(final Named impl) {
+    return new MatchingEngine(INST, impl.book().get());
   }
 
-  private static NewOrder order(long cid, OrderSide s, OrderType t, long price, long qty) {
+  private static NewOrder order(
+      final long cid, final OrderSide s, final OrderType t, final long price, final long qty) {
     return new NewOrder(cid, s, t, qty, price);
   }
 
-  private Accepted ok(SubmitResult r) {
+  private static Accepted ok(final SubmitResult r) {
     assertThat(r).isInstanceOf(Accepted.class);
     return (Accepted) r;
   }
 
-  @Test
-  void fr_3_1_price_priority_sweep() {
-    var e = engine();
+  @AcrossBooks
+  void fr_3_1_price_priority_sweep(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 5)));
     ok(e.submit(order(2, OrderSide.SELL, OrderType.LIMIT, 101, 5)));
 
@@ -61,9 +63,9 @@ class PriceTimeWalkTest {
     assertThat(e.topOfBook(OrderSide.BUY).isEmpty()).isTrue();
   }
 
-  @Test
-  void fr_3_2_time_priority_is_fifo() {
-    var e = engine();
+  @AcrossBooks
+  void fr_3_2_time_priority_is_fifo(final Named impl) {
+    var e = engine(impl);
     var first = ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 5)));
     var second = ok(e.submit(order(2, OrderSide.SELL, OrderType.LIMIT, 100, 5)));
 
@@ -74,26 +76,26 @@ class PriceTimeWalkTest {
     assertThat(e.status(second.orderId()).orElseThrow().remainingQty()).isEqualTo(5L);
   }
 
-  @Test
-  void fr_3_5_price_improvement_goes_to_the_aggressor() {
-    var e = engine();
+  @AcrossBooks
+  void fr_3_5_price_improvement_goes_to_the_aggressor(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 5)));
     var a = ok(e.submit(order(2, OrderSide.BUY, OrderType.LIMIT, 105, 5)));
     assertThat(a.fills().get(0).price()).isEqualTo(100L);
   }
 
-  @Test
-  void partial_fill_rests_the_remainder() {
-    var e = engine();
+  @AcrossBooks
+  void partial_fill_rests_the_remainder(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 3)));
     var a = ok(e.submit(order(2, OrderSide.BUY, OrderType.LIMIT, 100, 10)));
     assertThat(a.outcome()).isEqualTo(SubmitOutcome.RESTED);
     assertThat(e.topOfBook(OrderSide.BUY).qty()).isEqualTo(7L);
   }
 
-  @Test
-  void fr_2_2_market_order_sweeps_and_never_rests() {
-    var e = engine();
+  @AcrossBooks
+  void fr_2_2_market_order_sweeps_and_never_rests(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 2)));
     ok(e.submit(order(2, OrderSide.SELL, OrderType.LIMIT, 101, 2)));
     var a = ok(e.submit(order(3, OrderSide.BUY, OrderType.MARKET, 0, 10)));
@@ -104,9 +106,9 @@ class PriceTimeWalkTest {
     assertThat(e.topOfBook(OrderSide.SELL).isEmpty()).isTrue();
   }
 
-  @Test
-  void fr_2_5_fok_fills_in_full_or_not_at_all() {
-    var e = engine();
+  @AcrossBooks
+  void fr_2_5_fok_fills_in_full_or_not_at_all(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 4)));
 
     var killed = e.submit(order(2, OrderSide.BUY, OrderType.FOK, 100, 10));
@@ -118,9 +120,9 @@ class PriceTimeWalkTest {
     assertThat(e.topOfBook(OrderSide.SELL).isEmpty()).isTrue();
   }
 
-  @Test
-  void fr_2_6_post_only_never_takes_liquidity() {
-    var e = engine();
+  @AcrossBooks
+  void fr_2_6_post_only_never_takes_liquidity(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 5)));
 
     var crossed = e.submit(order(2, OrderSide.BUY, OrderType.POST, 100, 5));
@@ -132,9 +134,9 @@ class PriceTimeWalkTest {
     assertThat(e.topOfBook(OrderSide.BUY).price()).isEqualTo(99L);
   }
 
-  @Test
-  void fr_2_4_ioc_takes_what_it_can_and_cancels_the_rest() {
-    var e = engine();
+  @AcrossBooks
+  void fr_2_4_ioc_takes_what_it_can_and_cancels_the_rest(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 3)));
     var a = ok(e.submit(order(2, OrderSide.BUY, OrderType.IOC, 100, 10)));
     assertThat(a.fills().get(0).qty()).isEqualTo(3L);
@@ -142,9 +144,9 @@ class PriceTimeWalkTest {
     assertThat(e.topOfBook(OrderSide.BUY).isEmpty()).isTrue();
   }
 
-  @Test
-  void nfr_1_1_trades_carry_a_gapless_sequence() {
-    var e = engine();
+  @AcrossBooks
+  void nfr_1_1_trades_carry_a_gapless_sequence(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 100, 1)));
     ok(e.submit(order(2, OrderSide.SELL, OrderType.LIMIT, 101, 1)));
     var a = ok(e.submit(order(3, OrderSide.BUY, OrderType.LIMIT, 101, 2)));
@@ -155,9 +157,9 @@ class PriceTimeWalkTest {
     assertThat(t0.sequence()).isGreaterThan(0L);
   }
 
-  @Test
-  void does_not_cross_when_prices_do_not_meet() {
-    var e = engine();
+  @AcrossBooks
+  void does_not_cross_when_prices_do_not_meet(final Named impl) {
+    var e = engine(impl);
     ok(e.submit(order(1, OrderSide.SELL, OrderType.LIMIT, 101, 5)));
     var a = ok(e.submit(order(2, OrderSide.BUY, OrderType.LIMIT, 100, 5)));
     assertThat(a.fills().isEmpty()).isTrue();

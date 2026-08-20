@@ -3,6 +3,7 @@ package com.imc.me.support;
 import static org.assertj.core.api.Assertions.fail;
 
 import com.imc.me.MatchingEngine;
+import com.imc.me.book.OrderBook;
 import com.imc.me.domain.Instrument;
 import com.imc.me.domain.OrderSide;
 import com.imc.me.domain.OrderType;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Replays a scenario through the engine and diffs its output against the blessed file.
@@ -46,17 +48,18 @@ public final class ScenarioRunner {
    * change rather than retyped. Read the diff before blessing what it produces.
    */
   static List<String> render(final Path inputFile) throws IOException {
-    return replay(directives(Files.readAllLines(inputFile)));
+    return replay(
+        directives(Files.readAllLines(inputFile)), BookImplementations.reference().book());
   }
 
-  public static void run(final Path inputFile) throws IOException {
+  public static void run(final Path inputFile, final Supplier<OrderBook> book) throws IOException {
     final Path expectedFile =
         inputFile.resolveSibling(
             inputFile.getFileName().toString().replaceFirst("\\.input$", ".expected"));
 
     final List<String> input = directives(Files.readAllLines(inputFile));
     final List<String> expected = directives(Files.readAllLines(expectedFile));
-    final List<String> actual = replay(input);
+    final List<String> actual = replay(input, book);
 
     compare(inputFile.getFileName().toString(), expected, actual);
   }
@@ -77,7 +80,7 @@ public final class ScenarioRunner {
     return kept;
   }
 
-  private static List<String> replay(final List<String> input) {
+  private static List<String> replay(final List<String> input, final Supplier<OrderBook> book) {
     final List<String> out = new ArrayList<>();
     final Recorder recorder = new Recorder();
 
@@ -88,7 +91,7 @@ public final class ScenarioRunner {
       cursor = 1;
     }
 
-    final MatchingEngine engine = new MatchingEngine(instrument);
+    final MatchingEngine engine = new MatchingEngine(instrument, book.get());
     engine.register(recorder);
 
     final Map<Long, Integer> refByUid = new HashMap<>();

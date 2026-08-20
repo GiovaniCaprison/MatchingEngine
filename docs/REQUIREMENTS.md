@@ -78,7 +78,10 @@ against an independent implementation. `open` is an honest answer where nothing 
 | NFR-9.3 | Any generated run can be written out as a scenario fixture and replayed | simulation |
 | NFR-10.1 | The engine agrees with a reference implementation over generated flow | model |
 | NFR-11.1 | Latency is reported as p50, p99, p99.9 and max, at a fixed offered rate, per command type | benchmark |
+| NFR-11.2 | Every reported measurement names the implementation, the flow parameters and the environment it was taken on | benchmark |
 | NFR-12.1 | An independent implementation passes the same scenario corpus | conformance |
+| NFR-13.1 | Every book implementation passes the same scenario corpus and the same correctness suite | scenario, unit |
+| NFR-13.2 | Any two book implementations produce byte-identical output for identical input, sequence numbers included | scenario |
 
 ## API
 
