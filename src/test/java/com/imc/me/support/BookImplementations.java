@@ -1,5 +1,6 @@
 package com.imc.me.support;
 
+import com.imc.me.book.NaiveOrderBook;
 import com.imc.me.book.OrderBook;
 import com.imc.me.book.TreeMapOrderBook;
 import com.imc.me.matching.PriceTimeMatcher;
@@ -28,10 +29,18 @@ public final class BookImplementations {
   }
 
   public static List<Named> list() {
-    return List.of(new Named("TreeMap", () -> new TreeMapOrderBook(new PriceTimeMatcher())));
+    return List.of(
+        new Named("Naive", NaiveOrderBook::new),
+        new Named("TreeMap", () -> new TreeMapOrderBook(new PriceTimeMatcher())));
   }
 
-  /** The canonical implementation, used when a fixture is regenerated. */
+  /**
+   * The implementation a fixture is blessed from.
+   *
+   * <p>The naive one, deliberately. It is the oracle, so when it and a faster implementation
+   * disagree the faster one is wrong, and the blessed output should come from the side of that
+   * argument that is easier to be sure about.
+   */
   public static Named reference() {
     return list().get(0);
   }
