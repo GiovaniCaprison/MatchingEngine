@@ -1,0 +1,3 @@
+# FR-2.1: what a limit order cannot fill on entry rests at its own price.
+NEW SELL LIMIT 100 3
+NEW BUY  LIMIT 100 10

@@ -1,0 +1,5 @@
+# VR-2.2: with a tick of 5, 102 is refused rather than quietly rounded to 100.
+REJECTED #1 TICK_VIOLATION
+ACCEPTED #2 RESTED
+BOOK BID 100 qty=10
+BOOK ASK empty

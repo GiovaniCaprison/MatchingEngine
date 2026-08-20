@@ -6,17 +6,19 @@ one idea this document is built on.
 
 ## Current state
 
-There are no tests. The suite that existed was written before the engine and asserted very
-little; it was removed rather than repaired. What remains is the scenario harness, and its runner
-is still a stub.
+26 tests, nothing skipped. Thirteen of them are scenarios: the harness is wired and the corpus is
+the layer carrying most of the weight, as intended. Ten are boundary examples through the public
+API, and three sit in the book package to check a contract that is not observable from outside.
+
+Still missing: the reference model, and everything in the benchmark and soak lanes.
 
 ## What we test, and how
 
 The scenario corpus is the primary gate. A fixture is a command sequence and the blessed
-output: an ordered trade stream plus the resulting book. Fixtures live in
+output: the trade stream, each command's result, and the resulting book. Fixtures live in
 `src/test/resources/scenarios` as `.input` and `.expected` pairs, carry their requirement id in
 the filename, and are discovered by a test factory, so adding a scenario means adding two text
-files. This layer owns the order types, the matching rules, amend priority, sweeps, the event
+files. The grammar is specified in `SCENARIO_FORMAT.md`. This layer owns the order types, the matching rules, amend priority, sweeps, the event
 stream and determinism. It is also the only layer that survives a rewrite: the grammar is the
 contract, so a second implementation in another language runs the same corpus behind a thin
 runner.

@@ -1,0 +1,8 @@
+# FR-4.4: #1 raised and went to the back, so the aggressor hits #2 instead.
+ACCEPTED #1 RESTED
+ACCEPTED #2 RESTED
+AMENDED #1 REQUEUED_LOST_PRIORITY
+TRADE seq=4 aggressor=#3 resting=#2 price=100 qty=10
+ACCEPTED #3 FILLED
+BOOK BID empty
+BOOK ASK 100 qty=20

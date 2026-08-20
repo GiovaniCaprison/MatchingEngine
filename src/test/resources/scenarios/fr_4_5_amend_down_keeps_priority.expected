@@ -1,0 +1,8 @@
+# FR-4.5: #1 reduced and kept its place, so the aggressor still hits #1.
+ACCEPTED #1 RESTED
+ACCEPTED #2 RESTED
+AMENDED #1 REDUCED_KEPT_PRIORITY
+TRADE seq=4 aggressor=#3 resting=#1 price=100 qty=5
+ACCEPTED #3 FILLED
+BOOK BID empty
+BOOK ASK 100 qty=10

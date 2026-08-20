@@ -1,0 +1,7 @@
+# FR-3.2: at one price the earlier order fills first, which only the resting reference shows.
+ACCEPTED #1 RESTED
+ACCEPTED #2 RESTED
+TRADE seq=4 aggressor=#3 resting=#1 price=100 qty=5
+ACCEPTED #3 FILLED
+BOOK BID empty
+BOOK ASK 100 qty=5

@@ -1,0 +1,6 @@
+# FR-4.1, FR-4.2: removed, then a second cancel reports not-found instead of throwing.
+ACCEPTED #1 RESTED
+CANCELLED #1
+NOTFOUND #1
+BOOK BID empty
+BOOK ASK empty

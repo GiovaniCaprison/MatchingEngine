@@ -1,0 +1,5 @@
+# FR-2.5: the first FOK cannot be filled in full and is killed without trading.
+# The second can, and fills. The book after the kill proves nothing was consumed.
+NEW SELL LIMIT 100 4
+NEW BUY  FOK 100 10
+NEW BUY  FOK 100 4

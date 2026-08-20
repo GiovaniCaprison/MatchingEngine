@@ -3,11 +3,11 @@
 A single-symbol limit order book and matching engine in Java, built as the foundation for a
 full exchange. The long-term target is 20M operations per second on the matching hot path.
 
-Status: the engine matches. Submit, cancel and amend work through a validating boundary, the
-five order types are dispatched, one sequencer mints all identity, and an order registry answers
-status queries after an order has left the book. There are no tests at the moment: the suite that
-existed was written before the engine and asserted very little, so it was removed rather than
-repaired. See `docs/TESTING.md` for what replaces it.
+Status: the engine matches. Submit, cancel and amend work through a validating boundary, the five
+order types are dispatched, one sequencer mints all identity, and an order registry answers status
+queries after an order has left the book. Correctness is carried by a corpus of replayable
+scenarios rather than by unit tests; see `docs/TESTING.md` for why, and `docs/SCENARIO_FORMAT.md`
+for the format.
 
 ## Design in one minute
 
@@ -51,6 +51,8 @@ mvn test -Pstress    adds the randomised lane, for CI and pre-merge
 - [ENGINEERING_GUIDE.md](docs/ENGINEERING_GUIDE.md), the model, the matching algorithm, and the
   benchmarking and profiling road.
 - [TESTING.md](docs/TESTING.md), what gets proved and how.
+- [SCENARIO_FORMAT.md](docs/SCENARIO_FORMAT.md), the fixture grammar the scenario corpus is written
+  in, which is the contract a second implementation would be checked against.
 
 ## How to contribute
 

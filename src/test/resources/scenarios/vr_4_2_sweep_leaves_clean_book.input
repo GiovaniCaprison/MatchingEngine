@@ -1,0 +1,6 @@
+# VR-4.2: an aggressor that exhausts a side leaves both sides empty, with no
+# emptied price levels left behind.
+NEW SELL LIMIT 100 5
+NEW SELL LIMIT 101 5
+NEW SELL LIMIT 102 5
+NEW BUY  LIMIT 102 15

@@ -1,0 +1,5 @@
+# FR-4.1, FR-4.2: a cancel removes the order, and a second cancel of the same
+# reference reports not-found rather than throwing.
+NEW SELL LIMIT 100 5
+CANCEL #1
+CANCEL #1
