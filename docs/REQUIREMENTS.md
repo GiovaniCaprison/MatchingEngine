@@ -1,119 +1,125 @@
 # Requirements
 
-The specification, as a flat list. `ENGINEERING_GUIDE.md` says how the engine is built,
-`OOD_PRINCIPLES.md` says why it is shaped the way it is, and `TESTING.md` says how any of it
-gets proved.
+What the engine must do. `SCOPE.md` says where its boundary is, `PROTOCOL.md` says what crosses it,
+and `PRINCIPLES.md` says why the code is shaped the way it is.
 
-Ids are referenced from javadoc throughout the source. A comment reading `(FR-3.5)` means
-the code below it exists to satisfy that line in this file.
+Ids are referenced from source comments. A comment reading `(FR-3.2)` means the code below it exists
+to satisfy that line.
 
-The "proved by" column records the intended mechanism: a `unit` example, a `scenario` fixture, a
-`property` over random input, a `model` the engine is diffed against, a structural `rule`, the
-`compiler`, a `benchmark`, a `soak` run, the `simulation` that feeds those two, or `conformance`
-against an independent implementation. `open` is an honest answer where nothing proves it yet.
+The mechanism column records how a requirement is meant to be shown to hold: a `unit` test, a
+`corpus` fixture replayed and diffed, a `model` the engine is compared against, a `property` over
+generated input, the `compiler`, a `benchmark`, or `review` where nothing else applies.
 
-## FR: functional
+## FR: order entry
 
-| Id | Requirement | Proved by |
+| Id | Requirement | Mechanism |
 |---|---|---|
-| FR-1.1 | Accepts orders specifying side, type, quantity and price | unit |
-| FR-1.2 | Rejects invalid orders and communicates the reason | unit |
-| FR-1.3 | Accepted orders are assigned a uid returned to the client | unit |
-| FR-2.1 | A limit order rests at its price if it is not fully matched | scenario |
-| FR-2.2 | A market order never rests | scenario |
-| FR-2.3 | A market order's unfilled remainder is cancelled | scenario |
-| FR-2.4 | IOC matches available liquidity, remainder cancelled | scenario |
-| FR-2.5 | FOK executes in full immediately or not at all | scenario |
-| FR-2.6 | POST never takes liquidity | scenario |
-| FR-3.1 | Matching follows price priority, best price first | scenario, model |
-| FR-3.2 | Time priority at equal prices, FIFO | scenario, model |
-| FR-3.3 | An aggressing order matches resting liquidity | scenario, model |
-| FR-3.4 | A trade record is produced per match, carrying both uids, quantity and price | scenario |
-| FR-3.5 | Price improvement accrues to the aggressor at the resting price | scenario, model |
-| FR-4.1 | A resting order can be cancelled by its uid | unit |
-| FR-4.2 | Cancellation is idempotent; a re-cancel fails explicitly | unit |
-| FR-4.3 | A resting order's quantity and price can be amended | scenario |
-| FR-4.4 | An amend raising quantity or changing price loses time priority | scenario, model |
-| FR-4.5 | An amend only lowering quantity keeps time priority | scenario, model |
-| FR-5.1 | Best bid and ask are exposed with price and aggregate quantity | unit |
-| FR-5.2 | An empty side is clearly indicated | unit |
-| FR-5.3 | Depth aggregation matches per-level resting totals | property |
-| FR-5.4 | Order state is retrievable by uid, including remaining quantity | unit |
-| FR-5.5 | Query methods return only immutable types | rule |
-| FR-6.1 | The engine emits acceptance, fills, placement and terminal state | scenario |
+| FR-1.1 | Accepts a new order carrying side, pricing instruction, time in force, flags, price and quantity | unit |
+| FR-1.2 | An accepted order is assigned an engine order id, unique for the session, and reported | unit |
+| FR-1.3 | A refused order is reported with a machine readable reason and changes no state | unit |
+
+## FR: resting and remainder
+
+| Id | Requirement | Mechanism |
+|---|---|---|
+| FR-2.1 | A limit order's unmatched remainder rests at its own price | corpus |
+| FR-2.2 | A market order never rests | corpus |
+| FR-2.3 | An immediate-or-cancel remainder is removed rather than rested | corpus |
+| FR-2.4 | A fill-or-kill order executes in full or not at all, and a kill leaves the book untouched | corpus |
+| FR-2.5 | A post-only order never takes liquidity, and is refused if it would | corpus |
+
+## FR: matching
+
+| Id | Requirement | Mechanism |
+|---|---|---|
+| FR-3.1 | Resting liquidity is consumed best price first | corpus, model |
+| FR-3.2 | Within a price, the earlier arrival is consumed first | corpus, model |
+| FR-3.3 | An execution happens at the resting order's price | corpus, model |
+| FR-3.4 | Each execution reports an execution id, both order ids, price and quantity | corpus |
+
+## FR: amend and cancel
+
+| Id | Requirement | Mechanism |
+|---|---|---|
+| FR-4.1 | A resting order can be cancelled by its engine order id | unit |
+| FR-4.2 | Cancelling an order the engine is not resting is reported, not an error | unit |
+| FR-4.3 | A replace carries the full intended new state rather than a delta | corpus |
+| FR-4.4 | A replace lowering quantity at the same price keeps queue position | corpus, model |
+| FR-4.5 | Any other replace loses queue position | corpus, model |
+| FR-4.6 | A replace refused by a liquidity flag leaves the original order resting | corpus |
+
+## FR: output stream
+
+| Id | Requirement | Mechanism |
+|---|---|---|
+| FR-5.1 | Every event carries its own output sequence and the input sequence that caused it | corpus |
+| FR-5.2 | The output stream alone is sufficient to reconstruct the book at any point in it | corpus |
+| FR-5.3 | An order entering the book is reported with side, price and resting quantity | corpus |
+| FR-5.4 | An order leaving the book is reported with the quantity removed and the reason | corpus |
+| FR-5.5 | A quantity reduction that keeps queue position is reported without a removal | corpus |
 
 ## VR: validity
 
-| Id | Requirement | Proved by |
+| Id | Requirement | Mechanism |
 |---|---|---|
-| VR-1.1 | Zero or negative quantity is rejected | unit |
-| VR-2.1 | A non-positive price is rejected | unit |
-| VR-2.2 | An off-tick or over-precision price is rejected | unit |
-| VR-3.1 | Every order type handles an empty book without corrupting it | scenario |
-| VR-3.2 | An unknown or malformed order type is rejected | unit |
-| VR-4.1 | A full sweep across several levels stays consistent | scenario |
-| VR-4.2 | A sweep that exhausts a side leaves a clean empty book | scenario |
-| VR-6.1 | Per-level resting totals reconcile with the raw orders | property |
+| VR-1.1 | A non-positive quantity is refused | unit |
+| VR-1.2 | A quantity off the instrument's lot size is refused rather than rounded | unit |
+| VR-2.1 | A non-positive price on a priced order is refused | unit |
+| VR-2.2 | A price off the instrument's tick size is refused rather than rounded | unit |
+| VR-2.3 | A price outside the instrument's band is refused | unit |
+| VR-3.1 | An unknown or inconsistent field combination is refused | unit |
+| VR-4.1 | Every order type handles an empty book without corrupting it | corpus |
+| VR-5.1 | A refusal leaves the book byte identical | unit |
 
-## NFR: non-functional
+## NFR: correctness under load
 
-| Id | Requirement | Proved by |
+| Id | Requirement | Mechanism |
 |---|---|---|
-| NFR-1.1 | Identical input produces identical trades | scenario |
-| NFR-1.2 | Identical input produces an identical final book | scenario |
-| NFR-2.1 | Submission is sub-linear in resting order count | benchmark |
-| NFR-2.2 | Cancellation is constant time by uid | benchmark |
-| NFR-2.3 | A top-of-book query is constant time per side | benchmark |
-| NFR-3.1 | Aggregate depth equals the sum of resting quantity after any stream | property |
-| NFR-3.2 | No empty levels and no orphaned orders remain | property, unit |
-| NFR-4.1 | Single writer: book mutation is confined to one package | rule |
-| NFR-5.1 | The core engine depends only on itself and the JDK | rule |
-| NFR-6.1 | Internal invariants hold under randomised load | property |
-| NFR-7.1 | A steady-state submit on the core path allocates zero bytes | benchmark |
-| NFR-7.2 | Per-command allocation at the public boundary is measured separately from the core | benchmark |
-| NFR-8.1 | Invariants hold, and latency is reported, with a book of 10^6 resting orders | soak |
-| NFR-8.2 | Book size is stationary under generated flow, with insert and cancel rates balanced | soak |
-| NFR-9.1 | A seeded generator produces an identical command log on every run | simulation |
-| NFR-9.2 | Generated flow is parameterised by arrival, placement, size, type mix and cancel ratio, and every reported result names the parameters it was measured against | simulation |
-| NFR-9.3 | Any generated run can be written out as a scenario fixture and replayed | simulation |
-| NFR-10.1 | The engine agrees with a reference implementation over generated flow | model |
-| NFR-11.1 | Latency is reported as p50, p99, p99.9 and max, at a fixed offered rate, per command type | benchmark |
-| NFR-11.2 | Every reported measurement names the implementation, the flow parameters and the environment it was taken on | benchmark |
-| NFR-12.1 | An independent implementation passes the same scenario corpus | conformance |
-| NFR-13.1 | Every book implementation passes the same scenario corpus and the same correctness suite | scenario, unit |
-| NFR-13.2 | Any two book implementations produce byte-identical output for identical input, sequence numbers included | scenario |
+| NFR-1.1 | The same input log produces the same output log, byte for byte | corpus |
+| NFR-1.2 | The engine consumes input order rather than imposing it | review |
+| NFR-2.1 | One thread mutates a book: no locks, no concurrent collections, no atomics | review |
+| NFR-3.1 | Aggregate resting quantity at a price equals the sum of the orders at it | property |
+| NFR-3.2 | No empty price level and no unreferenced order remains | property |
+| NFR-4.1 | The matching core depends only on the JDK | review |
 
-## API
+The matching core means the book and the matching logic. A protocol module may depend on a codec
+generator, because a hand written wire format would be a project of its own and a worse one.
 
-| Id | Requirement | Proved by |
+## NFR: measurement
+
+| Id | Requirement | Mechanism |
 |---|---|---|
-| API-1.1 | `submit` returns a typed outcome carrying the uid and any fills | unit |
-| API-1.2 | A rejection carries a machine-readable reason | unit |
-| API-1.3 | The client order id is echoed back on the outcome | unit |
-| API-2.1 | `cancel` returns found or not-found and never throws | unit |
-| API-3.1 | `amend` applies the documented priority semantics | scenario |
-| API-4.1 | The top-of-book query returns price and aggregate quantity | unit |
-| API-5.1 | The depth query returns levels in priority order | unit |
-| API-6.1 | The status query returns an order's current state by uid | unit |
-| API-7.1 | An event consumer can register and receive events | unit |
-| API-8.1 | Invalid input is refused at the boundary | unit, rule |
-| API-8.2 | A boundary rejection leaves the book unmodified | unit |
-| API-9.1 | Acceptance and rejection are distinguishable types | unit |
-| API-10.1 | The public API is the only entry point that can mutate the book | compiler |
-| API-11.1 | No public method returns a mutable collection | rule |
+| NFR-5.1 | Submission is sub-linear in resting order count | benchmark |
+| NFR-5.2 | Cancellation is constant time by order id | benchmark |
+| NFR-5.3 | An implementation claiming a zero allocation steady state is measured, not trusted | benchmark |
+| NFR-5.4 | Latency is reported as p50, p99, p99.9 and max, at a fixed offered rate, per command type | benchmark |
+| NFR-5.5 | Every reported measurement names the implementation, the input parameters and the environment | benchmark |
+| NFR-5.6 | Decode cost is attributed separately from matching cost | benchmark |
+
+NFR-5.6 exists because decode is part of an implementation and therefore part of its cost. An
+engine that copies each command into objects pays for that, and one that reads fields in place does
+not. Without attribution the difference between two books can be swamped by the difference between
+two decoders.
+
+## NFR: comparability
+
+| Id | Requirement | Mechanism |
+|---|---|---|
+| NFR-6.1 | Every implementation produces byte identical output for identical input | corpus |
+| NFR-6.2 | Every implementation passes the same corpus and the same unit suite | corpus, unit |
+| NFR-6.3 | An implementation in another language passes the same corpus | corpus |
 
 ## Open
 
-Four things this list does not yet say, recorded so the silence is deliberate.
+Self match prevention. Participant id is on the wire and nothing reads it. The policy has to be
+chosen first: refuse the aggressor, cancel the resting order, cancel both, or decrement both.
 
-Self-trade policy. Whether an order may match against resting quantity from the same
-participant, and whether the resolution is cancel-newest, cancel-oldest or cancel-both. There
-is no participant identity in the model yet, so the requirement waits on that.
+Session state. A real engine owns pre-open, open, halt and close, and auction matching is a
+different algorithm from continuous matching. The schema leaves room for it and nothing implements
+it.
 
-Event stream completeness. FR-6.1 says which events are emitted. It does not say the stream
-is sufficient on its own to rebuild the book, which is the property a downstream consumer
-actually depends on and which is invisible in-process when it breaks.
+Fairness beyond price and time. Pro-rata and size pro-rata are real venue policies. Nothing here
+says what either should do.
 
-Fairness beyond price and time. Price-time is the only priority rule specified. Pro-rata and
-size-pro-rata are real venue policies, and `Matcher` exists so one can be substituted, but no
-requirement says what either should do.
+Price bands. VR-2.3 names the requirement. What the band is relative to, a static reference or a
+dynamic one, is undecided.
