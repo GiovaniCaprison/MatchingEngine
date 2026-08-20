@@ -25,9 +25,10 @@
     <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED</jvm.access.flags>
   </properties>
 
-  <!-- Modules land one at a time: engine-api, engine-naive, conformance, benchmarks. -->
+  <!-- Modules land one at a time: naive, conformance, benchmarks. -->
   <modules>
     <module>matching-protocol</module>
+    <module>matching-api</module>
   </modules>
 
   <dependencyManagement>
