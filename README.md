@@ -44,17 +44,21 @@ is engine against engine rather than network stack against network stack.
 ## Layout
 
 ```
-protocol/         the SBE schema and the generated codecs
-engine-api/       the interface every implementation satisfies
-engine-naive/     a list, scanned
-conformance/      the scenario corpus and the runner, which depends only on engine-api
-benchmarks/       JMH, one implementation per fork
-cpp/              the C++ implementation, built separately
+matching-protocol/     the SBE schema, and the codecs generated from it
+matching-api/          the interface every implementation satisfies
+matching-naive/        a list, scanned
+matching-conformance/  the scenario corpus and the runner, which depends only on the api
+matching-benchmarks/   JMH, one implementation per fork
+cpp/                   the C++ implementation, built separately
 docs/
 ```
 
-`conformance` depending only on `engine-api` is deliberate: a fixture physically cannot reach inside
-an implementation, so black box testing is enforced by the compiler rather than by discipline.
+Modules land one at a time and each one is additive. The conformance module depending only on the
+api is deliberate: a fixture physically cannot reach inside an implementation, so black box testing
+is enforced by the compiler rather than by discipline.
+
+The same schema generates the C++ codecs, which is what makes the cross-language comparison a
+comparison of engines rather than of two people's idea of a wire format.
 
 ## Documentation
 
@@ -71,9 +75,13 @@ an implementation, so black box testing is enforced by the compiler rather than 
 Requires JDK 21 and Maven.
 
 ```
-mvn compile     build everything
+mvn compile     build everything, generating the codecs first
 mvn test        unit tests and the conformance corpus
 ```
+
+Agrona reaches `jdk.internal.misc.Unsafe` for buffer access, so the build passes
+`--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`. It is declared once in the parent pom, and
+anything embedding the engine needs the same flag.
 
 Benchmarks do not run under `mvn test` and never should. A wall clock assertion inside a unit suite
 is the flakiest thing available and it contradicts the point of the project.
