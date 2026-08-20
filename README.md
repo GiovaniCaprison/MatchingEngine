@@ -1,79 +1,84 @@
 # MatchingEngine
 
-A single-symbol limit order book and matching engine in Java, built as the foundation for a
-full exchange. The long-term target is 20M operations per second on the matching hot path.
+A limit order book matching engine, built as a component of an exchange rather than as a
+demonstration, and used as the subject of a performance study.
 
-Status: the engine matches. Submit, cancel and amend work through a validating boundary, the five
-order types are dispatched, one sequencer mints all identity, and an order registry answers status
-queries after an order has left the book. Correctness is carried by a corpus of replayable
-scenarios rather than by unit tests; see `docs/TESTING.md` for why, and `docs/SCENARIO_FORMAT.md`
-for the format.
+There are two goals and they pull in the same direction. The first is an engine I can drop into a
+larger exchange project later, which means its boundary has to be the boundary a real matching
+engine has, and it has to do nothing that belongs to a gateway, a risk engine or a market data
+publisher. The second is to find out how much the implementation of that engine actually matters:
+what price level indexing buys over a linear scan, what removing allocation and boxing buys on top of
+that, what a flat cache friendly layout buys on top of that, and at what point C++ is simply the
+better language rather than assumed to be.
 
-## Design in one minute
+## How the study works
 
-- Single writer per book. One thread mutates the book, ids are minted at one ordered point, and
-  replaying the same input is reproducible bit for bit. Determinism comes free from the
-  architecture, and concurrency comes from partitioning books across threads.
-- Prices are scaled longs. `100.25` is stored as `1002500`, and conversion happens at the I/O
-  edge. Floating point cannot represent decimal prices exactly.
-- Typed outcomes. `submit`, `cancel` and `amend` return sealed result types, so "rejected" and
-  "not found" are values that the compiler makes you handle.
-- The core emits, it does not return. Results go into caller-supplied sinks as primitives, and
-  materialising objects is the edge's job.
-- Correctness before speed. JMH and profiling come once the engine is proved, because a fast
-  wrong answer is worthless.
+The engine is a deterministic function from an ordered log of commands to an ordered log of events.
+That single property is what makes the whole thing measurable: two implementations fed the same log
+must produce the same events, byte for byte, so a comparison between them is a measurement rather
+than an argument.
+
+So there is one message protocol and one interface, and every implementation is free to do whatever
+it likes behind it. Decoding a command is part of an implementation, which means it is part of that
+implementation's cost. An engine that copies each command into fresh objects pays for that. An engine
+that reads fields in place out of the buffer does not. Both are designs real systems ship, and the
+difference between them is one of the things being measured rather than something to factor out.
+
+Implementations, from the bottom up:
+
+- naive: a list, scanned, with a new order object per command
+- indexed: price levels in a sorted structure, an id index, objects per command
+- pooled: the same asymptotics with no boxing and no steady state allocation
+- flyweight: fields read in place from the buffer, orders in a flat ladder
+- C++: the same protocol, in a separate process, fed the same log
+
+Every one of them replays the same corpus of scenarios and has to produce identical output. The
+corpus is plain text and the grammar is deliberately simple, so an implementation in any language can
+be held to it.
+
+For measurement, each implementation runs in its own JVM. Two implementations loaded together make
+the call site megamorphic and every number after that is polluted, which is also why they are
+separate modules. The C++ process is fed the log once and times itself internally, so the comparison
+is engine against engine rather than network stack against network stack.
 
 ## Layout
 
 ```
-src/main/java/com/imc/me/    the engine: domain, book, matching, sequencer, registry, event
-src/test/java/com/imc/me/    boundary tests, book tests, the scenario corpus
-src/test/resources/scenarios/  scenario fixtures, .input and .expected pairs
+protocol/         the SBE schema and the generated codecs
+engine-api/       the interface every implementation satisfies
+engine-naive/     a list, scanned
+conformance/      the scenario corpus and the runner, which depends only on engine-api
+benchmarks/       JMH, one implementation per fork
+cpp/              the C++ implementation, built separately
+docs/
 ```
 
-## Build and test
+`conformance` depending only on `engine-api` is deliberate: a fixture physically cannot reach inside
+an implementation, so black box testing is enforced by the compiler rather than by discipline.
+
+## Documentation
+
+- [SCOPE.md](docs/SCOPE.md), where the engine ends and the exchange begins, including what it
+  deliberately does not do
+- [PROTOCOL.md](docs/PROTOCOL.md), the commands and events that cross the boundary, and what they mean
+- [REQUIREMENTS.md](docs/REQUIREMENTS.md), what the engine must do, and how each requirement is shown
+  to hold
+- [PRINCIPLES.md](docs/PRINCIPLES.md), why the code is shaped the way it is. Read this before
+  changing a signature.
+
+## Build
 
 Requires JDK 21 and Maven.
 
 ```
-mvn compile          build the engine
-mvn test             the fast and scenario lanes
-mvn test -Pstress    the randomised lane, empty until the reference model lands
+mvn compile     build everything
+mvn test        unit tests and the conformance corpus
 ```
 
-## Documentation
+Benchmarks do not run under `mvn test` and never should. A wall clock assertion inside a unit suite
+is the flakiest thing available and it contradicts the point of the project.
 
-- [REQUIREMENTS.md](docs/REQUIREMENTS.md), the specification as a flat list. Ids from this file
-  are referenced from javadoc throughout the source.
-- [OOD_PRINCIPLES.md](docs/OOD_PRINCIPLES.md), why the code is shaped the way it is: mutation
-  ownership, the core/edge border, order-type variation, the allocation budget. Read this before
-  changing a signature.
-- [ENGINEERING_GUIDE.md](docs/ENGINEERING_GUIDE.md), the model, the matching algorithm, and the
-  benchmarking and profiling road.
-- [TESTING.md](docs/TESTING.md), what gets proved and how.
-- [SCENARIO_FORMAT.md](docs/SCENARIO_FORMAT.md), the fixture grammar the scenario corpus is written
-  in, which is the contract a second implementation would be checked against.
+## Conventions
 
-## How to contribute
-
-So while this is likely not something anyone else is ever going to contribute to as it is
-intentionally a personal project which I am building for my own personal enjoyment,
-I am still going to document this process for anyone (including myself 100 months from now)
-such that reading through commits doesn't look like a scene from Apocalypse Now.
-
-I like to do something like `(broad term/catagory of whatever this is): what I am actually doing`
-for commit messages. I have not been doing from the first couple of commits as I was still trying
-to ensure that I did not accidentally explode by hippocampus from all of the new financial concepts
-that I was learning. However, that is how you should expect to see the things being committed.
-
-The beauty of this project is that TDD is natural. A ME is deterministic which means invariants
-can be black box tested and so long as they are held, we dgaf what implementation is sitting
-beneath the abstraction. So that is the approach we are taking, tests are defined as invariants
-which we use as guides for what we are actually building.
-
-AI USAGE is something which I do not want in this project apart from documentation (md files),
-quality and design guidance, or as a learning guide for financial topics like "WTAF is a LIMIT IOC.
-The code itself, should absolutely be something I do myself. The entire point of this is for me
-to learn and so AI does not work well as far as implementation in concerned.
-
-That is about it for now - or forever - I have no clue ))
+Commit messages read `(category): what I am actually doing`. Branches are one change each and land
+through a pull request.
