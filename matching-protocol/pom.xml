@@ -1,35 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <parent>
     <groupId>io.github.giovanicaprison</groupId>
     <artifactId>matching-engine</artifactId>
     <version>0.1.0-SNAPSHOT</version>
   </parent>
-
   <artifactId>matching-protocol</artifactId>
-
-  <description>
-    The wire format. The schema is the authority for the layout; the codecs are generated from it.
-  </description>
-
+  <description>The wire format. The schema is the authority for the layout; the codecs are generated from it.</description>
   <dependencies>
     <!-- Generated codecs are flyweights over an Agrona buffer, so this is a runtime dependency. -->
     <dependency>
       <groupId>org.agrona</groupId>
       <artifactId>agrona</artifactId>
     </dependency>
-
     <!-- Runs the generator. Not needed once the codecs exist, hence provided. -->
     <dependency>
       <groupId>uk.co.real-logic</groupId>
       <artifactId>sbe-tool</artifactId>
       <scope>provided</scope>
     </dependency>
-
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -39,7 +29,6 @@
       <artifactId>assertj-core</artifactId>
     </dependency>
   </dependencies>
-
   <build>
     <plugins>
       <plugin>
@@ -73,7 +62,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>

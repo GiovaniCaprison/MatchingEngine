@@ -7,9 +7,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * The codecs are generated, so these do not test SBE. They test the schema: a wrong primitive type, a
- * field in the wrong place or an enum that cannot hold its own values shows up here and nowhere else
- * until an implementation reads a field and gets a plausible wrong number.
+ * The codecs are generated, so these do not test SBE. They test the schema: a wrong primitive type,
+ * a field in the wrong place or an enum that cannot hold its own values shows up here and nowhere
+ * else until an implementation reads a field and gets a plausible wrong number.
  *
  * <p>One command and one event is enough. Every other message is the same shape.
  */
@@ -58,12 +58,7 @@ class SchemaRoundTripTest {
     final OrderExecutedEncoder encoder = new OrderExecutedEncoder();
     encoder.wrapAndApplyHeader(buffer, 0, new MessageHeaderEncoder());
     encoder.frame().instrumentId(7).sequence(500L).causeSequence(9_001L);
-    encoder
-        .executionId(88L)
-        .aggressorOrderId(2L)
-        .restingOrderId(1L)
-        .price(100_250L)
-        .quantity(300L);
+    encoder.executionId(88L).aggressorOrderId(2L).restingOrderId(1L).price(100_250L).quantity(300L);
 
     final MessageHeaderDecoder header = new MessageHeaderDecoder().wrap(buffer, 0);
     final OrderExecutedDecoder decoder = new OrderExecutedDecoder();
