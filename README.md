@@ -38,7 +38,7 @@ Requires JDK 21 and Maven.
 ```
 mvn compile          build the engine
 mvn test             the fast and scenario lanes
-mvn test -Pstress    adds the randomised lane, for CI and pre-merge
+mvn test -Pstress    the randomised lane, empty until the reference model lands
 ```
 
 ## Documentation

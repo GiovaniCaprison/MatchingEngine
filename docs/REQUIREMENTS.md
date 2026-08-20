@@ -7,8 +7,10 @@ gets proved.
 Ids are referenced from javadoc throughout the source. A comment reading `(FR-3.5)` means
 the code below it exists to satisfy that line in this file.
 
-The "proved by" column records the intended mechanism, and `open` is an honest answer where
-nothing proves it yet.
+The "proved by" column records the intended mechanism: a `unit` example, a `scenario` fixture, a
+`property` over random input, a `model` the engine is diffed against, a structural `rule`, the
+`compiler`, a `benchmark`, a `soak` run, the `simulation` that feeds those two, or `conformance`
+against an independent implementation. `open` is an honest answer where nothing proves it yet.
 
 ## FR: functional
 
@@ -67,6 +69,16 @@ nothing proves it yet.
 | NFR-4.1 | Single writer: book mutation is confined to one package | rule |
 | NFR-5.1 | The core engine depends only on itself and the JDK | rule |
 | NFR-6.1 | Internal invariants hold under randomised load | property |
+| NFR-7.1 | A steady-state submit on the core path allocates zero bytes | benchmark |
+| NFR-7.2 | Per-command allocation at the public boundary is measured separately from the core | benchmark |
+| NFR-8.1 | Invariants hold, and latency is reported, with a book of 10^6 resting orders | soak |
+| NFR-8.2 | Book size is stationary under generated flow, with insert and cancel rates balanced | soak |
+| NFR-9.1 | A seeded generator produces an identical command log on every run | simulation |
+| NFR-9.2 | Generated flow is parameterised by arrival, placement, size, type mix and cancel ratio, and every reported result names the parameters it was measured against | simulation |
+| NFR-9.3 | Any generated run can be written out as a scenario fixture and replayed | simulation |
+| NFR-10.1 | The engine agrees with a reference implementation over generated flow | model |
+| NFR-11.1 | Latency is reported as p50, p99, p99.9 and max, at a fixed offered rate, per command type | benchmark |
+| NFR-12.1 | An independent implementation passes the same scenario corpus | conformance |
 
 ## API
 
@@ -99,8 +111,6 @@ Event stream completeness. FR-6.1 says which events are emitted. It does not say
 is sufficient on its own to rebuild the book, which is the property a downstream consumer
 actually depends on and which is invisible in-process when it breaks.
 
-Allocation. OOD-11 sets a budget of zero allocations per steady-state submit. Nothing
-measures it, so it is a design intention rather than a requirement.
-
-Scale. Every number in this file is unqualified. Behaviour at ten resting orders says nothing
-about behaviour at a million, and no requirement names a book size.
+Fairness beyond price and time. Price-time is the only priority rule specified. Pro-rata and
+size-pro-rata are real venue policies, and `Matcher` exists so one can be substituted, but no
+requirement says what either should do.
