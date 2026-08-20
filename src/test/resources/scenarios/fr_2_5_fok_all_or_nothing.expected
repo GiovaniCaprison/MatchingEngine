@@ -1,0 +1,7 @@
+# FR-2.5: #2 is killed without trading. #3 filling in full is the proof #1 survived it.
+ACCEPTED #1 RESTED
+REJECTED #2 FOK_UNFILLABLE
+TRADE seq=4 aggressor=#3 resting=#1 price=100 qty=4
+ACCEPTED #3 FILLED
+BOOK BID empty
+BOOK ASK empty

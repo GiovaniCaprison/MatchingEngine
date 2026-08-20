@@ -1,0 +1,5 @@
+# FR-2.6: a post-only order that would take liquidity is refused, and the resting
+# order it would have hit is untouched. Priced away from the spread, it rests.
+NEW SELL LIMIT 100 5
+NEW BUY  POST 100 5
+NEW BUY  POST 99 5

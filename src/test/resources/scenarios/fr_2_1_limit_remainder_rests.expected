@@ -1,0 +1,6 @@
+# FR-2.1: 3 of 10 filled, and the remaining 7 rests at the order's own price.
+ACCEPTED #1 RESTED
+TRADE seq=3 aggressor=#2 resting=#1 price=100 qty=3
+ACCEPTED #2 RESTED
+BOOK BID 100 qty=7
+BOOK ASK empty

@@ -1,0 +1,5 @@
+# FR-3.2: at one price, the order that arrived first is filled first.
+# Only the resting reference in the trade line can show this; an aggregate cannot.
+NEW SELL LIMIT 100 5
+NEW SELL LIMIT 100 5
+NEW BUY  LIMIT 100 5

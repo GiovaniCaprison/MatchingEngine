@@ -1,0 +1,6 @@
+# FR-2.6: #2 refused, and the ask it would have taken is still resting at the end.
+ACCEPTED #1 RESTED
+REJECTED #2 WOULD_CROSS
+ACCEPTED #3 RESTED
+BOOK BID 99 qty=5
+BOOK ASK 100 qty=5

@@ -1,0 +1,4 @@
+# FR-2.2, FR-2.3: a market order sweeps at any price and its remainder is cancelled.
+NEW SELL LIMIT 100 2
+NEW SELL LIMIT 101 2
+NEW BUY  MARKET - 10

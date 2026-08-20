@@ -1,4 +1,8 @@
-TRADE price=100 qty=5
-TRADE price=101 qty=3
+# FR-3.1: best price first, then outward. The aggressor takes 100 before 101.
+ACCEPTED #1 RESTED
+ACCEPTED #2 RESTED
+TRADE seq=4 aggressor=#3 resting=#1 price=100 qty=5
+TRADE seq=5 aggressor=#3 resting=#2 price=101 qty=3
+ACCEPTED #3 FILLED
 BOOK BID empty
 BOOK ASK 101 qty=2

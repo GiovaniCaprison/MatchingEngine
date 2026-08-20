@@ -1,0 +1,6 @@
+# FR-2.4: took the 3 that were there, cancelled the other 7 rather than resting it.
+ACCEPTED #1 RESTED
+TRADE seq=3 aggressor=#2 resting=#1 price=100 qty=3
+ACCEPTED #2 REMAINDER_CANCELLED
+BOOK BID empty
+BOOK ASK empty

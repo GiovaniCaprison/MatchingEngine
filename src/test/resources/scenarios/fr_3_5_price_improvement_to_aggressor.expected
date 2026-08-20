@@ -1,0 +1,6 @@
+# FR-3.5: the trade prints at 100, the resting price, not the aggressor's 105 limit.
+ACCEPTED #1 RESTED
+TRADE seq=3 aggressor=#2 resting=#1 price=100 qty=5
+ACCEPTED #2 FILLED
+BOOK BID empty
+BOOK ASK empty
