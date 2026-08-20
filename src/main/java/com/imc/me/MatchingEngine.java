@@ -24,6 +24,7 @@ import com.imc.me.event.sink.EngineListener;
 import com.imc.me.event.sink.TradeEventSink;
 import com.imc.me.matching.Matcher;
 import com.imc.me.matching.PriceTimeMatcher;
+import com.imc.me.matching.TradeSink;
 import com.imc.me.registry.OrderRegistry;
 import com.imc.me.sequencer.Sequencer;
 import com.imc.me.util.Prices;
@@ -70,22 +71,63 @@ public final class MatchingEngine {
   private EngineListener[] listeners = new EngineListener[0];
 
   public MatchingEngine(final Instrument instrument) {
-    this(instrument, new PriceTimeMatcher());
+    this(instrument, new TreeMapOrderBook(new PriceTimeMatcher()));
   }
 
   /**
-   * Takes the matching strategy rather than hardwiring it.
+   * Takes the matching strategy, with the default book behind it.
    *
-   * <p>This is the substitution that justifies {@link Matcher} existing at all (OOD-17). Price-time
-   * versus pro-rata is a real venue-level variation, and the reference {@code TreeMapOrderBook}
-   * will eventually be differential-tested against a faster book using the same matcher. It also
-   * means the boundary's own behaviour, meaning validation, identity, the registry and event
-   * fan-out, can be exercised without a working walk.
+   * <p>Price-time versus pro-rata is a real venue-level variation, which is what justifies {@link
+   * Matcher} existing at all (OOD-17).
    */
   public MatchingEngine(final Instrument instrument, final Matcher matcher) {
+    this(instrument, new TreeMapOrderBook(matcher));
+  }
+
+  /**
+   * Takes the book itself, which is the substitution everything else about this project rests on.
+   *
+   * <p>Implementations of {@link OrderBook} are meant to be compared: a naive one that is obviously
+   * correct, this one, and eventually a flat ladder (OOD-18). They are only comparable if the same
+   * corpus and the same correctness suite run against every one of them and produce identical
+   * output, which is why the engine rather than the book owns validation, identity and sequencing.
+   * A book implements the data structure and nothing else.
+   */
+  public MatchingEngine(final Instrument instrument, final OrderBook book) {
     this.instrument = instrument;
     this.sequencer = new Sequencer();
-    this.book = new TreeMapOrderBook(matcher, sequencer);
+    this.book = book;
+  }
+
+  /**
+   * Turns the book's executions into sequenced events.
+   *
+   * <p>This is the seam that keeps both the matching algorithm and the book ignorant of sequencing.
+   * They report that two orders executed; the engine decides where that sits in the total order
+   * (OOD-13). Doing it here rather than in each book is what stops two implementations disagreeing
+   * about numbering, which would break a comparison for a reason that has nothing to do with
+   * matching.
+   *
+   * <p>One instance, retargeted per command, so the write path does not allocate a sink per order
+   * (OOD-11). Safe because there is one writer (OOD-2) and its useful lifetime is a single
+   * synchronous call.
+   */
+  private final class SequencingTradeSink implements TradeSink {
+    private TradeEventSink target;
+
+    @Override
+    public void onTrade(
+        final long aggressorId, final long restingId, final long price, final long qty) {
+      target.onTrade(sequencer.next(), aggressorId, restingId, price, qty);
+    }
+  }
+
+  private final SequencingTradeSink stamper = new SequencingTradeSink();
+
+  /** Points the stamper at this command's consumer and hands it to the book. */
+  private TradeSink stampingInto(final TradeEventSink sink) {
+    stamper.target = sink;
+    return stamper;
   }
 
   /** Registers a consumer of the outbound event stream (API-7.1). */
@@ -126,7 +168,7 @@ public final class MatchingEngine {
     registry.accepted(order);
 
     final CollectingTradeSink fills = new CollectingTradeSink();
-    final SubmitOutcome outcome = book.submit(order, fanOutTo(fills));
+    final SubmitOutcome outcome = book.submit(order, stampingInto(fanOutTo(fills)));
 
     return switch (outcome) {
       case KILLED -> reject(command.clientOrderId(), orderId, RejectReason.FOK_UNFILLABLE);
@@ -160,7 +202,8 @@ public final class MatchingEngine {
     if (newQty <= 0) return AmendOutcome.NOT_FOUND;
 
     final CollectingTradeSink fills = new CollectingTradeSink();
-    final AmendOutcome outcome = book.amend(orderId, newQty, newPrice, fanOutTo(fills));
+    final AmendOutcome outcome =
+        book.amend(orderId, newQty, newPrice, stampingInto(fanOutTo(fills)));
 
     if (outcome == AmendOutcome.FILLED_ON_AMEND
         || outcome == AmendOutcome.REMAINDER_CANCELLED_ON_AMEND) {

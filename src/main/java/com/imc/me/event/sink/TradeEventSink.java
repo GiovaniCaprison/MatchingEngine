@@ -4,12 +4,14 @@ package com.imc.me.event.sink;
  * Where the book puts sequenced trade events, which is the engine's outbound stream.
  *
  * <p>Separate from {@link com.imc.me.matching.TradeSink} because they carry different things. The
- * matcher reports executions: these two orders traded, this much, at this price. The book turns
- * those into events by stamping each one with its position in the total order (OOD-13), and that
- * stamp is what makes the stream replayable and auditable.
+ * matcher and the book report executions: these two orders traded, this much, at this price. The
+ * engine turns those into events by stamping each one with its position in the total order
+ * (OOD-13), and that stamp is what makes the stream replayable and auditable.
  *
- * <p>The book owns the sequencer because the book is the single writer. Assigning the number at a
- * consumer instead would let two consumers of the same run disagree about the order of events.
+ * <p>The engine stamps rather than the book, so that swapping one book implementation for another
+ * cannot change the numbering. Two implementations of the same behaviour have to produce identical
+ * output for a comparison between them to mean anything, and sequencing is the one part of that
+ * output a data structure has no business deciding.
  *
  * <p>Still primitives, so a publishing implementation allocates nothing (OOD-9).
  */

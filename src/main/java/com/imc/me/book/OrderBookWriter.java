@@ -3,7 +3,7 @@ package com.imc.me.book;
 import com.imc.me.event.result.AmendOutcome;
 import com.imc.me.event.result.CancelResult;
 import com.imc.me.event.result.SubmitOutcome;
-import com.imc.me.event.sink.TradeEventSink;
+import com.imc.me.matching.TradeSink;
 
 /**
  * The mutating half of a book. Exactly one thread ever holds one of these (OOD-2).
@@ -22,7 +22,7 @@ public interface OrderBookWriter {
    * decides whether to collect them for a client or publish them and allocate nothing. What comes
    * back is the terminal state, as an enum constant.
    */
-  SubmitOutcome submit(final Order order, final TradeEventSink sink);
+  SubmitOutcome submit(final Order order, final TradeSink sink);
 
   /**
    * Amends a resting order to a new quantity and price.
@@ -32,7 +32,7 @@ public interface OrderBookWriter {
    * spread and execute, so an amend is not always a book-only operation.
    */
   AmendOutcome amend(
-      final long orderId, final long newQty, final long newPrice, final TradeEventSink sink);
+      final long orderId, final long newQty, final long newPrice, final TradeSink sink);
 
   CancelResult cancel(final long orderId);
 }
