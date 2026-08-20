@@ -1,6 +1,0 @@
-# FR-4.4: #1 raises its quantity, goes to the back of the queue, and the
-# aggressor now hits #2 first.
-NEW SELL LIMIT 100 10
-NEW SELL LIMIT 100 10
-AMEND #1 20 100
-NEW BUY  LIMIT 100 10

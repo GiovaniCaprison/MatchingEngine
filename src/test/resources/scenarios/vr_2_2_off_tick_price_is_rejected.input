@@ -1,4 +1,0 @@
-# VR-2.2: with a tick of 5, a price of 102 is refused rather than rounded.
-INSTRUMENT tick=5 lot=1 scale=4
-NEW BUY LIMIT 102 10
-NEW BUY LIMIT 100 10

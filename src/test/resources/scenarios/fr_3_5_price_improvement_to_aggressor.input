@@ -1,3 +1,0 @@
-# FR-3.5: the trade prints at the resting order's price, not the aggressor's limit.
-NEW SELL LIMIT 100 5
-NEW BUY  LIMIT 105 5

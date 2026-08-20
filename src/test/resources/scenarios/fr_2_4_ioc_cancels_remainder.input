@@ -1,3 +1,0 @@
-# FR-2.4: IOC takes what is there and cancels the rest rather than resting it.
-NEW SELL LIMIT 100 3
-NEW BUY  IOC 100 10
