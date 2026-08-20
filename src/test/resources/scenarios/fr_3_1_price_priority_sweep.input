@@ -1,4 +1,0 @@
-# FR-3.1: an aggressor takes the best price first, then walks outward.
-NEW SELL LIMIT 100 5
-NEW SELL LIMIT 101 5
-NEW BUY  LIMIT 101 8

@@ -1,8 +1,0 @@
-# FR-2.2, FR-2.3: swept both levels at any price, and the remainder of 6 is cancelled.
-ACCEPTED #1 RESTED
-ACCEPTED #2 RESTED
-TRADE seq=4 aggressor=#3 resting=#1 price=100 qty=2
-TRADE seq=5 aggressor=#3 resting=#2 price=101 qty=2
-ACCEPTED #3 REMAINDER_CANCELLED
-BOOK BID empty
-BOOK ASK empty

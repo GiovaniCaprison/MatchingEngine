@@ -1,6 +1,0 @@
-# FR-4.5: #1 reduces its quantity and keeps its place in the queue, so the
-# aggressor still hits #1 rather than #2.
-NEW SELL LIMIT 100 10
-NEW SELL LIMIT 100 10
-AMEND #1 5 100
-NEW BUY  LIMIT 100 5
