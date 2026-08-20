@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.imc</groupId>
+  <groupId>io.github.giovanicaprison</groupId>
   <artifactId>matching-engine</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -12,8 +12,68 @@
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <sbe.version>1.34.1</sbe.version>
+    <agrona.version>2.0.0</agrona.version>
+    <junit.version>5.11.3</junit.version>
+    <assertj.version>3.26.3</assertj.version>
+
+    <exec.plugin.version>3.5.0</exec.plugin.version>
+    <buildhelper.plugin.version>3.6.0</buildhelper.plugin.version>
+    <surefire.version>3.5.1</surefire.version>
+
+    <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED</jvm.access.flags>
   </properties>
 
-  <!-- Modules land one at a time: protocol, engine-api, engine-naive, conformance, benchmarks. -->
-  <modules/>
+  <!-- Modules land one at a time: engine-api, engine-naive, conformance, benchmarks. -->
+  <modules>
+    <module>matching-protocol</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.agrona</groupId>
+        <artifactId>agrona</artifactId>
+        <version>${agrona.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>uk.co.real-logic</groupId>
+        <artifactId>sbe-tool</artifactId>
+        <version>${sbe.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>${assertj.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefire.version}</version>
+          <configuration>
+            <!--
+              Agrona reaches jdk.internal.misc.Unsafe for buffer access, which the module system
+              does not export by default. Declared once here so every module inherits it, and
+              benchmarks will need the same flag when they arrive.
+            -->
+            <argLine>${jvm.access.flags}</argLine>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 </project>
