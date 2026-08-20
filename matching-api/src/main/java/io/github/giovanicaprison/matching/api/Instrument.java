@@ -19,12 +19,7 @@ package io.github.giovanicaprison.matching.api;
  * @param priceScale implied decimal places in every price
  */
 public record Instrument(
-    int instrumentId,
-    long tickSize,
-    long lotSize,
-    long minPrice,
-    long maxPrice,
-    int priceScale) {
+    int instrumentId, long tickSize, long lotSize, long minPrice, long maxPrice, int priceScale) {
 
   /**
    * Checked here because this is startup configuration rather than the hot path, and a nonsensical

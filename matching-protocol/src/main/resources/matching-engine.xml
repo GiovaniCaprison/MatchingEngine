@@ -1,67 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  The engine's wire format. Commands in, events out.
+<sbe:messageSchema byteOrder="littleEndian" description="Matching engine canonical commands and events" id="1" package="io.github.giovanicaprison.matching.protocol" semanticVersion="0.1" version="0" xmlns:sbe="http://fixprotocol.io/2016/sbe">
+  <!--
+    The engine's wire format. Commands in, events out.
 
-  This is an internal canonical format, not a client facing protocol. A client protocol carries
-  hundreds of fields, optional groups and session plumbing; a canonical command is about ten fields
-  wide. See docs/PROTOCOL.md for what the messages mean and docs/SCOPE.md for why the engine sees
-  this rather than a session protocol.
+    This is an internal canonical format, not a client facing protocol. A client protocol carries
+    hundreds of fields, optional groups and session plumbing; a canonical command is about ten fields
+    wide. See docs/PROTOCOL.md for what the messages mean and docs/SCOPE.md for why the engine sees
+    this rather than a session protocol.
 
-  Adding a field or a message means a version bump, not a new schema. Existing decoders keep working,
-  which is what leaves room for session state and auctions without a format change.
--->
-<sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
-                   package="io.github.giovanicaprison.matching.protocol"
-                   id="1"
-                   version="0"
-                   semanticVersion="0.1"
-                   description="Matching engine canonical commands and events"
-                   byteOrder="littleEndian">
-
+    Adding a field or a message means a version bump, not a new schema. Existing decoders keep working,
+    which is what leaves room for session state and auctions without a format change.
+  -->
   <types>
-    <composite name="messageHeader" description="Template and schema identification">
-      <type name="blockLength" primitiveType="uint16"/>
-      <type name="templateId" primitiveType="uint16"/>
-      <type name="schemaId" primitiveType="uint16"/>
-      <type name="version" primitiveType="uint16"/>
+    <composite description="Template and schema identification" name="messageHeader">
+      <type name="blockLength" primitiveType="uint16"></type>
+      <type name="templateId" primitiveType="uint16"></type>
+      <type name="schemaId" primitiveType="uint16"></type>
+      <type name="version" primitiveType="uint16"></type>
     </composite>
-
-    <composite name="CommandFrame" description="Carried by every command">
-      <type name="instrumentId" primitiveType="uint32"/>
+    <composite description="Carried by every command" name="CommandFrame">
+      <type name="instrumentId" primitiveType="uint32"></type>
       <!-- Assigned upstream. The engine consumes this order rather than imposing it. -->
-      <type name="sequence" primitiveType="uint64"/>
+      <type name="sequence" primitiveType="uint64"></type>
     </composite>
-
-    <composite name="EventFrame" description="Carried by every event">
-      <type name="instrumentId" primitiveType="uint32"/>
+    <composite description="Carried by every event" name="EventFrame">
+      <type name="instrumentId" primitiveType="uint32"></type>
       <!-- The engine's own output numbering. -->
-      <type name="sequence" primitiveType="uint64"/>
+      <type name="sequence" primitiveType="uint64"></type>
       <!-- The command that caused this event, so causality is in the data. -->
-      <type name="causeSequence" primitiveType="uint64"/>
+      <type name="causeSequence" primitiveType="uint64"></type>
     </composite>
-
-    <enum name="Side" encodingType="uint8">
+    <enum encodingType="uint8" name="Side">
       <validValue name="BUY">0</validValue>
       <validValue name="SELL">1</validValue>
     </enum>
-
-    <enum name="PricingInstruction" encodingType="uint8">
+    <enum encodingType="uint8" name="PricingInstruction">
       <validValue name="LIMIT">0</validValue>
       <validValue name="MARKET">1</validValue>
     </enum>
-
-    <enum name="TimeInForce" encodingType="uint8">
+    <enum encodingType="uint8" name="TimeInForce">
       <validValue name="GOOD_TILL_CANCEL">0</validValue>
       <validValue name="DAY">1</validValue>
       <validValue name="IMMEDIATE_OR_CANCEL">2</validValue>
       <validValue name="FILL_OR_KILL">3</validValue>
     </enum>
-
-    <set name="OrderFlags" encodingType="uint8">
+    <set encodingType="uint8" name="OrderFlags">
       <choice name="postOnly">0</choice>
     </set>
-
-    <enum name="RejectReason" encodingType="uint8">
+    <enum encodingType="uint8" name="RejectReason">
       <validValue name="NON_POSITIVE_QUANTITY">0</validValue>
       <validValue name="LOT_VIOLATION">1</validValue>
       <validValue name="NON_POSITIVE_PRICE">2</validValue>
@@ -72,86 +58,75 @@
       <validValue name="FILL_OR_KILL_UNFILLABLE">7</validValue>
       <validValue name="UNKNOWN_ORDER">8</validValue>
     </enum>
-
-    <enum name="RemoveReason" encodingType="uint8">
+    <enum encodingType="uint8" name="RemoveReason">
       <validValue name="CANCELLED">0</validValue>
       <validValue name="REPLACED">1</validValue>
       <validValue name="IMMEDIATE_OR_CANCEL_REMAINDER">2</validValue>
       <validValue name="FILL_OR_KILL_KILLED">3</validValue>
     </enum>
   </types>
-
-  <sbe:message name="NewOrder" id="1" description="Place an order">
-    <field name="frame" id="1" type="CommandFrame"/>
-    <field name="clientOrderId" id="2" type="uint64"/>
-    <field name="participantId" id="3" type="uint32"/>
-    <field name="side" id="4" type="Side"/>
-    <field name="pricing" id="5" type="PricingInstruction"/>
-    <field name="timeInForce" id="6" type="TimeInForce"/>
-    <field name="flags" id="7" type="OrderFlags"/>
+  <sbe:message description="Place an order" id="1" name="NewOrder">
+    <field id="1" name="frame" type="CommandFrame"></field>
+    <field id="2" name="clientOrderId" type="uint64"></field>
+    <field id="3" name="participantId" type="uint32"></field>
+    <field id="4" name="side" type="Side"></field>
+    <field id="5" name="pricing" type="PricingInstruction"></field>
+    <field id="6" name="timeInForce" type="TimeInForce"></field>
+    <field id="7" name="flags" type="OrderFlags"></field>
     <!-- Scaled integer. Ignored when pricing is MARKET. -->
-    <field name="price" id="8" type="int64"/>
-    <field name="quantity" id="9" type="int64"/>
+    <field id="8" name="price" type="int64"></field>
+    <field id="9" name="quantity" type="int64"></field>
   </sbe:message>
-
-  <sbe:message name="CancelOrder" id="2" description="Cancel a resting order">
-    <field name="frame" id="1" type="CommandFrame"/>
-    <field name="clientOrderId" id="2" type="uint64"/>
-    <field name="participantId" id="3" type="uint32"/>
-    <field name="orderId" id="4" type="uint64"/>
+  <sbe:message description="Cancel a resting order" id="2" name="CancelOrder">
+    <field id="1" name="frame" type="CommandFrame"></field>
+    <field id="2" name="clientOrderId" type="uint64"></field>
+    <field id="3" name="participantId" type="uint32"></field>
+    <field id="4" name="orderId" type="uint64"></field>
   </sbe:message>
-
-  <sbe:message name="ReplaceOrder" id="3" description="Replace a resting order, carrying full intent">
-    <field name="frame" id="1" type="CommandFrame"/>
-    <field name="clientOrderId" id="2" type="uint64"/>
-    <field name="participantId" id="3" type="uint32"/>
-    <field name="orderId" id="4" type="uint64"/>
-    <field name="quantity" id="5" type="int64"/>
-    <field name="price" id="6" type="int64"/>
+  <sbe:message description="Replace a resting order, carrying full intent" id="3" name="ReplaceOrder">
+    <field id="1" name="frame" type="CommandFrame"></field>
+    <field id="2" name="clientOrderId" type="uint64"></field>
+    <field id="3" name="participantId" type="uint32"></field>
+    <field id="4" name="orderId" type="uint64"></field>
+    <field id="5" name="quantity" type="int64"></field>
+    <field id="6" name="price" type="int64"></field>
   </sbe:message>
-
-  <sbe:message name="OrderAccepted" id="10" description="Admitted, with its engine order id">
-    <field name="frame" id="1" type="EventFrame"/>
-    <field name="orderId" id="2" type="uint64"/>
-    <field name="clientOrderId" id="3" type="uint64"/>
-    <field name="participantId" id="4" type="uint32"/>
+  <sbe:message description="Admitted, with its engine order id" id="10" name="OrderAccepted">
+    <field id="1" name="frame" type="EventFrame"></field>
+    <field id="2" name="orderId" type="uint64"></field>
+    <field id="3" name="clientOrderId" type="uint64"></field>
+    <field id="4" name="participantId" type="uint32"></field>
   </sbe:message>
-
-  <sbe:message name="OrderRejected" id="11" description="Refused, and no state changed">
-    <field name="frame" id="1" type="EventFrame"/>
-    <field name="clientOrderId" id="2" type="uint64"/>
-    <field name="participantId" id="3" type="uint32"/>
-    <field name="reason" id="4" type="RejectReason"/>
+  <sbe:message description="Refused, and no state changed" id="11" name="OrderRejected">
+    <field id="1" name="frame" type="EventFrame"></field>
+    <field id="2" name="clientOrderId" type="uint64"></field>
+    <field id="3" name="participantId" type="uint32"></field>
+    <field id="4" name="reason" type="RejectReason"></field>
   </sbe:message>
-
-  <sbe:message name="OrderRested" id="12" description="Entered the book: the feed's add order">
-    <field name="frame" id="1" type="EventFrame"/>
-    <field name="orderId" id="2" type="uint64"/>
-    <field name="side" id="3" type="Side"/>
-    <field name="price" id="4" type="int64"/>
-    <field name="quantity" id="5" type="int64"/>
+  <sbe:message description="Entered the book: the feed's add order" id="12" name="OrderRested">
+    <field id="1" name="frame" type="EventFrame"></field>
+    <field id="2" name="orderId" type="uint64"></field>
+    <field id="3" name="side" type="Side"></field>
+    <field id="4" name="price" type="int64"></field>
+    <field id="5" name="quantity" type="int64"></field>
   </sbe:message>
-
-  <sbe:message name="OrderExecuted" id="13" description="One execution, at the resting order's price">
-    <field name="frame" id="1" type="EventFrame"/>
-    <field name="executionId" id="2" type="uint64"/>
-    <field name="aggressorOrderId" id="3" type="uint64"/>
-    <field name="restingOrderId" id="4" type="uint64"/>
-    <field name="price" id="5" type="int64"/>
-    <field name="quantity" id="6" type="int64"/>
+  <sbe:message description="One execution, at the resting order's price" id="13" name="OrderExecuted">
+    <field id="1" name="frame" type="EventFrame"></field>
+    <field id="2" name="executionId" type="uint64"></field>
+    <field id="3" name="aggressorOrderId" type="uint64"></field>
+    <field id="4" name="restingOrderId" type="uint64"></field>
+    <field id="5" name="price" type="int64"></field>
+    <field id="6" name="quantity" type="int64"></field>
   </sbe:message>
-
-  <sbe:message name="OrderReduced" id="14" description="New resting quantity, queue position kept">
-    <field name="frame" id="1" type="EventFrame"/>
-    <field name="orderId" id="2" type="uint64"/>
-    <field name="quantity" id="3" type="int64"/>
+  <sbe:message description="New resting quantity, queue position kept" id="14" name="OrderReduced">
+    <field id="1" name="frame" type="EventFrame"></field>
+    <field id="2" name="orderId" type="uint64"></field>
+    <field id="3" name="quantity" type="int64"></field>
   </sbe:message>
-
-  <sbe:message name="OrderRemoved" id="15" description="Left the book, with the quantity removed">
-    <field name="frame" id="1" type="EventFrame"/>
-    <field name="orderId" id="2" type="uint64"/>
-    <field name="quantity" id="3" type="int64"/>
-    <field name="reason" id="4" type="RemoveReason"/>
+  <sbe:message description="Left the book, with the quantity removed" id="15" name="OrderRemoved">
+    <field id="1" name="frame" type="EventFrame"></field>
+    <field id="2" name="orderId" type="uint64"></field>
+    <field id="3" name="quantity" type="int64"></field>
+    <field id="4" name="reason" type="RemoveReason"></field>
   </sbe:message>
-
 </sbe:messageSchema>
