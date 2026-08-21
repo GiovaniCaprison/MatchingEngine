@@ -91,7 +91,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 
 | Id | Requirement | Mechanism |
 |---|---|---|
-| FR-8.1 | Every event carries its own output sequence and the input sequence that caused it | unit |
+| FR-8.1 | The events one command produced are identifiable as a group from the stream alone | unit |
 | FR-8.2 | The output stream alone is sufficient to reconstruct the book at any point in it | corpus |
 | FR-8.3 | An order entering the book is reported with side, price and displayed quantity | unit |
 | FR-8.4 | An order leaving the book is reported with the quantity removed and the reason | unit |

@@ -176,7 +176,24 @@ so the cost is comprehension until a third arrives and P-7's wall applies.
 
 A new interface needs a named second implementation. Without one, write the class.
 
-## P-16: Representation is provisional
+## P-16: No cost without a venue that pays it
+
+A field, a check or an indirection on the hot path has to exist in a real engine or earn its place
+against measurement. Convenience for the study is not a reason.
+
+The engine is both a research subject and a component intended for production, and those pull the
+same way more often than not. Where they conflict the production shape wins, because a measurement
+taken on something nobody would ship measures nothing anybody needs.
+
+Two decisions this has already settled. Events carry a transaction boundary flag rather than a copy
+of the input sequence, which is what a real feed does and saves eight bytes and a store per event.
+And feature cost is measured by varying the input or by writing a second honest engine, never by a
+runtime flag, because a disabled feature behind a branch still occupies the method, the object layout
+and the inlining budget.
+
+Where a compromise is genuinely unavoidable, it is recorded here with what it costs.
+
+## P-17: Representation is provisional
 
 Today's objects, references and sorted maps are one choice with known successors: flat arrays indexed
 by integer, orders in a slab, fields read in place out of a buffer. Write code so that migration is
@@ -193,7 +210,7 @@ Here the successors are scheduled work, and comparing them is the study.
 ## Applying this
 
 When adding code, in order: which side of the border (P-3)? Who owns the invariant this touches
-(P-4)? What does it allocate (P-10)? Is the variation data or subtype (P-7)? Can the compiler enforce
-the constraint instead of a comment?
+(P-4)? What does it allocate (P-10)? Does a real engine pay this cost (P-16)? Is the variation data
+or subtype (P-7)? Can the compiler enforce the constraint instead of a comment?
 
 When a principle is violated, either fix the code or change this document and say why.

@@ -18,8 +18,11 @@ gateway's decode is expensive and the engine's is nearly free.
 Every command carries the sequence number assigned upstream. The engine never generates an input
 sequence of its own.
 
-Every event carries two numbers: its own output sequence, and the input sequence of the command that
-caused it, so causality is readable from the stream alone.
+Every event carries its own output sequence and a flags byte. One flag marks the last event a command
+produced, so a consumer groups events by the transaction that caused them without carrying the
+upstream sequence on every message. This follows CME's match event indicator; a per-event copy of the
+input sequence would cost eight bytes and a store on every event to carry information no real feed
+carries.
 
 ## Commands
 
