@@ -2,10 +2,9 @@
 
 A limit order book matching engine, and a study of how much its implementation matters.
 
-The engine is scoped to what a real matching engine owns, so it can later be a component of a
-larger exchange. Anything belonging to a gateway, a risk engine or a market data publisher is out
-of scope. The book holds resting limit orders; market, immediate-or-cancel and fill-or-kill orders
-cross it without joining it.
+The engine is scoped to what a real matching engine owns, so it can later be a component of a larger
+exchange. Where that boundary falls, and what sits either side of it, is in
+[SCOPE.md](docs/SCOPE.md).
 
 The study measures successive implementations of that engine on identical input: what price level
 indexing buys over a linear scan, what removing allocation and boxing buys on top of that, what a
