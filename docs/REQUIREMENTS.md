@@ -7,9 +7,9 @@ correctness and performance are established.
 Ids are cited from source comments. A comment reading `(FR-3.5)` means the code below it exists to
 satisfy that line.
 
-The mechanism column names how a requirement is shown to hold: a `unit` example, a `corpus` fixture
-replayed and diffed, a `property` over generated input, a `benchmark`, the `compiler`, or `review`
-where nothing else applies. Every `unit` row must be named by a test, and the build fails otherwise.
+The mechanism column names how a requirement is shown to hold: `unit`, `corpus`, `property`,
+`differential`, `benchmark`, `compiler` or `review`. `TESTING.md` defines each and what it can catch;
+`METHODOLOGY.md` covers `benchmark`.
 
 ## FR-1: configuration and order entry
 
@@ -151,7 +151,7 @@ where nothing else applies. Every `unit` row must be named by a test, and the bu
 
 | Id | Requirement | Mechanism |
 |---|---|---|
-| NFR-5.1 | Every implementation produces byte identical output for identical input | corpus |
+| NFR-5.1 | Every implementation produces byte identical output for identical input | corpus, differential |
 | NFR-5.2 | Every implementation passes the same corpus and the same unit suite | corpus, unit |
 | NFR-5.3 | An implementation in another language passes the same corpus | corpus |
 
