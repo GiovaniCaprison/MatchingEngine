@@ -25,8 +25,9 @@ Exactly one thread mutates a book. No locks, no concurrent collections, no atomi
 comes from partitioning instruments across engines.
 
 Single threaded is the faster option here. A lock free single writer keeps the book in one core's
-cache, needs no cache line ping-pong, no fences on the hot path and no retry loops. The LMAX Disruptor result is the canonical demonstration. The second
-payoff is that P-1 is free: one writer applying a fixed sequence produces one output sequence.
+cache, needs no cache line ping-pong, no fences on the hot path and no retry loops. The LMAX
+Disruptor result is the canonical demonstration. The second payoff is that P-1 is free: one writer
+applying a fixed sequence produces one output sequence.
 
 ## P-3: The protocol is the border
 
@@ -190,9 +191,9 @@ The engine is both a research subject and a component intended for production, a
 same way more often than not. Where they conflict the production shape wins, because a measurement
 taken on something nobody would ship measures nothing anybody needs.
 
-Two decisions this has already settled. Events carry a transaction boundary flag rather than a copy
-of the input sequence, which is what a real feed does and saves eight bytes and a store per event.
-And feature cost is measured by varying the input or by writing a second honest engine, never by a
+Two decisions this has already settled. An event carries its own sequence and nothing about its
+cause, which is how ITCH works and saves eight bytes and a store on every event published. And
+feature cost is measured by varying the input or by writing a second honest engine, never by a
 runtime flag, because a disabled feature behind a branch still occupies the method, the object layout
 and the inlining budget.
 

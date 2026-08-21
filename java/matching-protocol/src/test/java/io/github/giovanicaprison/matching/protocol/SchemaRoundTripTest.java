@@ -30,7 +30,11 @@ class SchemaRoundTripTest {
         .pricing(PricingInstruction.LIMIT)
         .timeInForce(TimeInForce.IMMEDIATE_OR_CANCEL)
         .price(100_250L)
-        .quantity(500L);
+        .quantity(500L)
+        .minQuantity(100L)
+        .displayQuantity(50L)
+        .triggerPrice(100_500L)
+        .smpId(77L);
     encoder.flags().postOnly(true);
 
     final MessageHeaderDecoder header = new MessageHeaderDecoder().wrap(buffer, 0);
@@ -50,22 +54,26 @@ class SchemaRoundTripTest {
     assertThat(decoder.flags().postOnly()).isTrue();
     assertThat(decoder.price()).isEqualTo(100_250L);
     assertThat(decoder.quantity()).isEqualTo(500L);
+    assertThat(decoder.minQuantity()).isEqualTo(100L);
+    assertThat(decoder.displayQuantity()).isEqualTo(50L);
+    assertThat(decoder.triggerPrice()).isEqualTo(100_500L);
+    assertThat(decoder.smpId()).isEqualTo(77L);
   }
 
   @Test
-  @DisplayName("an execution carries its cause as well as its own sequence")
+  @DisplayName("an execution carries its own sequence and nothing about its cause")
   void execution_round_trips() {
     final OrderExecutedEncoder encoder = new OrderExecutedEncoder();
     encoder.wrapAndApplyHeader(buffer, 0, new MessageHeaderEncoder());
-    encoder.frame().instrumentId(7).sequence(500L).causeSequence(9_001L);
+    encoder.frame().instrumentId(7).sequence(500L);
     encoder.executionId(88L).aggressorOrderId(2L).restingOrderId(1L).price(100_250L).quantity(300L);
 
     final MessageHeaderDecoder header = new MessageHeaderDecoder().wrap(buffer, 0);
     final OrderExecutedDecoder decoder = new OrderExecutedDecoder();
     decoder.wrap(buffer, header.encodedLength(), header.blockLength(), header.version());
 
+    assertThat(decoder.frame().instrumentId()).isEqualTo(7L);
     assertThat(decoder.frame().sequence()).isEqualTo(500L);
-    assertThat(decoder.frame().causeSequence()).isEqualTo(9_001L);
     assertThat(decoder.executionId()).isEqualTo(88L);
     assertThat(decoder.aggressorOrderId()).isEqualTo(2L);
     assertThat(decoder.restingOrderId()).isEqualTo(1L);
