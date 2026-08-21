@@ -6,9 +6,9 @@ The engine is scoped to what a real matching engine owns, so it can later be a c
 exchange. Where that boundary falls, and what sits either side of it, is in
 [SCOPE.md](docs/SCOPE.md).
 
-The study measures successive implementations of that engine on identical input: what price level
-indexing buys over a linear scan, what removing allocation and boxing buys on top of that, what a
-cache friendly layout buys again, and where C++ overtakes a tuned JVM.
+The study crosses the implementations below against how much of the engine's feature set the input
+actually uses, and asks whether a structural advantage survives a production one. The questions, the
+design and what is not claimed are in [METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## Implementations
 
@@ -44,6 +44,8 @@ black box testing holds without relying on discipline.
 - [REQUIREMENTS.md](docs/REQUIREMENTS.md), what the engine must do, and how each line is shown to hold
 - [PRINCIPLES.md](docs/PRINCIPLES.md), why the code is shaped as it is. Read before changing a
   signature.
+- [TESTING.md](docs/TESTING.md), the correctness mechanisms and the corpus format
+- [METHODOLOGY.md](docs/METHODOLOGY.md), how performance is measured and recorded
 
 ## Build
 
