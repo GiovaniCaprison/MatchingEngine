@@ -3,31 +3,29 @@
 Why the code is shaped the way it is. These are the decisions that are cheap to make by accident and
 expensive to reverse, so they are written once and referenced from source by id.
 
-A note on the phrase object oriented design. Much of what passes for it is harmful on a latency
-critical path. Virtual dispatch defeats inlining, encapsulation by getter defeats the cache, and
-layers of abstraction stop the JIT seeing the whole computation. What survives is the part that was
-always the valuable part: clear ownership of state, narrow interfaces, and making illegal states
-unrepresentable. Where those ideas conflict with the hardware, the hardware wins inside the book and
-they win at the edges. P-3 says where the border is, so the choice is never made case by case.
+Several of these run against conventional object oriented advice. Virtual dispatch defeats inlining,
+encapsulation by getter defeats the cache, and layers of abstraction stop the JIT seeing the whole
+computation. What holds up is clear ownership of state, narrow interfaces, and making illegal states
+unrepresentable. Where those conflict with the hardware, the hardware wins inside the book and they
+win at the edges. P-3 sets the border.
 
 ## P-1: The engine is a function of its input log
 
 Given the same ordered commands, the engine produces the same events, byte for byte. No clock, no
 randomness, no dependence on wall time or thread interleaving.
 
-Everything valuable here follows from that one property. Replay reproduces a book exactly, which is
-how recovery works without the engine implementing recovery. A failure is reproducible from its
-input rather than from a description of it. Two implementations can be compared, because identical
-output is checkable. And a rewrite in another language is verifiable rather than hoped for.
+Four things follow. Replay reproduces a book exactly, which is how recovery works without the engine
+implementing it. A failure is reproducible from its input log. Two implementations can be compared,
+because identical output is checkable. And an implementation in another language can be held to the
+same logs.
 
 ## P-2: One writer per book
 
 Exactly one thread mutates a book. No locks, no concurrent collections, no atomics. Concurrency
 comes from partitioning instruments across engines.
 
-Single threaded is the faster option here, which is counter-intuitive until the reason lands. A lock
-free single writer keeps the book in one core's cache, needs no cache line ping-pong, no fences on
-the hot path and no retry loops. The LMAX Disruptor result is the canonical demonstration. The second
+Single threaded is the faster option here. A lock free single writer keeps the book in one core's
+cache, needs no cache line ping-pong, no fences on the hot path and no retry loops. The LMAX Disruptor result is the canonical demonstration. The second
 payoff is that P-1 is free: one writer applying a fixed sequence produces one output sequence.
 
 ## P-3: The protocol is the border
@@ -36,13 +34,11 @@ Inside the border, code optimises for mechanical sympathy: primitives, in place 
 layouts, no collections in signatures. Outside it, code optimises for clarity. The border is the
 message format, and conversion happens at it.
 
-Most design confusion in a system like this comes from asking one type to satisfy both sides. A
-collection returned from the matcher is a good API and an unacceptable allocation, and copying it
-defensively makes it safer without making it cheaper, so you pay twice and satisfy neither. Naming
-the border turns that into a conversion step.
+One type cannot satisfy both sides. A collection returned from the matcher is a good API and an
+unacceptable allocation, and copying it defensively adds a second allocation without removing the
+first. Naming the border turns the contradiction into a conversion step.
 
-Be consistent is bad advice applied globally here. Each side should be internally consistent and
-they should not resemble each other.
+Consistency is a property of one side. The two are not expected to resemble each other.
 
 ## P-4: Mutation follows ownership
 
@@ -50,10 +46,10 @@ A field may only be mutated by whatever owns the invariant it participates in. I
 can break an invariant about another, both are changed in the same place, or it was never an
 invariant.
 
-Every serious engine mutates orders in place, because allocating a replacement per partial fill is
-unaffordable. The useful question is who may mutate. Uncontrolled mutation gives the worst bug in
-this domain: a book whose aggregate quantities no longer match the orders inside it. It is silent, it
-corrupts the feed, and by the time it surfaces the cause is long gone from the stack.
+Every serious engine mutates orders in place, since allocating a replacement per partial fill is
+unaffordable, so the constraint is on who may mutate. Uncontrolled mutation produces the worst defect
+in this domain: a book whose aggregate quantities no longer match the orders inside it. It is silent,
+it corrupts the outbound feed, and it surfaces long after the call that caused it.
 
 ## P-5: Validate at the boundary, trust inside
 
@@ -73,16 +69,16 @@ is not trusted, and it costs latency on every command to catch a case that canno
 Every operation that can fail reports a machine readable reason. No exceptions for expected outcomes,
 no boolean success flags, no nulls crossing the border.
 
-Order not found and price off tick are ordinary Tuesday. An exception for an expected outcome costs a
-stack trace fill, loses the information about what went wrong, and lets a caller forget to handle it.
-A reason code a client can act on is worth returning; a generic invalid order is not.
+Order not found and price off tick are routine outcomes. An exception for one costs a stack trace
+fill, discards the information about what went wrong, and lets a caller forget to handle it. Reasons
+are split finely enough to act on: a tick violation tells a client to fix its rounding, where a
+generic refusal tells it nothing.
 
 ## P-7: Variation is data, not subtype
 
 Behavioural variation on the hot path is a field and a switch. One order representation, one flat
 layout. There is no market order class and no immediate-or-cancel matcher.
 
-This is the principle that most directly contradicts textbook design, so the reasoning matters.
 HotSpot inlines a call site with one receiver type and handles two cheaply. At three or more it goes
 megamorphic: a real virtual call, no inlining through it, and every optimisation that depended on
 seeing the callee dies there. Five order types behind one interface puts that in the hottest loop in
@@ -119,7 +115,7 @@ with a profiler.
 On the road to millions of operations a second the enemy is pauses, not cycles, and one fifty
 millisecond stop is a catastrophe no average case compensates for. Allocation is structural: it
 cannot be optimised out of an API that returns objects, so deferring it means redesigning the API
-later. That is why P-8 and P-9 are design rules rather than performance tips.
+later. P-8 and P-9 are the shape this takes in an API.
 
 An implementation may decide to allocate. Copying each command into objects is a legitimate design
 and real systems ship it. What is not legitimate is claiming a zero allocation steady state without
@@ -144,8 +140,8 @@ a cache with an explicit invalidation rule.
 
 Duplicated state with different lifetimes is the second worst bug here, after broken aggregates. It
 is insidious because both copies are locally correct and only their relationship is wrong, so no
-test of a single object catches it. The question to ask is which single thing you would ask for a
-given fact. If the answer is either of two, fix it.
+test of a single object catches it. For any fact there should be one structure to ask. Two is a
+defect.
 
 ## P-13: Removal means detachment
 
@@ -155,8 +151,8 @@ operation.
 A half detached node is the closest thing a managed language has to a use after free. It looks alive,
 arithmetic on it succeeds, and a later traversal walks through it into a part of the book that has
 moved on. The collector guarantees the memory is valid, not that it is still part of the book.
-Detaching on exit also makes a node's state a pure function of its most recent insert, which is what
-makes reuse safe rather than lucky.
+Detaching on exit makes a node's state a function of its most recent insert, which is what makes
+reuse and pooling safe.
 
 ## P-14: Preconditions over defensive checks
 
@@ -178,8 +174,7 @@ freeze the first implementation's assumptions into a shape the second has to fig
 single implementation behind an interface is usually free, since the JIT devirtualises one receiver,
 so the cost is comprehension until a third arrives and P-7's wall applies.
 
-The question to ask of a new interface is to name the second implementation. If you cannot, write the
-class.
+A new interface needs a named second implementation. Without one, write the class.
 
 ## P-16: Representation is provisional
 
@@ -193,7 +188,7 @@ only while the surrounding code treats representation as an implementation detai
 identity as meaningful, keep the level container and the order node as separate concepts, and prefer
 returning counts and indices over returning objects.
 
-In this project the successors are not hypothetical. Comparing them is the point.
+Here the successors are scheduled work, and comparing them is the study.
 
 ## Applying this
 
@@ -201,5 +196,4 @@ When adding code, in order: which side of the border (P-3)? Who owns the invaria
 (P-4)? What does it allocate (P-10)? Is the variation data or subtype (P-7)? Can the compiler enforce
 the constraint instead of a comment?
 
-When a principle is violated, either fix the code or change this document and say why. A principle
-nobody follows teaches a reader that the documented design is fiction.
+When a principle is violated, either fix the code or change this document and say why.

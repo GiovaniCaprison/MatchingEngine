@@ -3,9 +3,8 @@
 A matching engine is a deterministic function from an ordered stream of commands for one
 instrument to an ordered stream of events sufficient to rebuild its book.
 
-Everything in this repository follows from that sentence, including the parts it refuses to do.
-This engine is built to be a component of an exchange, so the boundary matters more than the
-feature list. The components either side of it are a separate project.
+The engine is built to be a component of an exchange, so its boundary matters more than its feature
+list. The components either side of it are a separate project.
 
 ## Where the engine sits
 
@@ -41,10 +40,9 @@ already decoded from any session protocol.
 - journaling and recovery orchestration
 - mapping order ids back to client sessions
 
-Recovery is worth a line because its absence looks like a gap. A deterministic engine plus the
-upstream journal is the recovery mechanism: replaying the log reproduces the book exactly. The
-engine earns recovery by being a pure function of its input, so there is nothing further for it to
-implement.
+Recovery is listed as a non-goal because its absence reads as an omission. A deterministic engine
+plus the upstream journal is the recovery mechanism: replaying the log reproduces the book exactly,
+so there is nothing further for the engine to implement.
 
 ## One instrument per engine
 
