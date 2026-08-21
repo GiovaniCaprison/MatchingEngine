@@ -98,14 +98,19 @@ collection satisfies both a safe API and zero allocation, so the way out is to i
 This is the standard idiom in LMAX, Aeron and Chronicle. It also gives streaming: a consumer can act
 on the first execution before the last one exists.
 
-## P-9: Every output is bounded
+## P-9: Work per command is bounded by state, never by a caller
 
-Any query whose result size depends on book state takes an explicit bound from the caller.
+The work one command causes is bounded by the state it has to touch. No command does work whose size
+a caller chose.
 
-An unbounded depth query is linear in price levels, in both time and allocation, at a size chosen by
-whoever is currently spamming the book. One client asking for depth on a book with fifty thousand
-levels stalls the writer and everyone behind it. Real feeds are depth limited for exactly this
-reason.
+Some commands are unavoidably large. A mass cancel touches every resting order for a participant, a
+market order can sweep the book, and a stop cascade can chain. Real engines have those spikes and
+cannot design them away, and each one is bounded by the book rather than by a request.
+
+What this forbids is the other kind. A depth query taking a level count is bounded by whoever is
+currently asking, so one client can stall the writer and everyone behind it. This engine has no query
+commands at all, and a consumer builds the book from the event stream, which is how real feeds avoid
+the same problem.
 
 ## P-10: Allocation is part of the contract
 

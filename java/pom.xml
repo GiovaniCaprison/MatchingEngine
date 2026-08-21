@@ -21,7 +21,6 @@
   <modules>
     <module>matching-protocol</module>
     <module>matching-api</module>
-    <module>matching-naive</module>
   </modules>
   <dependencyManagement>
     <dependencies>

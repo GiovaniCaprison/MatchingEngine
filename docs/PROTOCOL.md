@@ -18,11 +18,14 @@ gateway's decode is expensive and the engine's is nearly free.
 Every command carries the sequence number assigned upstream. The engine never generates an input
 sequence of its own.
 
-Every event carries its own output sequence and a flags byte. One flag marks the last event a command
-produced, so a consumer groups events by the transaction that caused them without carrying the
-upstream sequence on every message. This follows CME's match event indicator; a per-event copy of the
-input sequence would cost eight bytes and a store on every event to carry information no real feed
-carries.
+Every event carries its own output sequence and nothing else about its cause. Events are published as
+they are produced, with no lookahead and no batching, so the engine never holds one back to learn what
+follows it.
+
+Nothing groups events by the command that produced them, because nothing needs to. Every event leaves
+the visible book in a valid state, so a consumer applies them one at a time. ITCH works this way. CME
+carries a match event indicator because its consumers compute implied prices and statistics that have
+to be applied atomically, and neither is in scope here.
 
 ## Commands
 

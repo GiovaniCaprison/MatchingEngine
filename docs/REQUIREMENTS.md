@@ -91,8 +91,8 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 
 | Id | Requirement | Mechanism |
 |---|---|---|
-| FR-8.1 | The events one command produced are identifiable as a group from the stream alone | unit |
-| FR-8.2 | The output stream alone is sufficient to reconstruct the book at any point in it | corpus |
+| FR-8.1 | Applying any prefix of the output stream yields a valid book | corpus |
+| FR-8.2 | A book rebuilt from the stream alone matches the engine's own at every point | corpus |
 | FR-8.3 | An order entering the book is reported with side, price and displayed quantity | unit |
 | FR-8.4 | An order leaving the book is reported with the quantity removed and the reason | unit |
 | FR-8.5 | A quantity reduction that keeps queue position is reported without a removal | unit |
@@ -126,7 +126,11 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | Id | Requirement | Mechanism |
 |---|---|---|
 | NFR-2.1 | Single writer: one thread mutates a book (P-2) | review |
-| NFR-2.2 | The matching core depends only on the standard library | review |
+| NFR-2.2 | The matching core depends only on the standard library and the buffer abstraction its wire format requires | review |
+
+The matching core means the book, the trigger book and the matching logic. The buffer abstraction is
+named as an exception because the generated codecs are typed against it, so avoiding it would mean
+hand writing the wire format, which is a separate project and a worse one.
 
 ## NFR-3: invariants
 
@@ -140,12 +144,16 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 
 | Id | Requirement | Mechanism |
 |---|---|---|
-| NFR-4.1 | Submission is sub-linear in resting order count | benchmark |
-| NFR-4.2 | Cancellation is constant time by order id | benchmark |
+| NFR-4.1 | Submission cost as a function of resting order count is reported for every implementation | benchmark |
+| NFR-4.2 | Cancellation cost as a function of resting order count is reported for every implementation | benchmark |
 | NFR-4.3 | An implementation claiming a zero allocation steady state is measured, not trusted | benchmark |
 | NFR-4.4 | Latency is reported as p50, p99, p99.9 and max, at a fixed offered rate, per command type | benchmark |
 | NFR-4.5 | Every reported measurement names the implementation, the input parameters and the environment | benchmark |
 | NFR-4.6 | Decode cost is attributed separately from matching cost | benchmark |
+
+These are obligations on measurement, not targets an implementation must hit. A deliberately naive
+implementation is linear in resting count, and a requirement forbidding that would forbid the baseline
+the study is built on.
 
 ## NFR-5: comparability
 
