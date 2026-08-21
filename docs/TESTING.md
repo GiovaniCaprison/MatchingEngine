@@ -1,0 +1,151 @@
+# Testing
+
+How correctness is established. Measurement is in `METHODOLOGY.md`; the two share a generator and
+nothing else.
+
+Every requirement in `REQUIREMENTS.md` names one mechanism. This document says what each mechanism is
+for and which failures it is capable of catching.
+
+## Unit
+
+One rule, one test, at the public interface. Small enough that the expected result is written as a
+literal, and named so the requirement it covers is visible in the test output.
+
+This is the bulk of the suite because most of the remit is single rules: a market order does not rest,
+a price off tick is refused, displayed quantity is consumed before hidden. Fifty-five requirements
+are covered this way.
+
+A unit test proves the rule for the case it states. It does not prove the rule holds for sequences
+nobody wrote down, which is what the corpus and the property tests are for.
+
+## Corpus
+
+A fixture is a command sequence and the blessed output it must produce. Fixtures are plain text, live
+in `corpus/`, and are replayed by every implementation in every language.
+
+The corpus catches what unit tests structurally cannot: interaction. A stop cascade that fires during
+an iceberg replenishment inside an auction uncross is one fixture and would be six unit tests that
+each pass while the combination is wrong.
+
+When output changes legitimately, the runner prints the full actual output so it can be pasted in.
+Read the diff first. A blessed snapshot is worth what the last person to look at it was paying
+attention to.
+
+## Property
+
+Invariants that must hold after any sequence, checked over generated input. Aggregate quantity at a
+price equals the sum of its orders. No empty level and no unreferenced order survives. The trigger
+book holds exactly the stops that have not fired.
+
+These catch drift, which is the failure mode where every individual operation is correct and the
+structure is slowly wrong. No fixture finds that, because a fixture only checks the states somebody
+imagined.
+
+## Differential
+
+Two implementations fed identical generated input, output diffed. A disagreement means one is wrong,
+and the naive engine is the one written to be obviously right, so it is the arbiter.
+
+This is the only mechanism that catches an allocation error nobody thought to write a fixture for.
+An invariant cannot find it, because a book that allocated to the wrong order at the same price is
+internally consistent.
+
+## Compiler
+
+Where a violation fails the build there is no test. An exhaustive switch over an enum with no default
+arm, and mutators that cannot be named outside their package, are enforced at compile time. A test
+that restates a declaration is a worse copy of the source text.
+
+## Review
+
+Judgement that cannot be automated without encoding today's code as the specification. Single writer
+discipline, dependency freedom of the matching core, and whether an abstraction has a second
+implementation worth naming.
+
+## The gate
+
+The build fails when a requirement marked `unit` is not named by a test.
+
+The check reads `REQUIREMENTS.md` as the source of truth, extracts the ids marked `unit`, and scans
+test sources for each id in a display name. It fails three ways: a `unit` requirement no test names, a
+test naming an id absent from the document, and a test naming an id whose mechanism is `compiler` or
+`review`.
+
+It also fails when a test that names a requirement contains no assertion. That is not hypothetical
+paranoia: an earlier version of this project had seventeen empty test bodies carrying requirement
+annotations, and its coverage gate reported them as covered. A gate that rewards the claim rather than
+the check produces claims.
+
+The gate is gameable, as any gate is. An empty test that fails a build is easier to notice and reject
+than a missing test that produces a slightly shorter report.
+
+## Where tests live
+
+Placement is decided by what a test needs to see, and the compiler enforces it.
+
+A test that drives an engine through nothing but the public interface lives outside the
+implementation's package, so it cannot reach an internal even by accident. Those are the tests a
+rewrite has to keep passing.
+
+A test that must observe an internal structure lives in that implementation's package, and each one
+carries a written reason why the public interface was insufficient. There should be few of them.
+
+The corpus and the gate depend on the api alone, so neither can be flattered by an implementation's
+internals.
+
+## Corpus format
+
+One directive per line. A line whose first non-blank character is `#` is a comment. Blank lines are
+ignored. Fields are separated by any run of spaces, so columns can be aligned. There are no trailing
+comments, because `#` is also the order reference sigil.
+
+An order reference is `#n`, counting `NEW` directives from one. References are not engine order ids.
+Asserting engine ids would test id allocation and would break an implementation that numbers
+differently for a good reason.
+
+Input directives:
+
+```
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+STATE      CONTINUOUS
+NEW        BUY  LIMIT  GTC 100000 50
+NEW        SELL LIMIT  IOC 100000 50  min=10
+NEW        BUY  LIMIT  GTC  99995 100 display=10
+NEW        SELL MARKET IOC       -  50 trigger=100500
+NEW        BUY  LIMIT  GTC 100000 50  smp=7 p=2
+CANCEL     #3
+REPLACE    #3 40 100005
+MASSCANCEL p=2
+```
+
+`INSTRUMENT` is required and comes first. On `NEW`, a price of `-` means the order has none. The four
+qualifiers and the participant default to absent.
+
+Output lines, one per event, in the order the engine produced them:
+
+```
+ACCEPTED   #1
+REJECTED   #2 TICK_VIOLATION
+RESTED     #1 BUY 100000 50
+EXECUTED   exec=1 aggressor=#3 resting=#1 100000 50
+REDUCED    #1 40
+REMOVED    #1 50 CANCELLED
+TRIGGERED  #4
+STATE      CONTINUOUS
+INDICATIVE 100000 500
+```
+
+## The cross-language contract
+
+An implementation in any language passes the corpus by reading the fixtures, replaying them, and
+emitting these lines. The grammar is deliberately simple so that a runner is a small amount of code
+in any language, and the fixtures are the contract rather than any one runner.
+
+That is what makes a comparison between a Java engine and a C++ engine a measurement of two engines
+and not of two readings of a specification.
+
+## What has no test
+
+If the compiler guarantees it, nothing is written. If it is a judgement about a future substitution,
+it is reviewed. Both are recorded as such in `REQUIREMENTS.md`, so a reader asking why a line has no
+test finds an answer instead of an omission.
