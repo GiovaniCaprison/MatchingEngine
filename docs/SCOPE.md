@@ -36,7 +36,8 @@ and on firing it becomes an ordinary order which then enters or crosses the limi
 - the trigger book, and the evaluation of triggers against executed prices
 - order lifecycle: new, cancel, replace, mass cancel
 - pricing instruction, time in force, liquidity flags, minimum quantity, hidden quantity
-- instrument level validation: tick, lot, static and dynamic price bands, field consistency
+- validation of an incoming order against the instrument: tick, lot, static and dynamic price bands,
+  field consistency
 - self match prevention
 - trading state, including auction call phases and uncrossing
 - execution ids and the numbering of its own output
@@ -51,6 +52,8 @@ and on firing it becomes an ordinary order which then enters or crosses the limi
 - clearing and settlement
 - journaling and recovery orchestration
 - mapping order ids back to client sessions
+- validating instrument reference data. The definition command is trusted, and whatever owns
+  reference data checks it
 - expiry of good-till-date orders, which needs a calendar the engine does not have. The scheduler
   cancels them and the engine sees an ordinary cancel
 

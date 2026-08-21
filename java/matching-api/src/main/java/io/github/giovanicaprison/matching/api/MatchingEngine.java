@@ -18,6 +18,10 @@ import org.agrona.DirectBuffer;
  * produces the same events, byte for byte, which is what makes two implementations comparable and a
  * replay exact.
  *
+ * <p>The first command an engine receives is an instrument definition, and its fields are trusted
+ * (P-14). Reference data is validated by whatever owns it, several components upstream, so a
+ * nonsensical tick size is a programming error there and not a refusal here.
+ *
  * <p>One instrument per instance, one thread per instance (P-2). Nothing here is thread safe and
  * nothing should be: concurrency comes from partitioning instruments across engines.
  */
