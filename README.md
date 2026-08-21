@@ -45,7 +45,7 @@ black box testing holds without relying on discipline.
 - [PRINCIPLES.md](docs/PRINCIPLES.md), why the code is shaped as it is. Read before changing a
   signature.
 - [TESTING.md](docs/TESTING.md), the correctness mechanisms and the corpus format
-- [METHODOLOGY.md](docs/METHODOLOGY.md), how performance is measured and recorded
+- [METHODOLOGY.md](docs/METHODOLOGY.md), how performance is measured, with what, and what is recorded
 
 ## Build
 

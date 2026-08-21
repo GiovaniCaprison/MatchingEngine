@@ -1,7 +1,7 @@
 # Methodology
 
-How performance is measured and what the measurements are for. `TESTING.md` covers correctness; the
-two share a flow generator and nothing else.
+How performance is measured, with what, and what each run records. `TESTING.md` covers correctness;
+the two share a flow generator and nothing else.
 
 ## Questions
 
@@ -75,16 +75,24 @@ moving structure. Where drift is unavoidable it is reported with the number.
 
 ## Environment
 
-Runs are taken on a bare metal instance, which is what gives access to hardware performance counters
-and removes hypervisor scheduling from the measurement. A shared instance provides neither.
+Runs are taken on a bare metal instance. That is what gives a real performance monitoring unit, and it
+removes hypervisor scheduling from the measurement. A shared instance provides neither.
 
-The measured thread is pinned to an isolated core with its hyperthread sibling offline. Frequency is
-fixed rather than left to scale, the governor is set for performance, huge pages are configured
-deliberately, and the machine is otherwise quiet.
+Some settings are boot parameters and need a reboot after the instance comes up: `isolcpus`,
+`nohz_full` and `rcu_nocbs` for the measured core, and `processor.max_cstate=1` with
+`intel_idle.max_cstate=0`. Deep C-state exit latency lands directly in the tail, so a benchmark that
+leaves idle states alone is measuring the power manager.
 
-Every one of those is a recorded field, alongside the kernel, the processor
-model, the runtime build, the collector and heap settings, the compiler and its flags, and the
-instance identity. A different physical host is a variable, not an implementation detail.
+The rest are set at runtime: the scaling governor to performance, turbo disabled so frequency is fixed
+instead of drifting, the hyperthread sibling of the measured core taken offline through `/sys`, and
+huge pages reserved if an implementation uses them. The instruments need `perf_event_paranoid` at 1 or
+below, and `kptr_restrict` at 0 for kernel symbols in a profile.
+
+Every one of these is verified after boot and recorded, alongside the kernel, the processor model, the
+runtime build, the collector and heap settings, the compiler and its flags, and the instance identity.
+A setting that was requested and did not take is worse than one never requested, because the run looks
+controlled. The processor model matters because counter names and meanings are microarchitecture
+specific, so a comparison across instance families is not a comparison.
 
 ## Statistics
 
@@ -105,16 +113,155 @@ finding or a defect in the harness. Where one is excluded, the reason and the co
 Before any comparison, the smallest difference the setup can detect is established by measuring one
 implementation against itself. A difference below that is not reported as a difference.
 
-## Profiling
+## Instruments
 
-Profiling follows a measured difference and never substitutes for one. A finding is a difference plus
-a mechanism; a difference alone is an observation.
+Profiling follows a measured difference and never substitutes for one. A finding is a difference plus a
+mechanism; a difference alone is an observation. The order below runs from cheapest and broadest to
+most expensive and narrowest, and every entry names the instrument for both languages.
 
-Counters first: cycles, instructions, cache misses at each level, branch mispredictions, and
-instructions per cycle, from the hardware. Then allocation, in bytes per command, with a control
-benchmark so that fixture allocation is not attributed to the measured path. Then compilation and
-deoptimisation logs, which is where the regime change result comes from. Sampling profiles last, for
-attribution to a call site.
+**Latency.** HdrHistogram, which exists for both languages with a compatible encoding, so one analysis
+pipeline reads both. Encoded logs are stored and percentiles computed at analysis time. The harness is
+ours and open loop; JMH and Google Benchmark are both closed loop and cannot observe a stall, so they
+are used only for microbenchmarks of a single operation, where they handle warm-up, forking and dead
+code elimination better than we would.
+
+**Aggregate counters.** `perf stat` for both: cycles, instructions, instructions per cycle, cache
+misses at each level, TLB misses, branch mispredictions, and stalled cycles front and back end. Per
+process over an interval, so attributing a miss to a line of code needs a sampling profiler. `perf c2c`
+for false sharing, once a publisher moves to another core.
+
+**Bracketed counters.** Hardware counters read in process on the measured thread, around the measured
+region, through `perf_event_open` with the counter page mapped so a read costs tens of cycles. Java
+reaches it through the foreign function API, C++ directly, so both produce the same numbers around the
+same region.
+
+This is what excludes runtime noise from a count: compiler threads, collector threads and startup are
+all on other threads and are not counted. Instructions retired is far more stable run to run than
+cycles, its variance coming only from recompilation and safepoints, which makes it the closest thing
+available to a noise free comparison of two implementations of one algorithm.
+
+**Attribution to code.** Java uses async-profiler, which samples on a signal so it can interrupt
+anywhere, walks JIT frames as well as native and kernel ones, and can sample on perf events so a cache
+miss is attributable to a call site. It wants `-XX:+DebugNonSafepoints` for frame information away from
+safepoints and `-XX:+PreserveFramePointer` for reliable walking.
+
+Flight Recorder's method profiler samples at safepoints instead. A stretch of code containing no
+safepoint poll is invisible to it and its cost lands on whatever came next, so every flame graph
+produced through Mission Control carries that bias. Flight Recorder is therefore the event timeline
+here and async-profiler is the attribution; treating either as the other produces confident nonsense.
+
+C++ uses `perf record`, with `perf report` for a call graph and `perf annotate` for per instruction
+attribution inside a function, and flame graphs from `perf script` through the stack collapse scripts.
+The C++ side sees more here, since there is no runtime compilation to resolve first.
+
+**Events on the timeline.** Java uses Flight Recorder, read with `jfr print` for scripted extraction
+rather than through a viewer, and configured with a custom settings file. Neither shipped profile is
+right: the default omits events we want, and the profiling one enables two we cannot afford. It raises
+method sampling, which is the safepoint biased instrument we replaced, so the extra samples are more of
+the data we do not trust. And it enables per-allocation events carrying stack traces, which puts a
+stack walk on the allocation path inside the operation whose cost we are establishing.
+
+That second objection is not about overhead. A uniform slowdown shifts the whole distribution and a
+comparison survives it. A stack walk on thread local buffer refill fires on some commands and not
+others, so it inflates particular percentiles and changes the shape, and the shape is the subject. The
+same reasoning excludes stack traces on every exception, which should be empty here since failure is a
+value (P-6); the count is kept and the traces are not.
+
+The custom file enables the timeline and nothing else: collection with causes and phases, safepoint
+operations including the time taken to reach one, compilation, and deoptimisation. Time to safepoint
+needs naming on its own, since it produces latency outliers unrelated to collection and is routinely
+missed by people who read the collection log and stop. `-Xlog:safepoint*` gives the same in text.
+
+C++ has none of these events because it has none of these mechanisms. Its comparable record is
+allocator behaviour, and an implementation that preallocates and never allocates in steady state has
+nothing to report, which is what the comparison is about.
+
+**Allocation and collection.** Separate phenomena, recorded separately. Java measures allocation as
+bytes per command from the runtime's own accounting, with a control benchmark so fixture allocation is
+not attributed to the measured path. An earlier version of this project reported 284 bytes per command
+for an operation that allocates nothing, because the profiler counted the book warm-up against the
+measured commands. Off-heap footprint comes from `-XX:NativeMemoryTracking`. Collection is a pause
+distribution with causes, from `-Xlog:gc*` and the flight recording.
+
+A zero allocation claim is proved rather than measured. Epsilon never collects, so an implementation
+that allocates nothing in steady state runs to completion under it, and one that allocates dies.
+Stronger than any counter, and it costs one flag. C++ uses heaptrack or massif, and the equivalent
+proof is an allocator configured to fail after initialisation.
+
+**Compiler behaviour.** Java uses `-XX:+PrintCompilation` for a timeline, `-XX:+PrintInlining` for
+inlining decisions including the reason for each refusal, and `-XX:+LogCompilation` for a machine
+readable record that JITWatch reads and maps to emitted assembly. A deoptimisation appears as a method
+made not entrant with a reason, and those reasons are the regime change result. C++ uses the
+optimisation report: `-fopt-info-vec-missed` and `-fopt-info-inline` on GCC, `-Rpass` and
+`-Rpass-missed` on Clang. Both compilers are built and compared, since choosing one silently is a
+choice nobody can check.
+
+**Emitted code.** For headline claims only. Java needs hsdis for `-XX:+PrintAssembly`, scoped to one
+method with a compile command, to answer whether a bounds check was hoisted, a loop unrolled, or
+anything vectorised. C++ uses `objdump -d`, or `perf annotate` to see the same instructions with
+samples attached. Code size from `size` and `nm --size-sort`, since instruction cache pressure is real
+in a hot loop.
+
+**Layout and footprint.** JOL for Java, reporting object layout, header overhead, field padding and
+the footprint of a graph. `pahole` for C++, reporting struct layout, padding and cache line straddling
+from the debug information. Bytes per resting order is a headline comparative figure in both and nearly
+free to collect.
+
+**Deterministic simulation.** Cachegrind simulates a cache hierarchy, so it answers which layout
+touches more lines with no hardware noise, and callgrind counts instructions the same way. Both are
+C++ only and slow enough to need reduced inputs, which determinism makes valid. They are a cross check
+on the bracketed counters rather than the primary instrument, now that both languages can count their
+own.
+
+## Fairness between the languages
+
+The runtime compiles with a profile gathered at run time, so a Java number is profile guided by
+construction. Comparing it against a C++ build without profile guided optimisation understates C++,
+which is one of the few places this comparison could be quietly rigged. Headline comparisons use a
+profile guided build and report the difference against a plain optimised one. Optimisation level, link
+time optimisation, profile guidance, target architecture and compiler identity are recorded per run.
+
+## What every run collects
+
+A standard run carries only counters and produces the numbers that get reported:
+
+- the manifest: run identity, commit, environment as verified, configuration including generator seed
+  and flow parameters, and the command line
+- the encoded latency histogram
+- aggregate and bracketed counter output
+- a verification record: event counts by type, and a checksum of the output stream
+- environment samples before and after: frequency, thermal state, context switches and involuntary
+  preemptions on the measured core, and steal time
+
+Java runs add the collection log, the safepoint log, the compilation log and a flight recording. C++
+runs add the optimisation report and the build flags.
+
+The verification record is not optional. A benchmark that does not check its output will report a fast
+wrong engine.
+
+An investigation run is taken separately, on the same input and machine, when a measured difference
+needs a mechanism. It adds a sampling profile and its flame graph, a second profile sampled on cache
+misses, disassembly of the methods a claim names, a layout report, the simulators on a reduced input,
+and allocation profiling.
+
+## Where analysis happens
+
+Collection is entirely command line, so all of it runs on a headless instance. Every viewer is not:
+Mission Control, JITWatch, the heaptrack and callgrind viewers, and flame graphs in a browser.
+
+A run writes its directory on the instance, the directory is pulled down whole, and analysis happens
+locally against the artifacts. Nothing is inspected interactively on the box and no figure is produced
+there, which keeps the instance disposable and every figure traceable to a stored artifact.
+
+## Instrument cost
+
+Every instrument perturbs, and the question to ask is whether it perturbs uniformly. Counters are close
+to free. Bracketed reads cost tens of cycles each. Sampling profilers cost a few percent. Flight
+recording costs more. Frame pointer preservation and non-safepoint debug information cost a little
+continuously. The simulators cost one to two orders of magnitude.
+
+Headline numbers come from a standard run. Everything heavier runs separately, and the analysis names
+which run each figure came from.
 
 ## Threats to validity
 
@@ -139,12 +286,6 @@ Every number names the setting it was taken under, and the difference between th
 a result.
 
 ## Reproducibility
-
-Each run writes a directory containing its manifest, its raw histograms and its counter output.
-
-The manifest records the run identity and time, the commit and whether the tree was modified, the
-full environment, the configuration including the generator seed and flow parameters, and the command
-line that produced it.
 
 Histograms are stored in their encoded form, never as summary percentiles. An encoded histogram can
 be merged and re-quantiled, so a question asked next year about a run from today is answerable
