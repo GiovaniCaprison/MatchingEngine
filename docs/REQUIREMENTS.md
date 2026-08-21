@@ -11,13 +11,14 @@ The mechanism column names how a requirement is shown to hold: a `unit` example,
 replayed and diffed, a `property` over generated input, a `benchmark`, the `compiler`, or `review`
 where nothing else applies. Every `unit` row must be named by a test, and the build fails otherwise.
 
-## FR-1: order entry
+## FR-1: configuration and order entry
 
 | Id | Requirement | Mechanism |
 |---|---|---|
-| FR-1.1 | Accepts a new order carrying side, pricing instruction, time in force, flags, price and quantity, with optional minimum quantity, display quantity, trigger price and self match id | unit |
-| FR-1.2 | An accepted order is assigned an engine order id, unique for the session, and reported | unit |
-| FR-1.3 | A refused order is reported with a machine readable reason and changes no state | unit |
+| FR-1.1 | An instrument definition command configures the engine, and precedes every other command | unit |
+| FR-1.2 | Accepts a new order using every field the protocol defines for it | unit |
+| FR-1.3 | An accepted order is assigned an engine order id, unique for the session, and reported | unit |
+| FR-1.4 | A refused order is reported with a machine readable reason and changes no state | unit |
 
 ## FR-2: time in force and remainder
 
