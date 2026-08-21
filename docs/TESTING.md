@@ -12,8 +12,7 @@ One rule, one test, at the public interface. Small enough that the expected resu
 literal, and named so the requirement it covers is visible in the test output.
 
 This is the bulk of the suite because most of the remit is single rules: a market order does not rest,
-a price off tick is refused, displayed quantity is consumed before hidden. Fifty-five requirements
-are covered this way.
+a price off tick is refused, displayed quantity is consumed before hidden.
 
 A unit test proves the rule for the case it states. It does not prove the rule holds for sequences
 nobody wrote down, which is what the corpus and the property tests are for.
@@ -79,6 +78,12 @@ the check produces claims.
 The gate is gameable, as any gate is. An empty test that fails a build is easier to notice and reject
 than a missing test that produces a slightly shorter report.
 
+A second check fails the build on documents that have drifted apart. Every requirement id cited
+anywhere must exist in `REQUIREMENTS.md`, every principle id must exist in `PRINCIPLES.md`, and every
+message named in the corpus format must exist in `PROTOCOL.md` and in the schema. Documents disagreeing
+with each other is the failure this project has actually had, more than once, and it is not a thing
+review reliably catches: a stale claim reads perfectly well on its own page.
+
 ## Where tests live
 
 Placement is decided by what a test needs to see, and the compiler enforces it.
@@ -134,6 +139,10 @@ TRIGGERED  #4
 STATE      CONTINUOUS
 INDICATIVE 100000 500
 ```
+
+Nothing marks which command produced which events, because the protocol does not group them. A fixture
+author may separate them with blank lines for readability, since blank lines are ignored and therefore
+not part of the comparison.
 
 ## The cross-language contract
 

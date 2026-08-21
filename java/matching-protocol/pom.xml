@@ -56,7 +56,7 @@
                 </systemProperty>
               </systemProperties>
               <arguments>
-                <argument>${project.basedir}/src/main/resources/matching-engine.xml</argument>
+                <argument>${project.basedir}/../../schema/matching-engine.xml</argument>
               </arguments>
             </configuration>
           </execution>
