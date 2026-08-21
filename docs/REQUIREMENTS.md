@@ -77,13 +77,13 @@ generated input, the `compiler`, a `benchmark`, or `review` where nothing else a
 |---|---|---|
 | NFR-1.1 | The same input log produces the same output log, byte for byte | corpus |
 | NFR-1.2 | The engine consumes input order rather than imposing it | review |
-| NFR-2.1 | One thread mutates a book: no locks, no concurrent collections, no atomics | review |
+| NFR-2.1 | Single writer: one thread mutates a book (P-2) | review |
 | NFR-3.1 | Aggregate resting quantity at a price equals the sum of the orders at it | property |
 | NFR-3.2 | No empty price level and no unreferenced order remains | property |
 | NFR-4.1 | The matching core depends only on the JDK | review |
 
 The matching core means the book and the matching logic. A protocol module may depend on a codec
-generator, because a hand written wire format would be a project of its own and a worse one.
+generator; hand writing a wire format is a separate project.
 
 ## NFR: measurement
 
@@ -96,10 +96,8 @@ generator, because a hand written wire format would be a project of its own and 
 | NFR-5.5 | Every reported measurement names the implementation, the input parameters and the environment | benchmark |
 | NFR-5.6 | Decode cost is attributed separately from matching cost | benchmark |
 
-NFR-5.6 exists because decode is part of an implementation and therefore part of its cost. An
-engine that copies each command into objects pays for that, and one that reads fields in place does
-not. Without attribution the difference between two books can be swamped by the difference between
-two decoders.
+Decode is part of an implementation and therefore part of its cost. Without NFR-5.6 the difference
+between two books can be swamped by the difference between two decoders.
 
 ## NFR: comparability
 
