@@ -114,14 +114,21 @@ public final class NaiveMatchingEngine implements MatchingEngine {
     }
 
     // Pre-trade gates. Both refuse before anything is touched, so the book is unchanged (VR-5.1).
-    final long fillable = fillableQuantity(side, pricing, price, quantity);
-    if (timeInForce == TimeInForce.FILL_OR_KILL && fillable < quantity) {
-      emitRejected(cause, clientOrderId, participantId, RejectReason.FILL_OR_KILL_UNFILLABLE);
-      return;
-    }
-    if (postOnly && fillable > 0) {
-      emitRejected(cause, clientOrderId, participantId, RejectReason.WOULD_CROSS);
-      return;
+    //
+    // Only fill-or-kill and post-only need to know what is fillable, and finding out is a full
+    // scan, so an ordinary limit order must not pay for it. Computing it unconditionally would be a
+    // second scan per order that no reasonable naive engine performs, and this one is the baseline
+    // every later implementation is measured against.
+    if (timeInForce == TimeInForce.FILL_OR_KILL || postOnly) {
+      final long fillable = fillableQuantity(side, pricing, price, quantity);
+      if (timeInForce == TimeInForce.FILL_OR_KILL && fillable < quantity) {
+        emitRejected(cause, clientOrderId, participantId, RejectReason.FILL_OR_KILL_UNFILLABLE);
+        return;
+      }
+      if (postOnly && fillable > 0) {
+        emitRejected(cause, clientOrderId, participantId, RejectReason.WOULD_CROSS);
+        return;
+      }
     }
 
     final long orderId = ++nextOrderId;
@@ -186,8 +193,7 @@ public final class NaiveMatchingEngine implements MatchingEngine {
     }
 
     // Anything else is a fresh arrival, which is how ITCH models it and why the layer above needs
-    // no
-    // special handling for replace (FR-4.5).
+    // no special handling for replace (FR-4.5).
     resting.remove(order);
     emitRemoved(cause, orderId, order.remainingQuantity, RemoveReason.REPLACED);
 

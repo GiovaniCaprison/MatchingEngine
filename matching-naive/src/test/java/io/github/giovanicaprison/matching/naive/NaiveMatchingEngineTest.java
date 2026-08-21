@@ -184,8 +184,7 @@ class NaiveMatchingEngineTest {
     assertThat(refusalFor(10L, 95L)).isEqualTo("BAND_VIOLATION");
 
     // Four refusals later the resting order is still there and still first in line. The aggressor
-    // is
-    // order 2 rather than order 6, because a refused order never reaches the book and so never
+    // is order 2 rather than order 6, because a refused order never reaches the book and so never
     // consumes an order id. Client order ids do advance, which is what a client correlates on.
     engine.limit(Side.BUY, 1000L, 10L);
     assertThat(engine.events())

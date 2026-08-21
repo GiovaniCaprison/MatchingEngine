@@ -15,6 +15,8 @@
     <exec.plugin.version>3.5.0</exec.plugin.version>
     <buildhelper.plugin.version>3.6.0</buildhelper.plugin.version>
     <surefire.version>3.5.1</surefire.version>
+    <jmh.version>1.37</jmh.version>
+    <shade.plugin.version>3.6.0</shade.plugin.version>
     <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED</jvm.access.flags>
   </properties>
   <!-- Modules land one at a time: conformance, benchmarks. -->
@@ -22,6 +24,7 @@
     <module>matching-protocol</module>
     <module>matching-api</module>
     <module>matching-naive</module>
+    <module>matching-benchmarks</module>
   </modules>
   <dependencyManagement>
     <dependencies>
@@ -44,6 +47,22 @@
         <groupId>io.github.giovanicaprison</groupId>
         <artifactId>matching-api</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.giovanicaprison</groupId>
+        <artifactId>matching-naive</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjdk.jmh</groupId>
+        <artifactId>jmh-core</artifactId>
+        <version>${jmh.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjdk.jmh</groupId>
+        <artifactId>jmh-generator-annprocess</artifactId>
+        <version>${jmh.version}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.junit.jupiter</groupId>

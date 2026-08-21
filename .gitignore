@@ -5,7 +5,7 @@ target/
 .classpath
 .project
 .settings/
-.jqwik-database
+.factorypath
 
 # OS / editor cruft
 .DS_Store
