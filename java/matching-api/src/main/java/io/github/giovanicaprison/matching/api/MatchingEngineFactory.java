@@ -10,10 +10,13 @@ package io.github.giovanicaprison.matching.api;
 public interface MatchingEngineFactory {
 
   /**
-   * A fresh engine with an empty book.
+   * A fresh engine with no instrument configured and an empty book.
    *
-   * @param instrument the instrument this engine handles for its whole life
-   * @param sink where its events go
+   * <p>The instrument arrives as a command (FR-1.1), so there is nothing to configure here. Holding
+   * reference data in a Java type would also leave the C++ side without a counterpart, since it
+   * reads the same definition off the wire.
+   *
+   * @param sink where the engine's events go
    */
-  MatchingEngine create(Instrument instrument, EventSink sink);
+  MatchingEngine create(EventSink sink);
 }
