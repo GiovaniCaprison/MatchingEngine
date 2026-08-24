@@ -21,6 +21,19 @@ final class Schema {
     return matches("<sbe:message\\s+name=\"([^\"]+)\"");
   }
 
+  /**
+   * The messages an engine emits, told apart from the ones it consumes by the frame they carry rather
+   * than by a list kept here.
+   */
+  static Set<String> events() {
+    return Pattern.compile("<sbe:message\\s+name=\"([^\"]+)\"(.*?)</sbe:message>", Pattern.DOTALL)
+        .matcher(Repository.read(FILE))
+        .results()
+        .filter(result -> result.group(2).contains("type=\"EventFrame\""))
+        .map(result -> result.group(1))
+        .collect(Collectors.toCollection(LinkedHashSet::new));
+  }
+
   private static Set<String> matches(final String pattern) {
     return Pattern.compile(pattern)
         .matcher(Repository.read(FILE))
