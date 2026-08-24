@@ -90,14 +90,20 @@ subclassing per type would duplicate the shared work in order to vary the rest.
 
 ## P-8: Push, don't pull
 
-The core never returns a collection. It emits into a caller supplied sink, one callback per result.
-Materialising objects is the edge's job, at the edge's expense.
+The core never returns a collection. It claims space from a caller supplied publisher, encodes one
+result into it and commits. Materialising objects is the edge's job, at the edge's expense.
 
 A returned collection forces an allocation the caller cannot decline, at a size unknown in advance.
 Copying defensively allocates a second time to buy immutability the core did not need. No returned
 collection satisfies both a safe API and zero allocation, so the way out is to invert the direction.
 This is the standard idiom in LMAX, Aeron and Chronicle. It also gives streaming: a consumer can act
 on the first execution before the last one exists.
+
+Claiming space rather than handing over a filled buffer is the same argument one level down. A
+consumer handed bytes has to copy them into whatever it publishes from, and it has to do its work on
+the engine's thread, so counting events or checksumming a stream lands inside the command those
+checks exist to protect. Encoding into the slot the consumer will read removes the copy and puts the
+consumer on another core.
 
 ## P-9: Work per command is bounded by state, never by a caller
 

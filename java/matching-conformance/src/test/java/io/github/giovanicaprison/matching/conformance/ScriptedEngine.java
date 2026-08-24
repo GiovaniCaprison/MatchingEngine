@@ -1,6 +1,6 @@
 package io.github.giovanicaprison.matching.conformance;
 
-import io.github.giovanicaprison.matching.api.EventSink;
+import io.github.giovanicaprison.matching.api.EventPublisher;
 import io.github.giovanicaprison.matching.api.MatchingEngine;
 import io.github.giovanicaprison.matching.api.MatchingEngineFactory;
 import java.util.List;
@@ -15,24 +15,24 @@ import org.agrona.DirectBuffer;
  */
 final class ScriptedEngine implements MatchingEngine, MatchingEngineFactory {
 
-  private final List<List<Consumer<EventSink>>> script;
-  private EventSink sink;
+  private final List<List<Consumer<EventPublisher>>> script;
+  private EventPublisher events;
   private int commands;
 
-  ScriptedEngine(final List<List<Consumer<EventSink>>> script) {
+  ScriptedEngine(final List<List<Consumer<EventPublisher>>> script) {
     this.script = script;
   }
 
   @Override
-  public MatchingEngine create(final EventSink events) {
-    this.sink = events;
+  public MatchingEngine create(final EventPublisher publisher) {
+    this.events = publisher;
     return this;
   }
 
   @Override
   public void onCommand(final DirectBuffer buffer, final int offset, final int length) {
     if (commands < script.size()) {
-      script.get(commands).forEach(event -> event.accept(sink));
+      script.get(commands).forEach(event -> event.accept(events));
     }
     commands++;
   }

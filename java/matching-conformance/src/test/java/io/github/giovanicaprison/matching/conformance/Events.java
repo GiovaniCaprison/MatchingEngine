@@ -1,6 +1,6 @@
 package io.github.giovanicaprison.matching.conformance;
 
-import io.github.giovanicaprison.matching.api.EventSink;
+import io.github.giovanicaprison.matching.api.EventPublisher;
 import io.github.giovanicaprison.matching.protocol.MessageHeaderEncoder;
 import io.github.giovanicaprison.matching.protocol.OrderAcceptedEncoder;
 import io.github.giovanicaprison.matching.protocol.OrderExecutedEncoder;
@@ -11,8 +11,6 @@ import io.github.giovanicaprison.matching.protocol.SessionState;
 import io.github.giovanicaprison.matching.protocol.SessionStateChangedEncoder;
 import io.github.giovanicaprison.matching.protocol.Side;
 import java.util.function.Consumer;
-import org.agrona.ExpandableArrayBuffer;
-import org.agrona.MutableDirectBuffer;
 
 /**
  * Encoded events for a scripted engine to emit.
@@ -25,7 +23,6 @@ final class Events {
 
   private static final int INSTRUMENT_ID = 1;
 
-  private final MutableDirectBuffer buffer = new ExpandableArrayBuffer(256);
   private final MessageHeaderEncoder header = new MessageHeaderEncoder();
   private final OrderAcceptedEncoder accepted = new OrderAcceptedEncoder();
   private final OrderRestedEncoder rested = new OrderRestedEncoder();
@@ -35,33 +32,36 @@ final class Events {
 
   private long sequence;
 
-  Consumer<EventSink> accepted(final long orderId, final long clientOrderId) {
-    return sink -> {
-      accepted.wrapAndApplyHeader(buffer, 0, header);
+  Consumer<EventPublisher> accepted(final long orderId, final long clientOrderId) {
+    return events -> {
+      final int at = claim(events, OrderAcceptedEncoder.BLOCK_LENGTH);
+      accepted.wrapAndApplyHeader(events.buffer(), at, header);
       accepted.frame().instrumentId(INSTRUMENT_ID).sequence(++sequence);
       accepted.orderId(orderId).clientOrderId(clientOrderId).participantId(1);
-      emit(sink, accepted.encodedLength());
+      events.commit();
     };
   }
 
-  Consumer<EventSink> rested(
+  Consumer<EventPublisher> rested(
       final long orderId, final Side side, final long price, final long quantity) {
-    return sink -> {
-      rested.wrapAndApplyHeader(buffer, 0, header);
+    return events -> {
+      final int at = claim(events, OrderRestedEncoder.BLOCK_LENGTH);
+      rested.wrapAndApplyHeader(events.buffer(), at, header);
       rested.frame().instrumentId(INSTRUMENT_ID).sequence(++sequence);
       rested.orderId(orderId).side(side).price(price).quantity(quantity);
-      emit(sink, rested.encodedLength());
+      events.commit();
     };
   }
 
-  Consumer<EventSink> executed(
+  Consumer<EventPublisher> executed(
       final long executionId,
       final long aggressor,
       final long resting,
       final long price,
       final long quantity) {
-    return sink -> {
-      executed.wrapAndApplyHeader(buffer, 0, header);
+    return events -> {
+      final int at = claim(events, OrderExecutedEncoder.BLOCK_LENGTH);
+      executed.wrapAndApplyHeader(events.buffer(), at, header);
       executed.frame().instrumentId(INSTRUMENT_ID).sequence(++sequence);
       executed
           .executionId(executionId)
@@ -69,29 +69,33 @@ final class Events {
           .restingOrderId(resting)
           .price(price)
           .quantity(quantity);
-      emit(sink, executed.encodedLength());
+      events.commit();
     };
   }
 
-  Consumer<EventSink> removed(final long orderId, final long quantity, final RemoveReason reason) {
-    return sink -> {
-      removed.wrapAndApplyHeader(buffer, 0, header);
+  Consumer<EventPublisher> removed(
+      final long orderId, final long quantity, final RemoveReason reason) {
+    return events -> {
+      final int at = claim(events, OrderRemovedEncoder.BLOCK_LENGTH);
+      removed.wrapAndApplyHeader(events.buffer(), at, header);
       removed.frame().instrumentId(INSTRUMENT_ID).sequence(++sequence);
       removed.orderId(orderId).quantity(quantity).reason(reason);
-      emit(sink, removed.encodedLength());
+      events.commit();
     };
   }
 
-  Consumer<EventSink> state(final SessionState session) {
-    return sink -> {
-      state.wrapAndApplyHeader(buffer, 0, header);
+  Consumer<EventPublisher> state(final SessionState session) {
+    return events -> {
+      final int at = claim(events, SessionStateChangedEncoder.BLOCK_LENGTH);
+      state.wrapAndApplyHeader(events.buffer(), at, header);
       state.frame().instrumentId(INSTRUMENT_ID).sequence(++sequence);
       state.state(session);
-      emit(sink, state.encodedLength());
+      events.commit();
     };
   }
 
-  private void emit(final EventSink sink, final int encodedLength) {
-    sink.onEvent(buffer, 0, MessageHeaderEncoder.ENCODED_LENGTH + encodedLength);
+  /** An engine claims header and block together, since it knows both before it encodes either. */
+  private static int claim(final EventPublisher events, final int blockLength) {
+    return events.claim(MessageHeaderEncoder.ENCODED_LENGTH + blockLength);
   }
 }

@@ -3,7 +3,7 @@ package io.github.giovanicaprison.matching.conformance;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import io.github.giovanicaprison.matching.api.EventSink;
+import io.github.giovanicaprison.matching.api.EventPublisher;
 import io.github.giovanicaprison.matching.protocol.RemoveReason;
 import io.github.giovanicaprison.matching.protocol.SessionState;
 import io.github.giovanicaprison.matching.protocol.Side;
@@ -135,11 +135,11 @@ class CorpusRunnerTest {
   }
 
   private ScriptedEngine engineEmitting(final long restingQuantity) {
-    final List<Consumer<EventSink>> definition = List.of();
-    final List<Consumer<EventSink>> session = List.of(events.state(SessionState.CONTINUOUS));
-    final List<Consumer<EventSink>> resting =
+    final List<Consumer<EventPublisher>> definition = List.of();
+    final List<Consumer<EventPublisher>> session = List.of(events.state(SessionState.CONTINUOUS));
+    final List<Consumer<EventPublisher>> resting =
         List.of(events.accepted(701, 1), events.rested(701, Side.BUY, 100_000, restingQuantity));
-    final List<Consumer<EventSink>> crossing =
+    final List<Consumer<EventPublisher>> crossing =
         List.of(events.accepted(702, 2), events.executed(9_001, 702, 701, 100_000, 50));
     return new ScriptedEngine(List.of(definition, session, resting, crossing));
   }

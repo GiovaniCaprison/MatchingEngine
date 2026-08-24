@@ -16,7 +16,7 @@ public interface MatchingEngineFactory {
    * reference data in a Java type would also leave the C++ side without a counterpart, since it
    * reads the same definition off the wire.
    *
-   * @param sink where the engine's events go
+   * @param events where the engine's events go
    */
-  MatchingEngine create(EventSink sink);
+  MatchingEngine create(EventPublisher events);
 }

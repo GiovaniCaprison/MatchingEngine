@@ -1,26 +1,35 @@
 package io.github.giovanicaprison.matching.conformance;
 
-import io.github.giovanicaprison.matching.api.EventSink;
+import io.github.giovanicaprison.matching.api.EventPublisher;
 import io.github.giovanicaprison.matching.api.MatchingEngine;
 import io.github.giovanicaprison.matching.api.MatchingEngineFactory;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 
 /**
  * Replays a fixture against an implementation and compares what it emitted to what the fixture says
  * it must emit.
  *
- * <p>The runner is the sink, so it sees events as the engine produces them, inside the command
- * being applied. That is also what lets a failure be printed as the fixture would read once
- * corrected, with each event under the command that caused it.
+ * <p>The runner is the publisher, and it renders each event as the engine commits it. Reading on
+ * the engine's thread is right here and wrong in a measurement: nothing is being timed, and seeing
+ * events arrive inside the command that caused them is what lets a failure be printed as the
+ * fixture would read once corrected.
+ *
+ * <p>Claims advance and wrap rather than reusing one offset, so an engine that assumed its events
+ * always land in the same place fails here instead of on a ring buffer.
  *
  * <p>Comparison is over words, not characters, so a fixture can align its columns.
  */
-public final class CorpusRunner implements EventSink {
+public final class CorpusRunner implements EventPublisher {
 
+  /** Room for the largest burst one command can produce, with no reason to be tight about it. */
+  private static final int CAPACITY = 1 << 20;
+
+  private final MutableDirectBuffer events = new UnsafeBuffer(new byte[CAPACITY]);
   private final References references = new References();
   private final CommandWriter writer = new CommandWriter(references);
   private final EventReader reader = new EventReader(references);
@@ -28,6 +37,9 @@ public final class CorpusRunner implements EventSink {
   private final List<String> emitted = new ArrayList<>();
 
   private List<String> inFlight = new ArrayList<>();
+  private int cursor;
+  private int claimed;
+  private int claimedLength;
 
   private CorpusRunner() {}
 
@@ -44,8 +56,24 @@ public final class CorpusRunner implements EventSink {
   }
 
   @Override
-  public void onEvent(final DirectBuffer buffer, final int offset, final int length) {
-    final String line = reader.read(buffer, offset, length);
+  public int claim(final int length) {
+    if (cursor + length > CAPACITY) {
+      cursor = 0;
+    }
+    claimed = cursor;
+    claimedLength = length;
+    cursor += length;
+    return claimed;
+  }
+
+  @Override
+  public MutableDirectBuffer buffer() {
+    return events;
+  }
+
+  @Override
+  public void commit() {
+    final String line = reader.read(events, claimed, claimedLength);
     emitted.add(line);
     inFlight.add(line);
   }
