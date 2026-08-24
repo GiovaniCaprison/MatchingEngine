@@ -102,9 +102,10 @@ above needs no special handling for replace. The order keeps its engine id acros
 A resting order that is fully executed gets no removal event; a consumer tracking quantity sees it
 reach zero. Recorded here because the other reading is that an event is missing.
 
-Hidden quantity is never reported. An iceberg's replenishment appears as an `OrderRemoved` of the
-exhausted tranche followed by an `OrderRested` of the next one, which is indistinguishable from a new
-order arriving at that price. That is the point of an iceberg, and it means the feed stays sufficient
+Hidden quantity is never reported. An iceberg's displayed tranche executes to zero, which a consumer
+tracking quantity has already seen, and the next tranche appears as an `OrderRested`, which is
+indistinguishable from a new order arriving at that price. There is no removal between the two, for the
+same reason a fully executed order gets none. That is the point of an iceberg, and it means the feed stays sufficient
 to rebuild the visible book without revealing what it cannot see.
 
 Between them the events are enough to rebuild the visible book at any point in the stream, which is

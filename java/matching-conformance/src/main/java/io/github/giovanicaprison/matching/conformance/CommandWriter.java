@@ -27,6 +27,10 @@ import org.agrona.MutableDirectBuffer;
  * <p>The instrument id and the input sequence are the harness's, not the fixture's. Nothing a
  * fixture writes decides them, which is the same arrangement the engine has in production: input
  * arrives already sequenced.
+ *
+ * <p>A cancel or a replace carries the reference of the order it targets as its own client order
+ * id. That is what a refusal is rendered by, so {@code REJECTED #1 UNKNOWN_ORDER} says which order
+ * the command named rather than which position in the file it occupied.
  */
 final class CommandWriter {
 
@@ -130,7 +134,7 @@ final class CommandWriter {
     cancel.wrapAndApplyHeader(buffer, 0, header);
     cancel.frame().instrumentId(INSTRUMENT_ID).sequence(sequence);
     cancel
-        .clientOrderId(sequence)
+        .clientOrderId(reference)
         .participantId((int) number(options, "p", references.participant(reference)))
         .orderId(references.orderId(reference));
     return length(cancel.encodedLength());
@@ -141,7 +145,7 @@ final class CommandWriter {
     replace.wrapAndApplyHeader(buffer, 0, header);
     replace.frame().instrumentId(INSTRUMENT_ID).sequence(sequence);
     replace
-        .clientOrderId(sequence)
+        .clientOrderId(reference)
         .participantId(references.participant(reference))
         .orderId(references.orderId(reference))
         .quantity(Long.parseLong(arguments.get(1)))
@@ -153,7 +157,7 @@ final class CommandWriter {
     final Map<String, String> options = options(arguments);
     massCancel.wrapAndApplyHeader(buffer, 0, header);
     massCancel.frame().instrumentId(INSTRUMENT_ID).sequence(sequence);
-    massCancel.clientOrderId(sequence).participantId((int) number(options, "p"));
+    massCancel.clientOrderId(0).participantId((int) number(options, "p"));
     return length(massCancel.encodedLength());
   }
 

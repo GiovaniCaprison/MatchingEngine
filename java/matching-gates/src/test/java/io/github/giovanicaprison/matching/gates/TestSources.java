@@ -87,7 +87,7 @@ final class TestSources {
    * character literals are skipped so that a brace inside one does not unbalance the count.
    */
   private static String bodyAfter(final String source, final int from) {
-    final int open = source.indexOf('{', from);
+    final int open = openingBrace(source, from);
     if (open < 0) {
       return "";
     }
@@ -107,6 +107,25 @@ final class TestSources {
       }
     }
     return source.substring(open);
+  }
+
+  /**
+   * The brace that opens the block, which is not always the next one in the text.
+   *
+   * <p>An annotation can carry a brace inside a string, and {@code @ParameterizedTest(name =
+   * "{0}")} is the common case. Taking the next brace there reads the format string as the method
+   * body and calls a perfectly good test hollow.
+   */
+  private static int openingBrace(final String source, final int from) {
+    for (int at = from; at < source.length(); at++) {
+      final char character = source.charAt(at);
+      if (character == '"' || character == '\'') {
+        at = endOfLiteral(source, at, character);
+      } else if (character == '{') {
+        return at;
+      }
+    }
+    return -1;
   }
 
   private static int endOfLiteral(final String source, final int start, final char quote) {

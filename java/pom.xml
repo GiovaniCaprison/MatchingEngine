@@ -18,13 +18,14 @@
     <surefire.version>3.5.1</surefire.version>
     <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED --enable-native-access=ALL-UNNAMED</jvm.access.flags>
   </properties>
-  <!-- Modules land one at a time: one per rung. -->
+  <!-- Rungs land one at a time: indexed, pooled, flyweight. -->
   <modules>
     <module>matching-protocol</module>
     <module>matching-api</module>
     <module>matching-flow</module>
     <module>matching-conformance</module>
     <module>matching-gates</module>
+    <module>matching-naive</module>
     <module>matching-benchmarks</module>
   </modules>
   <dependencyManagement>
@@ -52,6 +53,11 @@
       <dependency>
         <groupId>io.github.giovanicaprison</groupId>
         <artifactId>matching-flow</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.giovanicaprison</groupId>
+        <artifactId>matching-conformance</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
