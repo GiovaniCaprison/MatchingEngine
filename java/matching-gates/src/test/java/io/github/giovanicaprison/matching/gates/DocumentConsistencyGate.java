@@ -31,6 +31,13 @@ class DocumentConsistencyGate {
   /** An enum constant, taken from the body of the runner's own vocabulary. */
   private static final Pattern ENUM_CONSTANT = Pattern.compile("\\b([A-Z][A-Z_]+)\\b");
 
+  /** A decoder named in the harness, which is how an event gets a name to be counted under. */
+  private static final Pattern DECODER = Pattern.compile("\\b([A-Z][A-Za-z]+)Decoder\\b");
+
+  private static final String HARNESS =
+      "java/matching-benchmarks/src/main/java/io/github/"
+          + "giovanicaprison/matching/benchmarks/EventNames.java";
+
   private static final String RUNNER = "java/matching-conformance/src/main/java/io/github/"
       + "giovanicaprison/matching/conformance/";
 
@@ -137,6 +144,21 @@ class DocumentConsistencyGate {
         .isEqualTo(vocabulary);
   }
 
+  /**
+   * The table itself, without the imports above it.
+   *
+   * <p>Matching the whole file would find a decoder in an import that the table no longer mentions,
+   * which is precisely the drift this is looking for.
+   */
+  private static String eventNameTable() {
+    final String source = Repository.read(HARNESS);
+    final int table = source.indexOf("BY_TEMPLATE");
+    if (table < 0) {
+      throw new IllegalStateException("the harness no longer has a table of event names");
+    }
+    return source.substring(table, source.indexOf(';', table));
+  }
+
   /** The constants of a bare enum, read as text so that the gates depend on no module. */
   private static Set<String> enumConstants(final String file) {
     final String source = Repository.read(RUNNER + file);
@@ -146,6 +168,22 @@ class DocumentConsistencyGate {
         .results()
         .map(result -> result.group(1))
         .collect(Collectors.toCollection(LinkedHashSet::new));
+  }
+
+  @Test
+  @DisplayName("every event the schema defines is one a run counts")
+  void every_event_can_be_counted() {
+    final Set<String> counted =
+        DECODER
+            .matcher(eventNameTable())
+            .results()
+            .map(result -> result.group(1))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    assertThat(counted)
+        .as("the events a verification record can name, against the events the schema defines. An"
+            + " event nobody counts is one a run cannot report and a wrong engine can hide behind")
+        .isEqualTo(Schema.events());
   }
 
   /**

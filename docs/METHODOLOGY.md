@@ -106,8 +106,11 @@ below, and `kptr_restrict` at 0 for kernel symbols in a profile.
 Every one of these is verified after boot and recorded, alongside the kernel, the processor model, the
 runtime build, the collector and heap settings, the compiler and its flags, and the instance identity.
 A setting that was requested and did not take is worse than one never requested, because the run looks
-controlled. The processor model matters because counter names and meanings are microarchitecture
-specific, so a comparison across instance families is not a comparison.
+controlled. The harness reads each one from the kernel's own files and grades the run on what it finds:
+a machine that is not set up produces an exploratory run, labelled in its manifest, which is useful
+while an implementation is being written and is not a result. The processor model matters because
+counter names and meanings are microarchitecture specific, so a comparison across instance families is
+not a comparison.
 
 ## Statistics
 

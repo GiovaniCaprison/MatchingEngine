@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.github.giovanicaprison</groupId>
+    <artifactId>matching-engine</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>matching-benchmarks</artifactId>
+  <description>The measurement harness: what a run records, and the environment it refuses to run in.</description>
+  <dependencies>
+    <!--
+      The flow, for the parameters a manifest has to carry, and the api and protocol for the events a
+      run verifies. No implementation: a measurement names one on its command line.
+    -->
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-flow</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+  </dependencies>
+</project>
