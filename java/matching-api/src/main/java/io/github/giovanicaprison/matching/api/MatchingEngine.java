@@ -28,7 +28,8 @@ import org.agrona.DirectBuffer;
 public interface MatchingEngine {
 
   /**
-   * Applies one command and emits whatever it caused into the sink this engine was built with.
+   * Applies one command and publishes whatever it caused to the publisher this engine was built
+   * with.
    *
    * <p>Called on the single writer thread, in the order the commands were sequenced upstream. The
    * engine does not impose that order and never generates an input sequence of its own.

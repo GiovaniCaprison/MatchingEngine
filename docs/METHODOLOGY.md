@@ -59,8 +59,23 @@ Decode is measured on its own as well as inside the engine. Without that separat
 between two books can be swamped by the difference between two decoders.
 
 The input log is generated, encoded and resident in memory before measurement begins. No file
-reading, no allocation and no generation happens inside the measured path, and the event sink used
-during measurement counts and discards. The harness never appears in a number.
+reading, no allocation and no generation happens inside the measured path.
+
+Three threads, each on its own core, in the shape a venue deploys. A driver publishes commands into a
+ring buffer at a fixed rate. The engine reads them from that ring and publishes its events into
+another. The verification consumer reads those and never touches the engine's core, which is the
+point: counting events by type and checksumming the output stream would otherwise sit inside the
+number they exist to protect.
+
+What is left on the measured core is what a venue pays. A read from the input ring, a publish per
+event, and the two clock reads that bracket the command. Ring publication is engine work in any real
+deployment, and venues timestamp at their boundaries too. Each of the three is measured on its own and
+reported with the run, so a reader can see the floor under every number.
+
+A full ring is back pressure rather than an outlier to explain away. The driver counts the times it
+could not publish at its intended moment and the engine counts the times it waited for space. A run
+reporting either is flagged, because those numbers describe a harness that could not keep up rather
+than an engine.
 
 ## Steady state and book state
 
@@ -236,6 +251,7 @@ A standard run carries only counters and produces the numbers that get reported:
 - a verification record: event counts by type, and a checksum of the output stream
 - environment samples before and after: frequency, thermal state, context switches and involuntary
   preemptions on the measured core, and steal time
+- the ring buffer record: capacity, high water mark, and the stalls at each end
 
 Java runs add the collection log, the safepoint log, the compilation log and a flight recording. C++
 runs add the optimisation report and the build flags.
