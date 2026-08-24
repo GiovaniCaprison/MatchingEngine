@@ -111,7 +111,7 @@ class MeasurementTest {
 
   private static MeasurementParameters parameters(final long rate) {
     return new MeasurementParameters(
-        rate, 0, 1 << 20, 1 << 20, MeasurementParameters.Cores.anywhere());
+        rate, 0, 1 << 20, 1 << 20, MeasurementParameters.Cores.anywhere(), Counter.few());
   }
 
   @Test
@@ -121,7 +121,7 @@ class MeasurementTest {
     // call and the run says so. Silence is the one thing that would not be.
     final MeasurementParameters pinned =
         new MeasurementParameters(
-            200_000, 0, 1 << 20, 1 << 20, new MeasurementParameters.Cores(1, 2, 3));
+            200_000, 0, 1 << 20, 1 << 20, new MeasurementParameters.Cores(1, 2, 3), Counter.few());
 
     final Measurement.Outcome outcome = Measurement.run(log(2_000), new CountingEngine(1), pinned);
 
@@ -142,6 +142,23 @@ class MeasurementTest {
 
     assertThat(outcome.placement()).isEmpty();
     assertThat(outcome.placedAsAsked()).isTrue();
+  }
+
+  @Test
+  @DisplayName("a run reports what the hardware counted, or that it could not be counted")
+  void counters_are_reported_or_absent() {
+    // Two honest outcomes again: counts for the region, or nothing because the platform has no
+    // perf_event_open. What would not be honest is a number nobody can attribute to a region.
+    final Measurement.Outcome outcome =
+        Measurement.run(log(2_000), new CountingEngine(1), parameters(200_000));
+
+    if (Counters.available()) {
+      assertThat(outcome.counted()).containsOnlyKeys(Counter.few().toArray(Counter[]::new));
+      assertThat(outcome.counted().values()).allSatisfy(count -> assertThat(count).isNotNegative());
+    } else {
+      assertThat(outcome.counted()).isEmpty();
+      assertThat(outcome.countersMultiplexed()).isFalse();
+    }
   }
 
   private static CommandLog log(final int commands) {

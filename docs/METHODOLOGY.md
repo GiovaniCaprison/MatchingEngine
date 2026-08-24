@@ -156,10 +156,18 @@ misses at each level, TLB misses, branch mispredictions, and stalled cycles fron
 process over an interval, so attributing a miss to a line of code needs a sampling profiler. `perf c2c`
 for false sharing, once a publisher moves to another core.
 
-**Bracketed counters.** Hardware counters read in process on the measured thread, around the measured
-region, through `perf_event_open` with the counter page mapped so a read costs tens of cycles. Java
-reaches it through the foreign function API, C++ directly, so both produce the same numbers around the
-same region.
+**Bracketed counters.** Hardware counters opened on the measured thread and read at both ends of the
+reported region, through `perf_event_open`. Java reaches it through the foreign function API, C++
+directly, so both produce the same numbers around the same region. Two `read` calls a run rather than
+the mapped counter page and `rdpmc`: a managed runtime cannot emit that instruction, and using it on
+one side only would put the difference between two reading mechanisms inside a comparison of two
+engines. Bracketing millions of commands makes two syscalls irrelevant, which is why the region rather
+than the command is the unit.
+
+Counting excludes the kernel and the hypervisor, so a syscall somebody else made cannot land in the
+number. A processor has a handful of counter slots, so a set is chosen to fit; where the kernel has to
+multiplex, every value becomes an extrapolation from the fraction of the time it was counting, and a
+run that did this says so rather than presenting the numbers as counts.
 
 This is what excludes runtime noise from a count: compiler threads, collector threads and startup are
 all on other threads and are not counted. Instructions retired is far more stable run to run than
@@ -262,6 +270,7 @@ A standard run carries only counters and produces the numbers that get reported:
 - a verification record: event counts by type, and a checksum of the output stream
 - environment samples before and after: frequency, thermal state, context switches and involuntary
   preemptions on the measured core, and steal time
+- the hardware counters over the reported region, and whether the kernel had to multiplex them
 - the ring buffer record: capacity, high water mark, and the stalls at each end
 - where each thread was placed, read back from the kernel rather than taken from the request
 
