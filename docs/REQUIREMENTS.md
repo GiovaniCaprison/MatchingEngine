@@ -47,14 +47,14 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 
 | Id | Requirement | Mechanism |
 |---|---|---|
-| FR-4.1 | A resting order can be cancelled by its engine order id | unit |
+| FR-4.1 | A resting order can be cancelled by the client order id it was entered with | unit |
 | FR-4.2 | Cancelling an order the engine is not resting is reported | unit |
 | FR-4.3 | A replace carries the full intended new state rather than a delta | unit |
 | FR-4.4 | A replace lowering quantity at the same price keeps queue position | unit |
 | FR-4.5 | Any other replace loses queue position | unit |
 | FR-4.6 | A replace refused by a liquidity flag leaves the original order resting | unit |
 | FR-4.7 | A mass cancel removes every resting order for a participant and reports each removal in arrival order | unit |
-| FR-4.8 | A replaced order keeps its engine order id, whether or not it keeps queue position | unit |
+| FR-4.8 | A replaced order keeps both of its ids, whether or not it keeps queue position | unit |
 
 ## FR-5: hidden quantity
 
@@ -178,6 +178,10 @@ applied; a price must satisfy the static band and the dynamic one.
 
 Pro-rata apportionment rounds each participant's share down to a whole lot. Whatever remains
 undistributed after rounding is allocated in arrival order, one lot at a time, until exhausted.
+
+An order is named by the client order id its participant gave it, and those are unique per participant
+for the session. Uniqueness is the sender's to guarantee. Two participants using the same number are two
+different orders, so the engine keys on the pair.
 
 A trigger price is a price on the instrument, so VR-2.2 and VR-2.3 apply to it. VR-2.4 does not: a stop
 is placed away from where the market is, and banding it against the last executed price would refuse

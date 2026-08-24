@@ -114,20 +114,23 @@
     <field name="smpId" id="13" type="uint64"/>
   </sbe:message>
 
+  <!--
+    An amendment names its order by the id the client gave it, not by the one the engine assigned.
+    A client can only know the engine's id once it has been told, so a command that carries it is a
+    command nothing can send until a round trip has completed.
+  -->
   <sbe:message name="CancelOrder" id="3" description="Cancel a resting order">
     <field name="frame" id="1" type="CommandFrame"/>
     <field name="clientOrderId" id="2" type="uint64"/>
     <field name="participantId" id="3" type="uint32"/>
-    <field name="orderId" id="4" type="uint64"/>
   </sbe:message>
 
   <sbe:message name="ReplaceOrder" id="4" description="Replace a resting order, carrying full intent">
     <field name="frame" id="1" type="CommandFrame"/>
     <field name="clientOrderId" id="2" type="uint64"/>
     <field name="participantId" id="3" type="uint32"/>
-    <field name="orderId" id="4" type="uint64"/>
-    <field name="quantity" id="5" type="int64"/>
-    <field name="price" id="6" type="int64"/>
+    <field name="quantity" id="4" type="int64"/>
+    <field name="price" id="5" type="int64"/>
   </sbe:message>
 
   <sbe:message name="MassCancel" id="5" description="Remove every resting order for a participant">

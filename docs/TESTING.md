@@ -105,10 +105,14 @@ One directive per line. A line whose first non-blank character is `#` is a comme
 ignored. Fields are separated by any run of spaces, so columns can be aligned. There are no trailing
 comments, because `#` is also the order reference sigil.
 
-An order reference is `#n`, counting `NEW` directives from one. References are not engine order ids.
-Asserting engine ids would test id allocation and would break an implementation that numbers
-differently for a good reason. An execution id is written `@n`, the nth distinct one in the stream,
-for the same reason.
+An order reference is `#n`, counting `NEW` directives from one, and it is the client order id that
+order was entered with. A command names an order that way, so a fixture needs nothing an engine has to
+report first.
+
+An event names an order by the engine's id, and that is never written down: asserting it would test id
+allocation and would break an implementation that numbers differently for a good reason. Events are
+rendered back through the reference instead. An execution id is written `@n`, the nth distinct one in
+the stream, for the same reason.
 
 Commands:
 

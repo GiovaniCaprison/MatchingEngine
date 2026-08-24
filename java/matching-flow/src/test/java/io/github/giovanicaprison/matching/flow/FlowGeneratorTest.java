@@ -81,10 +81,12 @@ class FlowGeneratorTest {
   }
 
   @Test
-  @DisplayName("a cancel or a replace names an order entered earlier, at the offset it is patched")
-  void targets_exist_and_are_patchable() {
+  @DisplayName("a cancel or a replace names an order entered earlier, and never one twice")
+  void targets_are_orders_the_flow_placed() {
     final CommandLog log = FlowGenerator.generate(PARAMETERS);
-    final Set<Integer> cancelled = new HashSet<>();
+    final MessageHeaderDecoder header = new MessageHeaderDecoder();
+    final CancelOrderDecoder cancel = new CancelOrderDecoder();
+    final Set<Long> cancelled = new HashSet<>();
     int entered = 0;
     int targeted = 0;
 
@@ -93,19 +95,20 @@ class FlowGeneratorTest {
         entered++;
         continue;
       }
-      if (log.targetOrdinal(command) < 0) {
+      if (log.templateId(command) != CancelOrderDecoder.TEMPLATE_ID) {
         continue;
       }
       targeted++;
-      assertThat(log.targetOrdinal(command)).isBetween(1, entered);
-      assertThat(log.buffer().getLong(log.patchOffset(command)))
-          .as("the patch offset has to be the field the driver overwrites")
-          .isEqualTo(log.targetOrdinal(command));
-      if (log.templateId(command) == CancelOrderDecoder.TEMPLATE_ID) {
-        assertThat(cancelled.add(log.targetOrdinal(command)))
-            .as("an order the generator has already cancelled is not a target again")
-            .isTrue();
-      }
+      header.wrap(log.buffer(), log.offset(command));
+      cancel.wrap(
+          log.buffer(),
+          log.offset(command) + MessageHeaderDecoder.ENCODED_LENGTH,
+          header.blockLength(),
+          header.version());
+      assertThat(cancel.clientOrderId()).isBetween(1L, (long) entered);
+      assertThat(cancelled.add(cancel.clientOrderId()))
+          .as("an order the generator has already cancelled is not a target again")
+          .isTrue();
     }
     assertThat(targeted).isPositive();
   }

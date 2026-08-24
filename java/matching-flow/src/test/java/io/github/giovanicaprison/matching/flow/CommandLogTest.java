@@ -32,29 +32,8 @@ class CommandLogTest {
     for (int command = 0; command < written.count(); command++) {
       assertThat(read.length(command)).isEqualTo(written.length(command));
       assertThat(read.templateId(command)).isEqualTo(written.templateId(command));
-      assertThat(read.targetOrdinal(command)).isEqualTo(written.targetOrdinal(command));
       assertThat(message(read, command)).isEqualTo(message(written, command));
     }
-  }
-
-  @Test
-  @DisplayName("a patch offset read back from a file points at the same field")
-  void patch_offsets_survive_the_round_trip() {
-    final CommandLog written = FlowGenerator.generate(FlowParameters.standard(7, 2_000));
-    final Path file = directory.resolve("flow.log");
-    written.writeTo(file);
-    final CommandLog read = CommandLog.readFrom(file);
-
-    int checked = 0;
-    for (int command = 0; command < read.count(); command++) {
-      if (read.patchOffset(command) < 0) {
-        continue;
-      }
-      checked++;
-      assertThat(read.buffer().getLong(read.patchOffset(command)))
-          .isEqualTo(read.targetOrdinal(command));
-    }
-    assertThat(checked).isPositive();
   }
 
   @Test

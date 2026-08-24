@@ -296,20 +296,21 @@ public final class NaiveEngine implements MatchingEngine {
           RejectReason.STATE_NOT_PERMITTED);
       return;
     }
-    final long orderId = cancelOrder.orderId();
-    final Order resting = book.byId(orderId);
+    final int participantId = (int) cancelOrder.participantId();
+    final long clientOrderId = cancelOrder.clientOrderId();
+    final Order resting = book.named(participantId, clientOrderId);
     if (resting != null) {
       book.remove(resting);
-      feed.removed(orderId, resting.displayed(), RemoveReason.CANCELLED);
+      feed.removed(resting.id(), resting.displayed(), RemoveReason.CANCELLED);
       reportIndicative();
       return;
     }
-    final Order stop = triggers.byId(orderId);
+    final Order stop = triggers.named(participantId, clientOrderId);
     if (stop != null) {
       // (FR-6.5) A stop is reported on cancellation as well, and it never appeared as resting, so
       // what it takes with it is its whole quantity.
       triggers.remove(stop);
-      feed.removed(orderId, stop.remaining(), RemoveReason.CANCELLED);
+      feed.removed(stop.id(), stop.remaining(), RemoveReason.CANCELLED);
       return;
     }
     feed.rejected(
@@ -324,7 +325,7 @@ public final class NaiveEngine implements MatchingEngine {
       feed.rejected(clientOrderId, participantId, RejectReason.STATE_NOT_PERMITTED);
       return;
     }
-    final Order resting = book.byId(replaceOrder.orderId());
+    final Order resting = book.named(participantId, clientOrderId);
     if (resting == null) {
       feed.rejected(clientOrderId, participantId, RejectReason.UNKNOWN_ORDER);
       return;

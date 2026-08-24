@@ -1,7 +1,6 @@
 package io.github.giovanicaprison.matching.conformance;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import io.github.giovanicaprison.matching.api.EventPublisher;
 import io.github.giovanicaprison.matching.protocol.RemoveReason;
@@ -91,21 +90,24 @@ class CorpusRunnerTest {
   }
 
   @Test
-  @DisplayName("a command against an order the engine never accepted is refused")
-  void an_unbound_reference_is_refused() {
+  @DisplayName("a command names an order without the engine having said anything about it")
+  void a_command_needs_nothing_from_the_engine() {
+    // This engine accepts nothing, so it has reported no id for anything. The cancel is still
+    // encodable and still sent, because a command names an order the way its sender does. Whether
+    // the order exists is the engine's answer to give.
     final String fixture =
         """
         INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
         NEW    BUY LIMIT GTC 100000 50
         CANCEL #1
         """;
+    final ScriptedEngine engine = new ScriptedEngine(List.of());
 
-    assertThatIllegalStateException()
-        .isThrownBy(
-            () ->
-                CorpusRunner.run(
-                    FixtureParser.parse("example", fixture), new ScriptedEngine(List.of())))
-        .withMessageContaining("#1 was never accepted");
+    final CorpusRunner.Result result =
+        CorpusRunner.run(FixtureParser.parse("example", fixture), engine);
+
+    assertThat(engine.commandsSeen()).isEqualTo(3);
+    assertThat(result.emitted()).isEmpty();
   }
 
   @Test

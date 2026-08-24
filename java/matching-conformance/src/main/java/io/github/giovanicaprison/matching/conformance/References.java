@@ -6,14 +6,17 @@ import java.util.Map;
 /**
  * The mapping between what a fixture writes and what an engine chose.
  *
- * <p>A fixture refers to an order as {@code #n}, counting {@code NEW} directives from one. Engine
- * order ids are never written down, because asserting them would test id allocation and would fail
- * an implementation that numbers differently for a good reason. Execution ids are handled the same
- * way, as {@code @n} for the nth distinct one in the stream.
+ * <p>A fixture refers to an order as {@code #n}, counting {@code NEW} directives from one, and that
+ * number is the client order id the harness gives it. A command needs nothing else, because a
+ * command names an order the way its sender does.
+ *
+ * <p>An event names it the way the engine does, and that id is never written down: asserting it
+ * would test id allocation and would fail an implementation that numbers differently for a good
+ * reason. So an event is rendered back through the id reported on acceptance. Execution ids work
+ * the same way, as {@code @n} for the nth distinct one in the stream.
  */
 final class References {
 
-  private final Map<Integer, Long> orderIdByReference = new LinkedHashMap<>();
   private final Map<Long, Integer> referenceByOrderId = new LinkedHashMap<>();
   private final Map<Integer, Integer> participantByReference = new LinkedHashMap<>();
   private final Map<Long, Integer> executionOrdinals = new LinkedHashMap<>();
@@ -23,23 +26,7 @@ final class References {
   }
 
   void bind(final int reference, final long orderId) {
-    orderIdByReference.put(reference, orderId);
     referenceByOrderId.put(orderId, reference);
-  }
-
-  /**
-   * The engine id behind a reference.
-   *
-   * <p>Unbound means the fixture is cancelling or replacing an order the engine never accepted.
-   * There is no id to send, so the fixture is wrong rather than interesting: a command against an
-   * unknown order is a unit test, where the id can be chosen deliberately.
-   */
-  long orderId(final int reference) {
-    final Long orderId = orderIdByReference.get(reference);
-    if (orderId == null) {
-      throw new IllegalStateException("#" + reference + " was never accepted, so it has no id");
-    }
-    return orderId;
   }
 
   int participant(final int reference) {

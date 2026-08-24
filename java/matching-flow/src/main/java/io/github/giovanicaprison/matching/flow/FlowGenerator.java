@@ -23,6 +23,10 @@ import org.agrona.concurrent.UnsafeBuffer;
  * they name has traded. That is a command a real venue receives, and the rejections it causes are
  * counted in a run's verification record.
  *
+ * <p>A cancel or a replace names its target the way the order's sender named it, by client order
+ * id, so a log is self contained: nothing in it depends on what an engine assigned, and both
+ * languages replay the same bytes with no patching at all.
+ *
  * <p>Prices stay inside the instrument's band, so a flow does not spend itself on refusals that
  * measure the validation path and nothing else. Parameters that would reach outside it are refused
  * here rather than producing a log that measures the wrong thing.
@@ -168,10 +172,7 @@ public final class FlowGenerator {
     final int index = resting.pick(sequence);
     cancel.wrapAndApplyHeader(out, at, header);
     cancel.frame().instrumentId(INSTRUMENT_ID).sequence(++inputSequence);
-    cancel
-        .clientOrderId(inputSequence)
-        .participantId(resting.participantAt(index))
-        .orderId(resting.ordinalAt(index));
+    cancel.clientOrderId(resting.ordinalAt(index)).participantId(resting.participantAt(index));
     complete(cancel.encodedLength());
     resting.removeAt(index);
   }
@@ -189,9 +190,8 @@ public final class FlowGenerator {
     replace.wrapAndApplyHeader(out, at, header);
     replace.frame().instrumentId(INSTRUMENT_ID).sequence(++inputSequence);
     replace
-        .clientOrderId(inputSequence)
+        .clientOrderId(resting.ordinalAt(index))
         .participantId(resting.participantAt(index))
-        .orderId(resting.ordinalAt(index))
         .quantity(quantity())
         .price(price);
     complete(replace.encodedLength());

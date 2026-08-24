@@ -1,10 +1,6 @@
 package io.github.giovanicaprison.matching.flow;
 
-import io.github.giovanicaprison.matching.protocol.CancelOrderDecoder;
-import io.github.giovanicaprison.matching.protocol.CancelOrderEncoder;
 import io.github.giovanicaprison.matching.protocol.MessageHeaderDecoder;
-import io.github.giovanicaprison.matching.protocol.ReplaceOrderDecoder;
-import io.github.giovanicaprison.matching.protocol.ReplaceOrderEncoder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -27,22 +23,18 @@ import org.agrona.concurrent.UnsafeBuffer;
  * <p>A log can be written to a file and read back, which is how a Java run and a C++ run are fed
  * the same bytes. Only one generator exists, and neither language owns it.
  *
- * <p>Cancels and replaces name their target by the ordinal of the order that created it, counting
- * order entries from one. The engine's id for that order is not knowable when a log is generated,
- * so the driver writes it into the message before sending, at {@link #patchOffset(int)}. That is a
- * gateway's job in production and it happens outside the measured region here.
+ * <p>Nothing in a log depends on what an engine did with it. A cancel names its target by the
+ * client order id the order was entered with, so the bytes go to any implementation unaltered and
+ * the driver does no work per command beyond publishing it.
  */
 public final class CommandLog {
 
   private static final byte[] MAGIC = "MEFLOW01".getBytes(StandardCharsets.UTF_8);
-  private static final int NOTHING = -1;
 
   private final DirectBuffer buffer;
   private final int[] offsets;
   private final int[] lengths;
   private final int[] templateIds;
-  private final int[] targetOrdinals;
-  private final int[] patchOffsets;
   private final int count;
   private final int measuredFrom;
 
@@ -58,8 +50,6 @@ public final class CommandLog {
     this.count = count;
     this.measuredFrom = measuredFrom;
     this.templateIds = new int[count];
-    this.targetOrdinals = new int[count];
-    this.patchOffsets = new int[count];
     index();
   }
 
@@ -92,16 +82,6 @@ public final class CommandLog {
 
   public int templateId(final int command) {
     return templateIds[command];
-  }
-
-  /** The order this command targets, or minus one when it targets none. */
-  public int targetOrdinal(final int command) {
-    return targetOrdinals[command];
-  }
-
-  /** Where the engine's order id belongs in this command, or minus one when it carries none. */
-  public int patchOffset(final int command) {
-    return patchOffsets[command];
   }
 
   public void writeTo(final Path file) {
@@ -174,28 +154,9 @@ public final class CommandLog {
    */
   private void index() {
     final MessageHeaderDecoder header = new MessageHeaderDecoder();
-    final CancelOrderDecoder cancel = new CancelOrderDecoder();
-    final ReplaceOrderDecoder replace = new ReplaceOrderDecoder();
     for (int command = 0; command < count; command++) {
-      final int offset = offsets[command];
-      header.wrap(buffer, offset);
-      final int body = offset + MessageHeaderDecoder.ENCODED_LENGTH;
+      header.wrap(buffer, offsets[command]);
       templateIds[command] = header.templateId();
-      targetOrdinals[command] = NOTHING;
-      patchOffsets[command] = NOTHING;
-      switch (header.templateId()) {
-        case CancelOrderDecoder.TEMPLATE_ID -> {
-          cancel.wrap(buffer, body, header.blockLength(), header.version());
-          targetOrdinals[command] = (int) cancel.orderId();
-          patchOffsets[command] = body + CancelOrderEncoder.orderIdEncodingOffset();
-        }
-        case ReplaceOrderDecoder.TEMPLATE_ID -> {
-          replace.wrap(buffer, body, header.blockLength(), header.version());
-          targetOrdinals[command] = (int) replace.orderId();
-          patchOffsets[command] = body + ReplaceOrderEncoder.orderIdEncodingOffset();
-        }
-        default -> {}
-      }
     }
   }
 }
