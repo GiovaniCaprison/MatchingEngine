@@ -48,10 +48,17 @@ final class Repository {
     }
   }
 
-  /** Test sources, which is where a requirement is claimed. */
-  static List<Path> testSources() {
+  /** Java test sources, which is where a requirement is claimed on that side. */
+  static List<Path> javaTestSources() {
     return filesUnder("java", ".java").stream()
         .filter(path -> path.toString().contains("/src/test/"))
+        .toList();
+  }
+
+  /** The same on the C++ side, where a test is a file in a test directory. */
+  static List<Path> cppTestSources() {
+    return filesUnder("cpp", ".cpp").stream()
+        .filter(path -> path.toString().contains("/test/"))
         .toList();
   }
 

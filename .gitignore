@@ -1,6 +1,9 @@
 # Maven build output
 target/
 
+# CMake build output, including the fetched generator and test framework
+cpp/build/
+
 # Eclipse / m2e / jdtls generated project metadata
 .classpath
 .project

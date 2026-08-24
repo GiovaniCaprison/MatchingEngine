@@ -30,7 +30,7 @@ class RequirementCoverageGate {
     assumeTrue(anImplementationExists(), "no implementation yet, so there is no suite to hold");
 
     final Set<String> unclaimed = new LinkedHashSet<>(Requirements.coveredByUnitTests());
-    unclaimed.removeAll(JavaTests.requirementsClaimed());
+    unclaimed.removeAll(TestSources.requirementsClaimed());
 
     assertThat(unclaimed)
         .as("requirements marked unit that no test names in its display name")
@@ -40,7 +40,7 @@ class RequirementCoverageGate {
   @Test
   @DisplayName("no test claims a requirement the document does not list")
   void claims_name_real_requirements() {
-    final Set<String> unknown = new LinkedHashSet<>(JavaTests.requirementsClaimed());
+    final Set<String> unknown = new LinkedHashSet<>(TestSources.requirementsClaimed());
     unknown.removeAll(Requirements.ids());
 
     assertThat(unknown)
@@ -53,7 +53,7 @@ class RequirementCoverageGate {
   @Test
   @DisplayName("no test claims a requirement the document says has no test")
   void claims_do_not_contradict_the_mechanism() {
-    final Set<String> contradicted = new LinkedHashSet<>(JavaTests.requirementsClaimed());
+    final Set<String> contradicted = new LinkedHashSet<>(TestSources.requirementsClaimed());
     contradicted.retainAll(Requirements.withoutTests());
 
     assertThat(contradicted)
@@ -67,10 +67,10 @@ class RequirementCoverageGate {
   @DisplayName("a test claiming a requirement asserts something")
   void claims_are_backed_by_an_assertion() {
     final Set<String> hollow =
-        JavaTests.all().stream()
+        TestSources.all().stream()
             .filter(declaration -> !declaration.requirementsClaimed().isEmpty())
             .filter(declaration -> !declaration.assertsSomething())
-            .map(JavaTests.Declaration::describe)
+            .map(TestSources.Declaration::describe)
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
     assertThat(hollow)
