@@ -11,21 +11,30 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Java test sources, read as display names and method bodies.
+ * Test sources in either language, read as the name a test goes by and the body under it.
  *
  * <p>Text rather than a parser or reflection. A parser is a dependency for a job this size, and
  * reflection would only see a body's effects, which is the opposite of what the gate needs: it has
  * to know whether a method asserts anything at all, including when the assertion is missing.
+ *
+ * <p>Both languages name a test in prose, which is why they were chosen: a requirement id can sit
+ * in the name where a reader of a failure sees it and this can find it. JUnit spells that
+ * {@code @DisplayName} and Catch2 spells it {@code TEST_CASE}, and after the name both are the same
+ * problem, a braced block to look inside.
  */
-final class JavaTests {
+final class TestSources {
 
   private static final Pattern DISPLAY_NAME =
       Pattern.compile("@DisplayName\\(\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*\\)");
 
-  /** What counts as checking something. A helper called from the body is not visible here. */
-  private static final List<String> ASSERTION_MARKERS = List.of("assert", "Assert", "fail(");
+  private static final Pattern TEST_CASE =
+      Pattern.compile("TEST_CASE\\(\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
 
-  private JavaTests() {}
+  /** What counts as checking something. A helper called from the body is not visible here. */
+  private static final List<String> ASSERTION_MARKERS =
+      List.of("assert", "Assert", "fail(", "CHECK", "REQUIRE");
+
+  private TestSources() {}
 
   record Declaration(Path file, int line, String displayName, String body) {
 
@@ -48,19 +57,22 @@ final class JavaTests {
 
   static List<Declaration> all() {
     final List<Declaration> declarations = new ArrayList<>();
-    for (final Path file : Repository.testSources()) {
+    collect(declarations, Repository.javaTestSources(), DISPLAY_NAME);
+    collect(declarations, Repository.cppTestSources(), TEST_CASE);
+    return declarations;
+  }
+
+  private static void collect(
+      final List<Declaration> declarations, final List<Path> files, final Pattern named) {
+    for (final Path file : files) {
       final String source = Repository.contentOf(file);
-      final Matcher displayName = DISPLAY_NAME.matcher(source);
-      while (displayName.find()) {
+      final Matcher name = named.matcher(source);
+      while (name.find()) {
         declarations.add(
             new Declaration(
-                file,
-                lineOf(source, displayName.start()),
-                displayName.group(1),
-                bodyAfter(source, displayName.end())));
+                file, lineOf(source, name.start()), name.group(1), bodyAfter(source, name.end())));
       }
     }
-    return declarations;
   }
 
   /** Every requirement id claimed by any test, whether or not the document lists it. */

@@ -1,0 +1,17 @@
+# Catch2 for the same reason JUnit's display names are used on the Java side: a test's name is prose,
+# so it can carry the requirement id it covers and the coverage gate can read it.
+
+include(FetchContent)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG v3.7.1
+  GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(Catch2)
+
+add_executable(schema-round-trip schema_round_trip.cpp)
+target_link_libraries(schema-round-trip PRIVATE matching-protocol Catch2::Catch2WithMain)
+
+include(Catch)
+catch_discover_tests(schema-round-trip)

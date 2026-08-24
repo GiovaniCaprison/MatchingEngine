@@ -80,12 +80,17 @@ cmake --build build
 ctest --test-dir build
 ```
 
+Configuring fetches the codec generator and the test framework by exact version and checksum into the
+build directory, so it needs the network once and never again. Formatting is `google-java-format` on
+one side and `clang-format` on the other, both at a hundred columns, so the two trees wrap alike.
+
 Agrona reaches `jdk.internal.misc.Unsafe` for buffer access, so the build passes
 `--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`, and the harness places its threads and reads
 counters through the foreign function API, which needs `--enable-native-access=ALL-UNNAMED`. Both are
-declared once in the parent pom, and anything embedding the engine needs the first of them. That is the internal one the runtime uses itself, which is
-why the flag is needed and why the access stays intrinsified. The memory access methods on
-`sun.misc.Unsafe` are on the removal path, and nothing here goes near them.
+declared once in the parent pom, and anything embedding the engine needs the first of them. That is
+the internal Unsafe the runtime uses itself, which is why the flag is needed and why the access stays
+intrinsified. The memory access methods on `sun.misc.Unsafe` are on the removal path, and nothing
+here goes near them.
 
 Benchmarks run outside the test phase, one implementation per process, and write a directory under
 `results/`. On the Java side that is a shaded jar; on the C++ side a binary.

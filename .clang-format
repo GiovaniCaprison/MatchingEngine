@@ -1,0 +1,6 @@
+# Google style at a hundred columns, which is what google-java-format uses on the Java side. The two
+# trees are read side by side, and a difference in wrapping is a difference nobody chose.
+BasedOnStyle: Google
+ColumnLimit: 100
+DerivePointerAlignment: false
+PointerAlignment: Left
