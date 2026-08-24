@@ -95,7 +95,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | Id | Requirement | Mechanism |
 |---|---|---|
 | FR-8.1 | Applying any prefix of the output stream yields a valid book | corpus |
-| FR-8.2 | A book rebuilt from the stream alone matches the engine's own at every point | corpus |
+| FR-8.2 | A book rebuilt from the stream alone matches the engine's own after every command | property |
 | FR-8.3 | An order entering the book is reported with side, price and displayed quantity | unit |
 | FR-8.4 | An order leaving the book is reported with the quantity removed and the reason | unit |
 | FR-8.5 | A quantity reduction that keeps queue position is reported without a removal | unit |

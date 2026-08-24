@@ -23,6 +23,11 @@ import org.agrona.concurrent.UnsafeBuffer;
  * always land in the same place fails here instead of on a ring buffer.
  *
  * <p>Comparison is over words, not characters, so a fixture can align its columns.
+ *
+ * <p>Every fixture also builds the book a consumer would build from the events, and a stream that
+ * cannot be followed fails the fixture whatever its lines say (FR-8.1). Output that reads correctly
+ * and describes an impossible book is the failure worth catching: it passes review and breaks a
+ * feed.
  */
 public final class CorpusRunner implements EventPublisher {
 
@@ -32,7 +37,8 @@ public final class CorpusRunner implements EventPublisher {
   private final MutableDirectBuffer events = new UnsafeBuffer(new byte[CAPACITY]);
   private final References references = new References();
   private final CommandWriter writer = new CommandWriter(references);
-  private final EventReader reader = new EventReader(references);
+  private final ConsumerBook rebuilt = new ConsumerBook();
+  private final EventReader reader = new EventReader(references, rebuilt);
   private final Map<Fixture.Command, List<String>> produced = new LinkedHashMap<>();
   private final List<String> emitted = new ArrayList<>();
 
@@ -45,14 +51,32 @@ public final class CorpusRunner implements EventPublisher {
 
   /** Runs one fixture. A throw from the engine is a failure of the fixture, not of the harness. */
   public static Result run(final Fixture fixture, final MatchingEngineFactory factory) {
+    return run(fixture, factory, (command, rebuilt) -> {});
+  }
+
+  /**
+   * Runs one fixture, with the rebuilt book offered up after each command.
+   *
+   * <p>After a command and not after an event: between the events of one command the engine is part
+   * way through a mutation, and a book compared there is a book compared mid-sentence.
+   */
+  public static Result run(
+      final Fixture fixture, final MatchingEngineFactory factory, final Quiescent observer) {
     final CorpusRunner runner = new CorpusRunner();
     final MatchingEngine engine = factory.create(runner);
     for (final Fixture.Command command : fixture.commands()) {
       runner.inFlight = runner.produced.computeIfAbsent(command, key -> new ArrayList<>());
       final int length = runner.writer.write(command);
       engine.onCommand(runner.writer.buffer(), 0, length);
+      observer.afterCommand(command, runner.rebuilt);
     }
-    return new Result(fixture, runner.emitted, runner.produced);
+    return new Result(fixture, runner.emitted, runner.produced, runner.rebuilt.problems());
+  }
+
+  /** Somewhere to look while the engine is between commands and holding still. */
+  public interface Quiescent {
+
+    void afterCommand(Fixture.Command command, ConsumerBook rebuilt);
   }
 
   @Override
@@ -80,10 +104,13 @@ public final class CorpusRunner implements EventPublisher {
 
   /** What one fixture did, and how it differs from what it should have done. */
   public record Result(
-      Fixture fixture, List<String> emitted, Map<Fixture.Command, List<String>> byCommand) {
+      Fixture fixture,
+      List<String> emitted,
+      Map<Fixture.Command, List<String>> byCommand,
+      List<String> problems) {
 
     public boolean passed() {
-      return firstDifference() < 0;
+      return firstDifference() < 0 && problems.isEmpty();
     }
 
     /** The index of the first line that differs, or minus one when nothing does. */
@@ -106,17 +133,22 @@ public final class CorpusRunner implements EventPublisher {
       if (passed()) {
         return fixture.name() + " passed";
       }
+      final StringBuilder said = new StringBuilder(fixture.name());
       final int at = firstDifference();
-      final List<String> expected = normalised(fixture.expectedOutput());
-      return fixture.name()
-          + " differs at output line "
-          + (at + 1)
-          + "\n  expected: "
-          + lineAt(expected, at)
-          + "\n  actual:   "
-          + lineAt(emitted, at)
-          + "\n\nthe run as a fixture:\n\n"
-          + asFixture();
+      if (at >= 0) {
+        final List<String> expected = normalised(fixture.expectedOutput());
+        said.append(" differs at output line ")
+            .append(at + 1)
+            .append("\n  expected: ")
+            .append(lineAt(expected, at))
+            .append("\n  actual:   ")
+            .append(lineAt(emitted, at));
+      }
+      if (!problems.isEmpty()) {
+        said.append("\n  emitted a stream a consumer cannot follow:");
+        problems.forEach(problem -> said.append("\n    ").append(problem));
+      }
+      return said.append("\n\nthe run as a fixture:\n\n").append(asFixture()).toString();
     }
 
     /** The commands as written, each followed by the events it actually produced. */

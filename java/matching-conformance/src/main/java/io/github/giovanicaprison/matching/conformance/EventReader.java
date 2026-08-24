@@ -15,6 +15,10 @@ import org.agrona.DirectBuffer;
 /**
  * Turns an event into the line a fixture writes for it.
  *
+ * <p>Every event also goes into the book a consumer would build from it, since this is the one
+ * place that decodes each event exactly once. Rendering and rebuilding from the same decode keeps
+ * the two from disagreeing about what an event said.
+ *
  * <p>Only what a fixture asserts is rendered. Sequence numbers are left out because they are a
  * property of the stream rather than of the event: asserting them would make every fixture depend
  * on how many events happen to precede the one being checked.
@@ -33,9 +37,11 @@ final class EventReader {
   private final AuctionIndicativeDecoder indicative = new AuctionIndicativeDecoder();
 
   private final References references;
+  private final ConsumerBook rebuilt;
 
-  EventReader(final References references) {
+  EventReader(final References references, final ConsumerBook rebuilt) {
     this.references = references;
+    this.rebuilt = rebuilt;
   }
 
   String read(final DirectBuffer buffer, final int offset, final int length) {
@@ -60,6 +66,7 @@ final class EventReader {
   private String accepted(final DirectBuffer buffer, final int offset) {
     accepted.wrap(buffer, offset, header.blockLength(), header.version());
     references.bind((int) accepted.clientOrderId(), accepted.orderId());
+    rebuilt.accepted(accepted.orderId());
     return Verb.ACCEPTED + " " + references.render(accepted.orderId());
   }
 
@@ -70,6 +77,7 @@ final class EventReader {
 
   private String rested(final DirectBuffer buffer, final int offset) {
     rested.wrap(buffer, offset, header.blockLength(), header.version());
+    rebuilt.rested(rested.orderId(), rested.side(), rested.price(), rested.quantity());
     return Verb.RESTED
         + " "
         + references.render(rested.orderId())
@@ -83,6 +91,11 @@ final class EventReader {
 
   private String executed(final DirectBuffer buffer, final int offset) {
     executed.wrap(buffer, offset, header.blockLength(), header.version());
+    rebuilt.executed(
+        executed.aggressorOrderId(),
+        executed.restingOrderId(),
+        executed.price(),
+        executed.quantity());
     return Verb.EXECUTED
         + " "
         + references.renderExecution(executed.executionId())
@@ -98,11 +111,13 @@ final class EventReader {
 
   private String reduced(final DirectBuffer buffer, final int offset) {
     reduced.wrap(buffer, offset, header.blockLength(), header.version());
+    rebuilt.reduced(reduced.orderId(), reduced.quantity());
     return Verb.REDUCED + " " + references.render(reduced.orderId()) + " " + reduced.quantity();
   }
 
   private String removed(final DirectBuffer buffer, final int offset) {
     removed.wrap(buffer, offset, header.blockLength(), header.version());
+    rebuilt.removed(removed.orderId(), removed.quantity());
     return Verb.REMOVED
         + " "
         + references.render(removed.orderId())

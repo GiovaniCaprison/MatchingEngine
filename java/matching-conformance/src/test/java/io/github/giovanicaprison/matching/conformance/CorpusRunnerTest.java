@@ -76,6 +76,7 @@ class CorpusRunnerTest {
         .contains("differs at output line 3")
         .contains("expected: RESTED #1 BUY 100000 50")
         .contains("actual:   RESTED #1 BUY 100000 40")
+        .doesNotContain("cannot follow")
         .contains("NEW      BUY LIMIT GTC 100000 50");
   }
 
@@ -142,7 +143,8 @@ class CorpusRunnerTest {
     final List<Consumer<EventPublisher>> resting =
         List.of(events.accepted(701, 1), events.rested(701, Side.BUY, 100_000, restingQuantity));
     final List<Consumer<EventPublisher>> crossing =
-        List.of(events.accepted(702, 2), events.executed(9_001, 702, 701, 100_000, 50));
+        List.of(
+            events.accepted(702, 2), events.executed(9_001, 702, 701, 100_000, restingQuantity));
     return new ScriptedEngine(List.of(definition, session, resting, crossing));
   }
 }

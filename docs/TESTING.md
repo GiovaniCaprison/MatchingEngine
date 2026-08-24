@@ -30,6 +30,12 @@ test that runs the directory.
 state: interaction. A stop cascade that fires during an iceberg replenishment inside an auction uncross
 is one scenario and would be six rules that each pass while the combination is wrong.
 
+Every fixture also builds the book a consumer would build from the events, and a stream that cannot be
+followed fails the fixture whatever its lines say (FR-8.1). Output that reads correctly and describes
+an impossible book is the failure worth catching, because it passes review and breaks a feed. Whether
+that book is the one the engine holds needs the engine's own, so it is a property test inside an
+implementation's package rather than something the corpus can ask (FR-8.2).
+
 When output changes legitimately, the runner prints the run back as a fixture so it can be read and
 pasted over the file. Read the diff first. A blessed snapshot is worth what the last person to look
 at it was paying attention to.
