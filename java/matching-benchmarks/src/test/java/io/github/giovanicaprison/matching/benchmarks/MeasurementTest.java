@@ -110,7 +110,38 @@ class MeasurementTest {
   }
 
   private static MeasurementParameters parameters(final long rate) {
-    return new MeasurementParameters(rate, 0, 1 << 20, 1 << 20);
+    return new MeasurementParameters(
+        rate, 0, 1 << 20, 1 << 20, MeasurementParameters.Cores.anywhere());
+  }
+
+  @Test
+  @DisplayName("a run asked to place its threads records where they ended up")
+  void placement_is_recorded_rather_than_assumed() {
+    // Two outcomes are honest: the threads went where they were asked, or the platform has no such
+    // call and the run says so. Silence is the one thing that would not be.
+    final MeasurementParameters pinned =
+        new MeasurementParameters(
+            200_000, 0, 1 << 20, 1 << 20, new MeasurementParameters.Cores(1, 2, 3));
+
+    final Measurement.Outcome outcome = Measurement.run(log(2_000), new CountingEngine(1), pinned);
+
+    assertThat(outcome.placement()).hasSize(3);
+    assertThat(outcome.placement())
+        .allSatisfy(
+            setting ->
+                assertThat(setting.status())
+                    .isIn(Setting.Status.OK, Setting.Status.UNAVAILABLE, Setting.Status.WRONG));
+    assertThat(outcome.commands()).isEqualTo(log(2_000).count());
+  }
+
+  @Test
+  @DisplayName("a run that asked for no core in particular claims nothing about placement")
+  void an_unpinned_run_claims_nothing() {
+    final Measurement.Outcome outcome =
+        Measurement.run(log(2_000), new CountingEngine(1), parameters(200_000));
+
+    assertThat(outcome.placement()).isEmpty();
+    assertThat(outcome.placedAsAsked()).isTrue();
   }
 
   private static CommandLog log(final int commands) {

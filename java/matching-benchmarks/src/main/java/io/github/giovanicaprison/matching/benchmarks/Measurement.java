@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.HdrHistogram.Histogram;
 import org.agrona.concurrent.MessageHandler;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -24,8 +26,8 @@ import org.agrona.concurrent.ringbuffer.OneToOneRingBuffer;
  * kept up, so a stall shows up as a queue rather than as samples nobody took. A harness that waited
  * for the previous command would report a tail that does not exist.
  *
- * <p>Nothing here is pinned to a core yet, so a run on this harness is exploratory until it is. The
- * grade in the manifest already says as much for any machine that is not set up.
+ * <p>Each thread pins itself before it does anything else, and the pin is read back rather than
+ * assumed. Where a platform has no such call every pin reads as unavailable and the run says so.
  */
 public final class Measurement {
 
@@ -37,6 +39,8 @@ public final class Measurement {
   private final Timings timings;
   private final VerificationRecord verification = new VerificationRecord();
   private final UnsafeBuffer nothing = new UnsafeBuffer(new byte[0]);
+
+  private final List<Setting> placement = new ArrayList<>();
 
   private volatile boolean ended;
   private long publishRetries;
@@ -63,11 +67,14 @@ public final class Measurement {
 
   private Outcome execute(final MatchingEngineFactory factory) {
     final MatchingEngine engine = factory.create(publisher);
-    final Thread verifier = thread("verifier", this::verify);
-    final Thread runner = thread("engine", () -> apply(engine));
+    final MeasurementParameters.Cores cores = parameters.cores();
+    final Thread verifier =
+        thread("verifier", () -> pinned("verifier", cores.verifier(), this::verify));
+    final Thread runner =
+        thread("engine", () -> pinned("engine", cores.engine(), () -> apply(engine)));
     verifier.start();
     runner.start();
-    drive();
+    pinned("driver", cores.driver(), this::drive);
     join(runner);
     join(verifier);
     return outcome();
@@ -96,6 +103,22 @@ public final class Measurement {
       }
       commandsQueued = Math.max(commandsQueued, queued(commands));
     }
+  }
+
+  /**
+   * Pins the thread, records what happened, and gets on with the work.
+   *
+   * <p>A refused pin does not stop a run. It changes what the run is worth, which is what the
+   * record is for.
+   */
+  private void pinned(final String name, final int core, final Runnable work) {
+    if (core != MeasurementParameters.UNPINNED) {
+      final Setting setting = Affinity.pin(name, core);
+      synchronized (placement) {
+        placement.add(setting);
+      }
+    }
+    work.run();
   }
 
   private void publish(final int command) {
@@ -155,6 +178,7 @@ public final class Measurement {
         applied,
         timings,
         verification,
+        List.copyOf(placement),
         publishRetries,
         publisher.waits(),
         publisher.waitedNanos(),
@@ -187,6 +211,7 @@ public final class Measurement {
    * @param commands how many were applied
    * @param timings every command's four timestamps
    * @param verification what the engine emitted, counted and hashed
+   * @param placement where each thread ended up, as read back from the kernel
    * @param publishRetries times the driver found the input ring full
    * @param publisherWaits times the engine found the output ring full
    * @param publisherWaitedNanos how long those waits cost in total
@@ -197,6 +222,7 @@ public final class Measurement {
       int commands,
       Timings timings,
       VerificationRecord verification,
+      List<Setting> placement,
       long publishRetries,
       long publisherWaits,
       long publisherWaitedNanos,
@@ -211,6 +237,11 @@ public final class Measurement {
      */
     public boolean harnessKeptUp() {
       return publishRetries == 0 && publisherWaits == 0;
+    }
+
+    /** Whether every thread ended up where it was asked to be. */
+    public boolean placedAsAsked() {
+      return placement.stream().allMatch(Setting::satisfied);
     }
 
     /** Everything a run produced, in the directory it produced it in. */
@@ -235,6 +266,7 @@ public final class Measurement {
               .object()
               .field("commands", commands)
               .field("harnessKeptUp", harnessKeptUp())
+              .field("placedAsAsked", placedAsAsked())
               .field("publishRetries", publishRetries)
               .field("publisherWaits", publisherWaits)
               .field("publisherWaitedNanos", publisherWaitedNanos)
@@ -244,6 +276,16 @@ public final class Measurement {
               .field("digest", Long.toHexString(verification.digest()));
       json.object("counts");
       verification.countsByName().forEach(json::field);
+      json.end();
+      json.array("placement");
+      for (final Setting setting : placement) {
+        json.object()
+            .field("name", setting.name())
+            .field("expected", setting.expected())
+            .field("actual", setting.actual())
+            .field("status", setting.status().name())
+            .end();
+      }
       json.end();
       summary(json, "service", timings.service());
       summary(json, "response", timings.response());

@@ -81,8 +81,9 @@ ctest --test-dir build
 ```
 
 Agrona reaches `jdk.internal.misc.Unsafe` for buffer access, so the build passes
-`--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`, declared once in the parent pom. Anything
-embedding the engine needs the same flag. That is the internal one the runtime uses itself, which is
+`--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`, and the harness places its threads and reads
+counters through the foreign function API, which needs `--enable-native-access=ALL-UNNAMED`. Both are
+declared once in the parent pom, and anything embedding the engine needs the first of them. That is the internal one the runtime uses itself, which is
 why the flag is needed and why the access stays intrinsified. The memory access methods on
 `sun.misc.Unsafe` are on the removal path, and nothing here goes near them.
 

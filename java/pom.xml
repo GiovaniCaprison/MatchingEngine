@@ -16,7 +16,7 @@
     <exec.plugin.version>3.5.0</exec.plugin.version>
     <buildhelper.plugin.version>3.6.0</buildhelper.plugin.version>
     <surefire.version>3.5.1</surefire.version>
-    <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED</jvm.access.flags>
+    <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED --enable-native-access=ALL-UNNAMED</jvm.access.flags>
   </properties>
   <!-- Modules land one at a time: one per rung. -->
   <modules>
@@ -82,9 +82,10 @@
           <version>${surefire.version}</version>
           <configuration>
             <!--
-              Agrona reaches jdk.internal.misc.Unsafe for buffer access, which the module system
-              does not export by default. Declared once here so every module inherits it, and
-              benchmarks will need the same flag when they arrive.
+              Two flags every module inherits. Agrona reaches jdk.internal.misc.Unsafe for buffer
+              access, which the module system does not export by default. And the harness calls
+              sched_setaffinity and perf_event_open through the foreign function API, which warns
+              today and will be blocked outright without native access enabled.
             -->
             <argLine>${jvm.access.flags}</argLine>
           </configuration>

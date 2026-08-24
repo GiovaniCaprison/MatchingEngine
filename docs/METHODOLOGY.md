@@ -263,6 +263,7 @@ A standard run carries only counters and produces the numbers that get reported:
 - environment samples before and after: frequency, thermal state, context switches and involuntary
   preemptions on the measured core, and steal time
 - the ring buffer record: capacity, high water mark, and the stalls at each end
+- where each thread was placed, read back from the kernel rather than taken from the request
 
 Java runs add the collection log, the safepoint log, the compilation log and a flight recording. C++
 runs add the optimisation report and the build flags.
