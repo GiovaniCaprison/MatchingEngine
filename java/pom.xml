@@ -17,10 +17,11 @@
     <surefire.version>3.5.1</surefire.version>
     <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED</jvm.access.flags>
   </properties>
-  <!-- Modules land one at a time: conformance, benchmarks. -->
+  <!-- Modules land one at a time: one per rung, then benchmarks. -->
   <modules>
     <module>matching-protocol</module>
     <module>matching-api</module>
+    <module>matching-conformance</module>
     <module>matching-gates</module>
   </modules>
   <dependencyManagement>

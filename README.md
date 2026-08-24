@@ -48,8 +48,8 @@ owns the file that defines the messages, nor the fixtures that hold both to the 
 
 Within a language, each implementation is its own module. Benchmarks need one implementation per
 process, because two loaded into one JVM make the call site megamorphic and pollute every number after
-that. And a conformance suite that depends only on the api cannot reach inside an implementation, so
-black box testing holds without relying on discipline.
+that. And a conformance suite that depends on the api and the protocol, and on no implementation,
+cannot reach inside one, so black box testing holds without relying on discipline.
 
 ## Documentation
 

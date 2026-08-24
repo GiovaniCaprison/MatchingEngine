@@ -53,7 +53,8 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-4.4 | A replace lowering quantity at the same price keeps queue position | unit |
 | FR-4.5 | Any other replace loses queue position | unit |
 | FR-4.6 | A replace refused by a liquidity flag leaves the original order resting | unit |
-| FR-4.7 | A mass cancel removes every resting order for a participant and reports each removal | unit |
+| FR-4.7 | A mass cancel removes every resting order for a participant and reports each removal in arrival order | unit |
+| FR-4.8 | A replaced order keeps its engine order id, whether or not it keeps queue position | unit |
 
 ## FR-5: hidden quantity
 
@@ -86,6 +87,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-7.6 | An auction executes all matched quantity at one price | unit |
 | FR-7.7 | An indicative uncrossing price and volume are reported whenever they change during a call phase | corpus |
 | FR-7.8 | A halt cancels nothing, and the book is intact on resumption | unit |
+| FR-7.9 | Until a state command arrives the engine is in pre-open, so nothing matches | unit |
 
 ## FR-8: output stream
 

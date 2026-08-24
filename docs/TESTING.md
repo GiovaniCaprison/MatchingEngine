@@ -26,9 +26,9 @@ The corpus catches what unit tests structurally cannot: interaction. A stop casc
 an iceberg replenishment inside an auction uncross is one fixture and would be six unit tests that
 each pass while the combination is wrong.
 
-When output changes legitimately, the runner prints the full actual output so it can be pasted in.
-Read the diff first. A blessed snapshot is worth what the last person to look at it was paying
-attention to.
+When output changes legitimately, the runner prints the run back as a fixture so it can be read and
+pasted over the file. Read the diff first. A blessed snapshot is worth what the last person to look
+at it was paying attention to.
 
 ## Property
 
@@ -96,8 +96,8 @@ rewrite has to keep passing.
 A test that must observe an internal structure lives in that implementation's package, and each one
 carries a written reason why the public interface was insufficient. There should be few of them.
 
-The corpus depends on the api alone, so it cannot be flattered by an implementation's internals. The
-gates depend on nothing at all, and read the documents and the sources as text.
+The corpus depends on the api and the protocol and on no implementation, so it cannot be flattered by
+one's internals. The gates depend on nothing at all, and read the documents and the sources as text.
 
 ## Corpus format
 
@@ -107,33 +107,35 @@ comments, because `#` is also the order reference sigil.
 
 An order reference is `#n`, counting `NEW` directives from one. References are not engine order ids.
 Asserting engine ids would test id allocation and would break an implementation that numbers
-differently for a good reason.
+differently for a good reason. An execution id is written `@n`, the nth distinct one in the stream,
+for the same reason.
 
-Input directives:
+Commands:
 
 ```
 INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
-STATE      CONTINUOUS
+SESSION    CONTINUOUS
 NEW        BUY  LIMIT  GTC 100000 50
 NEW        SELL LIMIT  IOC 100000 50  min=10
 NEW        BUY  LIMIT  GTC  99995 100 display=10
 NEW        SELL MARKET IOC       -  50 trigger=100500
-NEW        BUY  LIMIT  GTC 100000 50  smp=7 p=2
+NEW        BUY  LIMIT  GTC 100000 50  smp=7 p=2 POST_ONLY
 CANCEL     #3
 REPLACE    #3 40 100005
 MASSCANCEL p=2
 ```
 
-`INSTRUMENT` is required and comes first. On `NEW`, a price of `-` means the order has none. The four
+`INSTRUMENT` is required and comes first. On `NEW`, a price of `-` means the order has none, time in
+force is abbreviated `GTC`, `DAY`, `IOC` and `FOK`, and `POST_ONLY` is the only flag. The four
 qualifiers and the participant default to absent.
 
-Output lines, one per event, in the order the engine produced them:
+Events, one per line:
 
 ```
 ACCEPTED   #1
 REJECTED   #2 TICK_VIOLATION
 RESTED     #1 BUY 100000 50
-EXECUTED   exec=1 aggressor=#3 resting=#1 100000 50
+EXECUTED   @1 aggressor=#3 resting=#1 100000 50
 REDUCED    #1 40
 REMOVED    #1 50 CANCELLED
 TRIGGERED  #4
@@ -141,9 +143,9 @@ STATE      CONTINUOUS
 INDICATIVE 100000 500
 ```
 
-Nothing marks which command produced which events, because the protocol does not group them. A fixture
-author may separate them with blank lines for readability, since blank lines are ignored and therefore
-not part of the comparison.
+A fixture holds both, with each event written under the command that caused it. Nothing marks which
+is which, because no directive shares a name with a verb. That layout is for the reader: the
+comparison is over the output lines in order, so where a fixture puts them changes nothing.
 
 ## The cross-language contract
 
