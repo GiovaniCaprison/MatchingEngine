@@ -21,16 +21,16 @@ import org.agrona.MutableDirectBuffer;
 /**
  * Turns a fixture command into the bytes an engine receives.
  *
- * <p>Encoding happens as the replay reaches each command, since a cancel names an order by
- * reference and the engine's id for it is only known once the order has been accepted.
+ * <p>An order reference is the client order id the harness gave that order, so a cancel or a
+ * replace needs nothing an engine has to report first. That is what makes a fixture replayable
+ * against any implementation without knowing how it numbers anything.
  *
  * <p>The instrument id and the input sequence are the harness's, not the fixture's. Nothing a
  * fixture writes decides them, which is the same arrangement the engine has in production: input
  * arrives already sequenced.
  *
- * <p>A cancel or a replace carries the reference of the order it targets as its own client order
- * id. That is what a refusal is rendered by, so {@code REJECTED #1 UNKNOWN_ORDER} says which order
- * the command named rather than which position in the file it occupied.
+ * <p>A refusal is rendered by the client order id, so {@code REJECTED #1 UNKNOWN_ORDER} names the
+ * order the command meant rather than the position in the file it occupied.
  */
 final class CommandWriter {
 
@@ -135,8 +135,7 @@ final class CommandWriter {
     cancel.frame().instrumentId(INSTRUMENT_ID).sequence(sequence);
     cancel
         .clientOrderId(reference)
-        .participantId((int) number(options, "p", references.participant(reference)))
-        .orderId(references.orderId(reference));
+        .participantId((int) number(options, "p", references.participant(reference)));
     return length(cancel.encodedLength());
   }
 
@@ -147,7 +146,6 @@ final class CommandWriter {
     replace
         .clientOrderId(reference)
         .participantId(references.participant(reference))
-        .orderId(references.orderId(reference))
         .quantity(Long.parseLong(arguments.get(1)))
         .price(price(arguments.get(2)));
     return length(replace.encodedLength());

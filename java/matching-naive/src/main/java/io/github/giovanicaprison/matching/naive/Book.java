@@ -31,10 +31,14 @@ final class Book {
     return orders;
   }
 
-  /** A scan, because an id index is the next rung's idea. */
-  Order byId(final long id) {
+  /**
+   * The order one participant gave one client order id to.
+   *
+   * <p>A scan, because an index on the pair is the next rung's idea.
+   */
+  Order named(final int participantId, final long clientOrderId) {
     for (final Order order : orders) {
-      if (order.id() == id) {
+      if (order.participantId() == participantId && order.clientOrderId() == clientOrderId) {
         return order;
       }
     }

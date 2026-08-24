@@ -40,15 +40,32 @@ implementation out of band is what stops a Java run and a C++ run being configur
 word, price and quantity, then four optional qualifiers: minimum quantity, display quantity, trigger
 price and self match id. Zero means absent for all four.
 
-`CancelOrder` carries client order id, participant id and the engine order id to cancel.
+`CancelOrder` carries the participant id and the client order id of the order to cancel.
 
-`ReplaceOrder` carries client order id, participant id, the engine order id, and the full intended
-new quantity and price.
+`ReplaceOrder` carries the same pair, and the full intended new quantity and price.
 
 `MassCancel` carries client order id and the participant id whose resting orders are to be removed.
 
 `SessionStateChange` carries the state to enter. The engine has no clock, so every transition arrives
 this way, put here by whatever schedules the venue.
+
+## Two identities
+
+An order has two, and they are not interchangeable. The client's own id names it in commands. The
+engine's id names it in events.
+
+A command can only carry an id its sender already has, and a client learns the engine's id by being
+told, so a cancel that named it could not be sent until a round trip had completed. Naming the client's
+id instead means a client can cancel an order the moment it has decided to, and it means a recorded
+command stream is replayable without knowing what any engine did with it.
+
+The engine's id goes the other way. Events are what a market data feed is built from, and a feed cannot
+carry one participant's private numbering, so every event names the order by the id the engine assigned.
+Nasdaq splits it the same way: OUCH cancels a token the client chose, and the ITCH feed carries the
+exchange's order reference number.
+
+Client order ids are unique per participant for the life of the session. That is the sender's
+responsibility, not something the engine checks (P-14).
 
 ## How an order's kind is read from its fields
 

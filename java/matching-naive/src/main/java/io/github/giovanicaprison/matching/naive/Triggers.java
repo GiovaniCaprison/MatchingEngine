@@ -25,9 +25,9 @@ final class Triggers {
     return stops.remove(stop);
   }
 
-  Order byId(final long id) {
+  Order named(final int participantId, final long clientOrderId) {
     for (final Order stop : stops) {
-      if (stop.id() == id) {
+      if (stop.participantId() == participantId && stop.clientOrderId() == clientOrderId) {
         return stop;
       }
     }
