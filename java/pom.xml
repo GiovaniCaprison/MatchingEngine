@@ -6,10 +6,10 @@
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <properties>
-    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.release>25</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sbe.version>1.34.1</sbe.version>
-    <agrona.version>2.0.0</agrona.version>
+    <agrona.version>2.2.1</agrona.version>
     <junit.version>5.11.3</junit.version>
     <assertj.version>3.26.3</assertj.version>
     <hdrhistogram.version>2.2.2</hdrhistogram.version>

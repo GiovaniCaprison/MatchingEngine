@@ -63,7 +63,9 @@ cannot reach inside one, so black box testing holds without relying on disciplin
 
 ## Build
 
-Requires JDK 21 and Maven for the Java side, CMake and a recent GCC or Clang for the C++ side.
+Requires JDK 25 and Maven for the Java side, CMake and a recent GCC or Clang for the C++ side. The JDK
+is pinned in `.tool-versions`, since a runtime's build is part of what a measurement measured and every
+run records the one it ran on.
 
 ```
 cd java
@@ -80,7 +82,9 @@ ctest --test-dir build
 
 Agrona reaches `jdk.internal.misc.Unsafe` for buffer access, so the build passes
 `--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`, declared once in the parent pom. Anything
-embedding the engine needs the same flag.
+embedding the engine needs the same flag. That is the internal one the runtime uses itself, which is
+why the flag is needed and why the access stays intrinsified. The memory access methods on
+`sun.misc.Unsafe` are on the removal path, and nothing here goes near them.
 
 Benchmarks run outside the test phase, one implementation per process, and write a directory under
 `results/`. On the Java side that is a shaded jar; on the C++ side a binary.
