@@ -1,6 +1,8 @@
 package io.github.giovanicaprison.matching.benchmarks;
 
 import io.github.giovanicaprison.matching.protocol.MessageHeaderDecoder;
+import io.github.giovanicaprison.matching.protocol.OrderRejectedDecoder;
+import io.github.giovanicaprison.matching.protocol.OrderRemovedDecoder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -28,7 +30,10 @@ public final class VerificationRecord {
   private static final long FNV_PRIME = 0x100000001b3L;
 
   private final MessageHeaderDecoder header = new MessageHeaderDecoder();
+  private final OrderRejectedDecoder rejected = new OrderRejectedDecoder();
+  private final OrderRemovedDecoder removed = new OrderRemovedDecoder();
   private final Map<Integer, Long> counts = new TreeMap<>();
+  private final Map<String, Long> reasons = new TreeMap<>();
 
   private long events;
   private long bytes;
@@ -38,6 +43,7 @@ public final class VerificationRecord {
   public void record(final DirectBuffer buffer, final int offset, final int length) {
     header.wrap(buffer, offset);
     counts.merge(header.templateId(), 1L, Long::sum);
+    reason(buffer, offset);
     events++;
     bytes += length;
     digest = hash(digest, buffer, offset, length);
@@ -59,6 +65,27 @@ public final class VerificationRecord {
 
   static long basis() {
     return FNV_OFFSET;
+  }
+
+  /**
+   * Why an order was refused or removed, which is how a flow's shape is read back out of a run.
+   *
+   * <p>A run that rejects half of what it offers is measuring the validation path, and without this
+   * the only way to notice is to reason about the generator from first principles.
+   */
+  private void reason(final DirectBuffer buffer, final int offset) {
+    final int body = offset + MessageHeaderDecoder.ENCODED_LENGTH;
+    if (header.templateId() == OrderRejectedDecoder.TEMPLATE_ID) {
+      rejected.wrap(buffer, body, header.blockLength(), header.version());
+      reasons.merge("rejected " + rejected.reason(), 1L, Long::sum);
+    } else if (header.templateId() == OrderRemovedDecoder.TEMPLATE_ID) {
+      removed.wrap(buffer, body, header.blockLength(), header.version());
+      reasons.merge("removed " + removed.reason(), 1L, Long::sum);
+    }
+  }
+
+  public Map<String, Long> reasons() {
+    return Map.copyOf(reasons);
   }
 
   public long events() {
@@ -84,6 +111,8 @@ public final class VerificationRecord {
     final Json json = new Json().object().field("events", events).field("bytes", bytes);
     json.field("digest", Long.toHexString(digest)).object("counts");
     countsByName().forEach(json::field);
+    json.end().object("reasons");
+    reasons.forEach(json::field);
     return json.end().end().toString();
   }
 

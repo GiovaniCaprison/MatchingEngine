@@ -88,6 +88,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-7.7 | An indicative uncrossing price and volume are reported whenever they change during a call phase | corpus |
 | FR-7.8 | A halt cancels nothing, and the book is intact on resumption | unit |
 | FR-7.9 | Until a state command arrives the engine is in pre-open, so nothing matches | unit |
+| FR-7.10 | An auction uncrosses when the engine leaves the auction state, before the new state is reported | unit |
 
 ## FR-8: output stream
 
@@ -177,3 +178,7 @@ applied; a price must satisfy the static band and the dynamic one.
 
 Pro-rata apportionment rounds each participant's share down to a whole lot. Whatever remains
 undistributed after rounding is allocated in arrival order, one lot at a time, until exhausted.
+
+A trigger price is a price on the instrument, so VR-2.2 and VR-2.3 apply to it. VR-2.4 does not: a stop
+is placed away from where the market is, and banding it against the last executed price would refuse
+the stops anybody sends.
