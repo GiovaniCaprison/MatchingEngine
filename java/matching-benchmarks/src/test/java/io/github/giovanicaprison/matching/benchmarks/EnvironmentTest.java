@@ -85,6 +85,29 @@ class EnvironmentTest {
     assertThat(named(environment, "buffer bounds checks").actual()).isIn("true", "false");
   }
 
+  @Test
+  @DisplayName("a core is checked against the lists the kernel was given")
+  void isolation_is_read_per_core() throws IOException {
+    controlled();
+    final Environment environment = Environment.reading(machine);
+
+    assertThat(environment.isolationOf(4))
+        .allSatisfy(setting -> assertThat(setting.status()).isEqualTo(Setting.Status.OK));
+    assertThat(environment.isolationOf(0))
+        .allSatisfy(
+            setting -> {
+              assertThat(setting.status()).isEqualTo(Setting.Status.WRONG);
+              assertThat(setting.actual()).isEqualTo("false");
+            });
+  }
+
+  @Test
+  @DisplayName("a machine with no command line to read cannot say whether a core is isolated")
+  void isolation_is_unavailable_without_a_command_line() {
+    assertThat(Environment.reading(machine.resolve("nothing")).isolationOf(4))
+        .allSatisfy(setting -> assertThat(setting.status()).isEqualTo(Setting.Status.UNAVAILABLE));
+  }
+
   private static Setting named(final Environment environment, final String name) {
     return environment.settings().stream()
         .filter(setting -> setting.name().equals(name))

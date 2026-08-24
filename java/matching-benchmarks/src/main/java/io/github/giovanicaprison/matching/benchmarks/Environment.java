@@ -18,10 +18,11 @@ import java.util.Optional;
  * <p>The root is a parameter so that the probes can be tested against a directory that stands in
  * for a machine. In a run it is the real one.
  *
- * <p>Two things are deliberately not here. Whether the measured core is the one isolated depends on
- * which core the driver pins to, so it belongs with the driver. And a setting a kernel does not
- * expose reads as unavailable rather than wrong, since the distinction matters when the same
- * harness runs on a laptop to be developed and on metal to be believed.
+ * <p>Whether the measured core is one the kernel was told to leave alone cannot be probed until a
+ * core has been chosen, so {@link #isolationOf(int)} answers it separately.
+ *
+ * <p>A setting a kernel does not expose reads as unavailable rather than wrong. The distinction
+ * matters when the same harness runs on a laptop to be developed on and on metal to be believed.
  */
 public final class Environment {
 
@@ -58,6 +59,30 @@ public final class Environment {
   /** The settings that would make a number unbelievable, in the order they were probed. */
   public List<Setting> failures() {
     return settings.stream().filter(setting -> !setting.satisfied()).toList();
+  }
+
+  /**
+   * Whether one core is the kernel's to schedule on.
+   *
+   * <p>Pinning to a core the kernel still puts timers, work queues and callbacks on buys almost
+   * nothing, and the cost arrives in the tail where it is easy to blame on the engine.
+   *
+   * @param core the core the engine will run on
+   */
+  public List<Setting> isolationOf(final int core) {
+    return List.of(
+        isolates("core isolated", "isolcpus", core),
+        isolates("core tickless", "nohz_full", core),
+        isolates("core callback offloaded", "rcu_nocbs", core));
+  }
+
+  private Setting isolates(final String name, final String parameter, final int core) {
+    final String list = parameter(parameter);
+    if (list == null) {
+      return Setting.required(name, CMDLINE, "true", null);
+    }
+    return Setting.required(
+        name, CMDLINE, "true", String.valueOf(CpuList.parse(list).contains(core)));
   }
 
   private List<Setting> probe() {
