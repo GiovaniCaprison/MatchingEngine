@@ -1,0 +1,21 @@
+# An order carrying a self match id never executes against a resting order carrying the same one.
+# The resting order is removed and the walk continues into the order behind it.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    CONTINUOUS
+STATE      CONTINUOUS
+
+NEW        BUY  LIMIT GTC 100000 30 smp=7
+ACCEPTED   #1
+RESTED     #1 BUY 100000 30
+
+NEW        BUY  LIMIT GTC 100000 20 smp=9
+ACCEPTED   #2
+RESTED     #2 BUY 100000 20
+
+NEW        SELL LIMIT GTC 100000 50 smp=7
+ACCEPTED   #3
+REMOVED    #1 30 SELF_MATCH_PREVENTED
+EXECUTED   @1 aggressor=#3 resting=#2 100000 20
+RESTED     #3 SELL 100000 30

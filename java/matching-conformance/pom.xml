@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.github.giovanicaprison</groupId>
+    <artifactId>matching-engine</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>matching-conformance</artifactId>
+  <description>Replays the corpus against any implementation and compares its output to the blessed lines.</description>
+  <dependencies>
+    <!--
+      The api and the protocol, and no implementation. An implementation depends on this module for
+      its own tests, so a dependency the other way would be a cycle as well as a way for the runner
+      to be flattered by internals.
+    -->
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+  </dependencies>
+</project>

@@ -96,7 +96,8 @@ it became then produces its own events.
 ## Three conventions taken from ITCH
 
 A replace that loses queue position is reported as `OrderRemoved` then `OrderRested`, so the layer
-above needs no special handling for replace.
+above needs no special handling for replace. The order keeps its engine id across both, since
+`ReplaceOrder` names an order by that id and no event carries a new one.
 
 A resting order that is fully executed gets no removal event; a consumer tracking quantity sees it
 reach zero. Recorded here because the other reading is that an event is missing.
