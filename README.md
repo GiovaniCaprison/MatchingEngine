@@ -35,7 +35,7 @@ disabled feature behind a branch still occupies the method and the object layout
 schema/     the SBE schema, generated into both languages
 corpus/     scenario fixtures and their blessed output, language neutral
 docs/
-java/       parent pom, then api, protocol, one module per rung, conformance, benchmarks
+java/       parent pom, then api, protocol, gates, one module per rung, conformance, benchmarks
 cpp/        one target per rung, conformance, benchmarks
 results/    one directory per run: manifest, histograms, counters
 ```
@@ -68,7 +68,7 @@ Requires JDK 21 and Maven for the Java side, CMake and a recent GCC or Clang for
 ```
 cd java
 mvn compile     build everything, generating the codecs first
-mvn test        unit tests, the corpus, and the requirement coverage gate
+mvn test        unit tests, the corpus, and the gates
 ```
 
 ```

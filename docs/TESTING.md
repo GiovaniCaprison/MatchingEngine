@@ -61,7 +61,7 @@ Judgement that cannot be automated without encoding today's code as the specific
 discipline, dependency freedom of the matching core, and whether an abstraction has a second
 implementation worth naming.
 
-## The gate
+## The gates
 
 The build fails when a requirement marked `unit` is not named by a test.
 
@@ -78,11 +78,12 @@ the check produces claims.
 The gate is gameable, as any gate is. An empty test that fails a build is easier to notice and reject
 than a missing test that produces a slightly shorter report.
 
-A second check fails the build on documents that have drifted apart. Every requirement id cited
-anywhere must exist in `REQUIREMENTS.md`, every principle id must exist in `PRINCIPLES.md`, and every
-message named in the corpus format must exist in `PROTOCOL.md` and in the schema. Documents disagreeing
-with each other is the failure this project has actually had, more than once, and it is not a thing
-review reliably catches: a stale claim reads perfectly well on its own page.
+A second gate fails the build on documents that have drifted apart. Every requirement id cited
+anywhere must exist in `REQUIREMENTS.md` and every principle id in `PRINCIPLES.md`. Every message the
+schema defines must be described in `PROTOCOL.md` and reachable from a corpus directive, and every
+identifier `PROTOCOL.md` quotes must be defined in the schema. Documents disagreeing with each other
+is the failure this project has actually had, more than once, and it is not a thing review reliably
+catches: a stale claim reads perfectly well on its own page.
 
 ## Where tests live
 
@@ -95,8 +96,8 @@ rewrite has to keep passing.
 A test that must observe an internal structure lives in that implementation's package, and each one
 carries a written reason why the public interface was insufficient. There should be few of them.
 
-The corpus and the gate depend on the api alone, so neither can be flattered by an implementation's
-internals.
+The corpus depends on the api alone, so it cannot be flattered by an implementation's internals. The
+gates depend on nothing at all, and read the documents and the sources as text.
 
 ## Corpus format
 
