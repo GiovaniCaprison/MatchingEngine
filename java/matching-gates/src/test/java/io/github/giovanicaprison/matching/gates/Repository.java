@@ -4,7 +4,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -72,6 +76,27 @@ final class Repository {
             Stream.concat(
                 filesUnder("java", ".java").stream(), filesUnder("schema", ".xml").stream()))
         .toList();
+  }
+
+  /** Where the fixture format's vocabulary is declared, which two gates need to read. */
+  static final String RUNNER =
+      "java/matching-conformance/src/main/java/io/github/"
+          + "giovanicaprison/matching/conformance/";
+
+  /**
+   * The constants of a bare enum, read as text so that the gates depend on no module.
+   *
+   * <p>Text because a gate that imported the enum would be a gate that compiles against the thing
+   * it is checking, and a rename would then be invisible to it.
+   */
+  static Set<String> enumConstants(final String file) {
+    final String source = read(file);
+    final int body = source.indexOf('{', source.indexOf("enum "));
+    return Pattern.compile("\\b([A-Z][A-Z_]+)\\b")
+        .matcher(source.substring(body, source.indexOf('}', body)))
+        .results()
+        .map(result -> result.group(1))
+        .collect(Collectors.toCollection(LinkedHashSet::new));
   }
 
   static String contentOf(final Path path) {

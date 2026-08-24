@@ -1,0 +1,11 @@
+# VR-3.1 an inconsistent field combination is refused
+#
+# A market order told to rest until cancelled cannot do both.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY MARKET GTC - 50
+REJECTED #1 INVALID_FIELDS

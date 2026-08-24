@@ -1,0 +1,14 @@
+# FR-3.5 an execution happens at the resting order's price
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      SELL LIMIT GTC 100000 50
+ACCEPTED #1
+RESTED   #1 SELL 100000 50
+
+NEW      BUY LIMIT GTC 100025 50
+ACCEPTED #2
+EXECUTED @1 aggressor=#2 resting=#1 100000 50

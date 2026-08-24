@@ -1,0 +1,26 @@
+# FR-4.7 a mass cancel removes a participant's orders in arrival order
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW        BUY LIMIT GTC 100000 10 p=2
+ACCEPTED   #1
+RESTED     #1 BUY 100000 10
+
+NEW        BUY LIMIT GTC 99995 20 p=3
+ACCEPTED   #2
+RESTED     #2 BUY 99995 20
+
+NEW        BUY LIMIT GTC 99990 30 p=2
+ACCEPTED   #3
+RESTED     #3 BUY 99990 30
+
+MASSCANCEL p=2
+REMOVED    #1 10 MASS_CANCELLED
+REMOVED    #3 30 MASS_CANCELLED
+
+NEW        SELL MARKET IOC - 20
+ACCEPTED   #4
+EXECUTED   @1 aggressor=#4 resting=#2 99995 20

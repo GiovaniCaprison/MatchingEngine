@@ -1,0 +1,20 @@
+# FR-4.8 a replaced order keeps its engine order id
+#
+# The rest after the replace names the same order, and the cancel afterwards reaches it by the id
+# the client already had. A new id would leave the client with no way to learn it.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 50
+ACCEPTED #1
+RESTED   #1 BUY 100000 50
+
+REPLACE  #1 60 99995
+REMOVED  #1 50 REPLACED
+RESTED   #1 BUY 99995 60
+
+CANCEL   #1
+REMOVED  #1 60 CANCELLED

@@ -12,10 +12,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * The fixtures, replayed against this engine.
+ * Every fixture in the corpus, replayed against this engine.
  *
- * <p>They were written from the requirements rather than blessed from this engine's output, so a
- * failure here is either a defect or a misreading of the specification, and which one it is has to
+ * <p>One line, because the suite is not this rung's. The rules state the remit and the scenarios
+ * state interactions, and both belong to the specification rather than to an implementation, so
+ * every rung in either language runs the same directory. Four copies of the same rules would be
+ * four copies that drift, and "the same suite" would stop being checkable.
+ *
+ * <p>The fixtures were written from the requirements rather than blessed from any engine's output,
+ * so a failure here is either a defect or a misreading of the specification, and which one has to
  * be decided by reading rather than by pasting.
  */
 class CorpusConformanceTest {

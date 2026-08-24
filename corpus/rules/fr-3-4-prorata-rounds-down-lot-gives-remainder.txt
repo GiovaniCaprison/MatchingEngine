@@ -1,0 +1,23 @@
+# FR-3.4 pro-rata rounds down to lot and gives the remainder out in arrival order
+#
+# Thirty and ten resting, fifteen wanted. Shares are eleven and a quarter and three and three
+# quarters, so eleven and three go out and the lot the rounding left goes to whoever was first.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRO_RATA
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 30
+ACCEPTED #1
+RESTED   #1 BUY 100000 30
+
+NEW      BUY LIMIT GTC 100000 10
+ACCEPTED #2
+RESTED   #2 BUY 100000 10
+
+NEW      SELL LIMIT GTC 100000 15
+ACCEPTED #3
+EXECUTED @1 aggressor=#3 resting=#1 100000 11
+EXECUTED @2 aggressor=#3 resting=#2 100000 3
+EXECUTED @3 aggressor=#3 resting=#1 100000 1

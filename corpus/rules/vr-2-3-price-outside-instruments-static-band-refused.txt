@@ -1,0 +1,11 @@
+# VR-2.3 a price outside the instrument's static band is refused
+#
+# On tick and inside the dynamic band, and still outside what the instrument allows at all.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=99000 max=101000 band=5000 open=100000 alloc=PRICE_TIME
+
+SESSION  CONTINUOUS
+STATE    CONTINUOUS
+
+NEW      BUY LIMIT GTC 101005 50
+REJECTED #1 STATIC_BAND_VIOLATION

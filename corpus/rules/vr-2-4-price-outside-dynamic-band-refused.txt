@@ -1,0 +1,11 @@
+# VR-2.4 a price outside the dynamic band is refused
+#
+# On tick and inside the instrument's bounds, and too far from the reference price.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100505 50
+REJECTED #1 DYNAMIC_BAND_VIOLATION

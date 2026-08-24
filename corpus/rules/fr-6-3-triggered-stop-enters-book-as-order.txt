@@ -1,0 +1,27 @@
+# FR-6.3 a triggered stop enters the book as an order of its pricing instruction
+#
+# A stop-market, so on firing it takes the price it finds rather than the one it named, and its
+# remainder leaves.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY MARKET IOC - 30 trigger=100010
+ACCEPTED #1
+
+NEW      SELL LIMIT GTC 100015 10
+ACCEPTED #2
+RESTED   #2 SELL 100015 10
+
+NEW      SELL LIMIT GTC 100010 20
+ACCEPTED #3
+RESTED   #3 SELL 100010 20
+
+NEW       BUY LIMIT GTC 100010 20
+ACCEPTED  #4
+EXECUTED  @1 aggressor=#4 resting=#3 100010 20
+TRIGGERED #1
+EXECUTED  @2 aggressor=#1 resting=#2 100015 10
+REMOVED   #1 20 IMMEDIATE_OR_CANCEL_REMAINDER

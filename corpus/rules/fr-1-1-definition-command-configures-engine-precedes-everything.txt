@@ -1,0 +1,13 @@
+# FR-1.1 the definition command configures the engine and precedes everything
+#
+# A price legal on a five tick and illegal on a twenty five tick, refused because the definition
+# said twenty five. Nothing but the command could have told the engine that.
+
+INSTRUMENT tick=25 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+SESSION  CONTINUOUS
+STATE    CONTINUOUS
+NEW      BUY LIMIT GTC 100010 50
+REJECTED #1 TICK_VIOLATION
+NEW      BUY LIMIT GTC 100025 50
+ACCEPTED #2
+RESTED   #2 BUY 100025 50

@@ -1,0 +1,9 @@
+# VR-1.4 a display quantity above the order quantity is refused
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 50 display=60
+REJECTED #1 DISPLAY_QUANTITY_ABOVE_ORDER

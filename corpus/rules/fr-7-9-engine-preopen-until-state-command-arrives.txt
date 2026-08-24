@@ -1,0 +1,13 @@
+# FR-7.9 an engine is in pre-open until a state command arrives, so nothing matches
+#
+# Two orders that cross, and no execution. Nothing but a command could open the market.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+NEW      BUY LIMIT GTC 100000 50
+ACCEPTED #1
+RESTED   #1 BUY 100000 50
+
+NEW      SELL LIMIT GTC 100000 50
+ACCEPTED #2
+RESTED   #2 SELL 100000 50
