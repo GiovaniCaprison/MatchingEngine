@@ -60,6 +60,17 @@ public final class NaiveEngine implements MatchingEngine {
     this.feed = new Feed(events);
   }
 
+  /**
+   * The orders this engine is resting, for the one test that holds the feed to the book (FR-8.2).
+   *
+   * <p>The public interface cannot answer that question: comparing a book rebuilt from the events
+   * against the engine's own needs the engine's own, and nothing outside this package can see it.
+   * So the test that asks lives in here, and this is the only reason this method exists.
+   */
+  List<Order> resting() {
+    return book.orders();
+  }
+
   @Override
   public void onCommand(final DirectBuffer buffer, final int offset, final int length) {
     header.wrap(buffer, offset);

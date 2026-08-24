@@ -60,7 +60,7 @@ id instead means a client can cancel an order the moment it has decided to, and 
 command stream is replayable without knowing what any engine did with it.
 
 The engine's id goes the other way. Events are what a market data feed is built from, and a feed cannot
-carry one participant's private numbering, so every event names the order by the id the engine assigned.
+carry one participant's private numbering, so every event names the order by the id the engine gave it.
 Nasdaq splits it the same way: OUCH cancels a token the client chose, and the ITCH feed carries the
 exchange's order reference number.
 
@@ -95,8 +95,13 @@ order; a stop produces no resting event, since it is not in the book.
 `OrderRested` reports side, price and displayed quantity for an order that has entered the book. This
 is the add-order a market data feed needs, and it carries displayed quantity only.
 
-`OrderExecuted` reports execution id, aggressor order id, resting order id, price and quantity. The
-price is the resting order's.
+`OrderExecuted` reports execution id, both order ids, price and quantity. In continuous trading the
+price is the resting order's and the aggressor has not rested. In an auction neither side aggressed and
+the price is the uncrossing price.
+
+A consumer decrements whichever of the two orders it is holding, which is one rule for both: in
+continuous trading that is the resting side alone, and in an auction it is both. A consumer that only
+ever followed the side named resting would keep a filled order for the rest of the session.
 
 `OrderReduced` reports a new displayed quantity for an order that kept its queue position.
 
@@ -122,8 +127,8 @@ reach zero. Recorded here because the other reading is that an event is missing.
 Hidden quantity is never reported. An iceberg's displayed tranche executes to zero, which a consumer
 tracking quantity has already seen, and the next tranche appears as an `OrderRested`, which is
 indistinguishable from a new order arriving at that price. There is no removal between the two, for the
-same reason a fully executed order gets none. That is the point of an iceberg, and it means the feed stays sufficient
-to rebuild the visible book without revealing what it cannot see.
+same reason a fully executed order gets none. That is the point of an iceberg, and it means the feed
+stays sufficient to rebuild the visible book without revealing what it cannot see.
 
 Between them the events are enough to rebuild the visible book at any point in the stream, which is
 the contract with the market data publisher above.
