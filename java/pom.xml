@@ -21,6 +21,7 @@
   <modules>
     <module>matching-protocol</module>
     <module>matching-api</module>
+    <module>matching-flow</module>
     <module>matching-conformance</module>
     <module>matching-gates</module>
   </modules>

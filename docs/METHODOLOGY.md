@@ -215,6 +215,10 @@ own.
 
 ## Fairness between the languages
 
+One generator produces the input, and both languages replay the same encoded bytes from a file. A
+generator written twice would put a difference between two flows inside a comparison of two engines,
+and the difference would look like a finding.
+
 The runtime compiles with a profile gathered at run time, so a Java number is profile guided by
 construction. Comparing it against a C++ build without profile guided optimisation understates C++,
 which is one of the few places this comparison could be quietly rigged. Headline comparisons use a

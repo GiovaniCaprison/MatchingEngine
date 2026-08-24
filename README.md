@@ -35,7 +35,7 @@ disabled feature behind a branch still occupies the method and the object layout
 schema/     the SBE schema, generated into both languages
 corpus/     scenario fixtures and their blessed output, language neutral
 docs/
-java/       parent pom, then api, protocol, gates, one module per rung, conformance, benchmarks
+java/       parent pom, then api, protocol, flow, conformance, gates, one module per rung, benchmarks
 cpp/        one target per rung, conformance, benchmarks
 results/    one directory per run: manifest, histograms, counters
 ```
