@@ -1,0 +1,16 @@
+# FR-1.3 an accepted order is assigned an id of its own and reported
+#
+# Two orders that both rest. If they shared an id the second rest would name the first order.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 10
+ACCEPTED #1
+RESTED   #1 BUY 100000 10
+
+NEW      BUY LIMIT GTC 99995 20
+ACCEPTED #2
+RESTED   #2 BUY 99995 20

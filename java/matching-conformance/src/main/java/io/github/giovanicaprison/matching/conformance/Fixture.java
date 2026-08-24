@@ -12,7 +12,19 @@ import java.util.List;
  * @param name how the fixture is identified in a failure, normally its file name
  * @param elements commands and expected output interleaved as written
  */
-public record Fixture(String name, List<Element> elements) {
+public record Fixture(String name, String title, List<Element> elements) {
+
+  /**
+   * The title is what the fixture is for, in words.
+   *
+   * <p>It is the first comment line of the file, and for a fixture that states one rule it opens
+   * with the id of the requirement that rule is. That is where the coverage gate reads it from, so
+   * a rule and its claim cannot drift apart: they are the same line.
+   */
+  @Override
+  public String toString() {
+    return title.isBlank() ? name : title;
+  }
 
   /** A line of a fixture: either a command to send or an event to expect. */
   public sealed interface Element {

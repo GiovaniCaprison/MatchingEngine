@@ -1,0 +1,23 @@
+# FR-5.3 displayed quantity at a price is consumed before hidden quantity
+#
+# The iceberg arrived first, so its displayed ten goes first. What follows is the other order's
+# displayed fifty rather than the iceberg's hidden ninety.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 100 display=10
+ACCEPTED #1
+RESTED   #1 BUY 100000 10
+
+NEW      BUY LIMIT GTC 100000 50
+ACCEPTED #2
+RESTED   #2 BUY 100000 50
+
+NEW      SELL LIMIT GTC 100000 60
+ACCEPTED #3
+EXECUTED @1 aggressor=#3 resting=#1 100000 10
+RESTED   #1 BUY 100000 10
+EXECUTED @2 aggressor=#3 resting=#2 100000 50

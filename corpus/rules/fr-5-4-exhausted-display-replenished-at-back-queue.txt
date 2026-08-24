@@ -1,0 +1,21 @@
+# FR-5.4 an exhausted display is replenished at the back of the queue at its price
+#
+# Alone at its price, the iceberg is reached again immediately, and each tranche appears as a fresh
+# rest. To a consumer that is a new order arriving there, which is the point of an iceberg.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 30 display=10
+ACCEPTED #1
+RESTED   #1 BUY 100000 10
+
+NEW      SELL LIMIT GTC 100000 25
+ACCEPTED #2
+EXECUTED @1 aggressor=#2 resting=#1 100000 10
+RESTED   #1 BUY 100000 10
+EXECUTED @2 aggressor=#2 resting=#1 100000 10
+RESTED   #1 BUY 100000 10
+EXECUTED @3 aggressor=#2 resting=#1 100000 5

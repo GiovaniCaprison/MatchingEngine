@@ -1,0 +1,22 @@
+# FR-3.2 allocation follows the algorithm the instrument was configured with
+#
+# The same arrivals as the price-time case, on a pro-rata instrument. Time no longer decides: both
+# orders give up a share, and the later one is touched before the earlier is exhausted.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRO_RATA
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 20
+ACCEPTED #1
+RESTED   #1 BUY 100000 20
+
+NEW      BUY LIMIT GTC 100000 20
+ACCEPTED #2
+RESTED   #2 BUY 100000 20
+
+NEW      SELL LIMIT GTC 100000 20
+ACCEPTED #3
+EXECUTED @1 aggressor=#3 resting=#1 100000 10
+EXECUTED @2 aggressor=#3 resting=#2 100000 10

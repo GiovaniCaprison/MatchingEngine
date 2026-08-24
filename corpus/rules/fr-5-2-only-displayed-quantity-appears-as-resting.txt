@@ -1,0 +1,16 @@
+# FR-5.2 only displayed quantity appears as resting in the output stream
+#
+# The rest says forty and the removal says forty. A consumer's book never held the hundred, so a
+# removal of a hundred would take it negative.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 100 display=40
+ACCEPTED #1
+RESTED   #1 BUY 100000 40
+
+CANCEL   #1
+REMOVED  #1 40 CANCELLED

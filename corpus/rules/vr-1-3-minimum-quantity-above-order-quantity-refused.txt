@@ -1,0 +1,9 @@
+# VR-1.3 a minimum quantity above the order quantity is refused
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT IOC 100000 50 min=60
+REJECTED #1 MINIMUM_QUANTITY_ABOVE_ORDER

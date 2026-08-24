@@ -1,0 +1,13 @@
+# VR-1.2 a quantity off the instrument's lot size is refused rather than rounded
+
+INSTRUMENT tick=5 lot=10 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION  CONTINUOUS
+STATE    CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 15
+REJECTED #1 LOT_VIOLATION
+
+NEW      BUY LIMIT GTC 100000 20
+ACCEPTED #2
+RESTED   #2 BUY 100000 20

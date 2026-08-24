@@ -1,0 +1,16 @@
+# FR-8.3 an order entering the book is reported with side, price and displayed quantity
+#
+# Side, price and quantity, and for an iceberg the quantity is the displayed part.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      SELL LIMIT GTC 100005 50
+ACCEPTED #1
+RESTED   #1 SELL 100005 50
+
+NEW      BUY LIMIT GTC 99995 80 display=25
+ACCEPTED #2
+RESTED   #2 BUY 99995 25

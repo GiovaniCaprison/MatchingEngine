@@ -28,18 +28,12 @@ class DocumentConsistencyGate {
   /** The leading word of a line in the corpus format, which is a directive or an output verb. */
   private static final Pattern CORPUS_WORD = Pattern.compile("(?m)^([A-Z][A-Z]+)\\b");
 
-  /** An enum constant, taken from the body of the runner's own vocabulary. */
-  private static final Pattern ENUM_CONSTANT = Pattern.compile("\\b([A-Z][A-Z_]+)\\b");
-
   /** A decoder named in the harness, which is how an event gets a name to be counted under. */
   private static final Pattern DECODER = Pattern.compile("\\b([A-Z][A-Za-z]+)Decoder\\b");
 
   private static final String HARNESS =
       "java/matching-benchmarks/src/main/java/io/github/"
           + "giovanicaprison/matching/benchmarks/EventNames.java";
-
-  private static final String RUNNER = "java/matching-conformance/src/main/java/io/github/"
-      + "giovanicaprison/matching/conformance/";
 
   @Test
   @DisplayName("every requirement id cited anywhere is one the document lists")
@@ -134,13 +128,15 @@ class DocumentConsistencyGate {
   @Test
   @DisplayName("the corpus format's words are the runner's directives and verbs")
   void the_document_and_the_runner_agree() {
-    final Set<String> vocabulary = new LinkedHashSet<>(enumConstants("Directive.java"));
-    vocabulary.addAll(enumConstants("Verb.java"));
+    final Set<String> vocabulary =
+        new LinkedHashSet<>(Repository.enumConstants(Repository.RUNNER + "Directive.java"));
+    vocabulary.addAll(Repository.enumConstants(Repository.RUNNER + "Verb.java"));
 
     assertThat(corpusFormatWords())
-        .as("the words TESTING.md documents against the ones the runner accepts. The document is"
-            + " the specification a second runner is written from, so a word missing from either"
-            + " side is a fixture one language can read and the other cannot")
+        .as(
+            "the words TESTING.md documents against the ones the runner accepts. The document is"
+                + " the specification a second runner is written from, so a word missing from"
+                + " either side is a fixture one language can read and the other cannot")
         .isEqualTo(vocabulary);
   }
 
@@ -159,17 +155,6 @@ class DocumentConsistencyGate {
     return source.substring(table, source.indexOf(';', table));
   }
 
-  /** The constants of a bare enum, read as text so that the gates depend on no module. */
-  private static Set<String> enumConstants(final String file) {
-    final String source = Repository.read(RUNNER + file);
-    final int body = source.indexOf('{', source.indexOf("enum "));
-    return ENUM_CONSTANT
-        .matcher(source.substring(body, source.indexOf('}', body)))
-        .results()
-        .map(result -> result.group(1))
-        .collect(Collectors.toCollection(LinkedHashSet::new));
-  }
-
   @Test
   @DisplayName("every event the schema defines is one a run counts")
   void every_event_can_be_counted() {
@@ -181,8 +166,10 @@ class DocumentConsistencyGate {
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
     assertThat(counted)
-        .as("the events a verification record can name, against the events the schema defines. An"
-            + " event nobody counts is one a run cannot report and a wrong engine can hide behind")
+        .as(
+            "the events a verification record can name, against the events the schema defines. An"
+                + " event nobody counts is one a run cannot report and a wrong engine can hide"
+                + " behind")
         .isEqualTo(Schema.events());
   }
 

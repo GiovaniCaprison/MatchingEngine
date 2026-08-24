@@ -1,0 +1,16 @@
+# FR-8.5 a quantity reduction that keeps queue position is reported without a removal
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 50
+ACCEPTED #1
+RESTED   #1 BUY 100000 50
+
+REPLACE  #1 20 100000
+REDUCED  #1 20
+
+CANCEL   #1
+REMOVED  #1 20 CANCELLED

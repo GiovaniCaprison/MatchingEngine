@@ -1,0 +1,27 @@
+# FR-7.5 an auction uncrosses at the price that trades the most
+#
+# Forty trades at a hundred thousand and thirty at a hundred thousand and ten, so the lower price
+# wins on volume even though the higher one has a bid sitting on it.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    OPENING_AUCTION
+STATE      OPENING_AUCTION
+
+NEW        BUY LIMIT GTC 100010 30
+ACCEPTED   #1
+RESTED     #1 BUY 100010 30
+
+NEW        BUY LIMIT GTC 100000 20
+ACCEPTED   #2
+RESTED     #2 BUY 100000 20
+
+NEW        SELL LIMIT GTC 100000 40
+ACCEPTED   #3
+RESTED     #3 SELL 100000 40
+INDICATIVE 100000 40
+
+SESSION    CONTINUOUS
+EXECUTED   @1 aggressor=#1 resting=#3 100000 30
+EXECUTED   @2 aggressor=#2 resting=#3 100000 10
+STATE      CONTINUOUS

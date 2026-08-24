@@ -8,23 +8,27 @@ for and which failures it is capable of catching.
 
 ## Unit
 
-One rule, one test, at the public interface. Small enough that the expected result is written as a
-literal, and named so the requirement it covers is visible in the test output.
+One rule, one fixture, at the public interface. Small enough that the expected result is written out in
+full, and opening with the id of the requirement it states.
 
 This is the bulk of the suite because most of the remit is single rules: a market order does not rest,
-a price off tick is refused, displayed quantity is consumed before hidden.
+a price off tick is refused, displayed quantity is consumed before hidden. They live in `corpus/rules/`
+because they belong to the specification and not to any one implementation. Four rungs in two languages
+would otherwise hold eight copies of the same rules, and NFR-5.2's claim that every implementation
+passes the same suite would stop being checkable.
 
-A unit test proves the rule for the case it states. It does not prove the rule holds for sequences
-nobody wrote down, which is what the corpus and the property tests are for.
+A rule proves itself for the case it states. It does not prove the rule holds for sequences nobody
+wrote down, which is what the scenarios and the property tests are for.
 
 ## Corpus
 
 A fixture is a command sequence and the blessed output it must produce. Fixtures are plain text, live
-in `corpus/`, and are replayed by every implementation in every language.
+in `corpus/`, and are replayed by every implementation in every language. A rung's whole suite is one
+test that runs the directory.
 
-The corpus catches what unit tests structurally cannot: interaction. A stop cascade that fires during
-an iceberg replenishment inside an auction uncross is one fixture and would be six unit tests that
-each pass while the combination is wrong.
+`corpus/rules/` holds the single rules above. `corpus/scenarios/` holds what a rule structurally cannot
+state: interaction. A stop cascade that fires during an iceberg replenishment inside an auction uncross
+is one scenario and would be six rules that each pass while the combination is wrong.
 
 When output changes legitimately, the runner prints the run back as a fixture so it can be read and
 pasted over the file. Read the diff first. A blessed snapshot is worth what the last person to look
@@ -63,17 +67,18 @@ implementation worth naming.
 
 ## The gates
 
-The build fails when a requirement marked `unit` is not named by a test.
+The build fails when a requirement marked `unit` is claimed by nothing.
 
-The check reads `REQUIREMENTS.md` as the source of truth, extracts the ids marked `unit`, and scans
-test sources for each id in a display name. It fails three ways: a `unit` requirement no test names, a
-test naming an id absent from the document, and a test naming an id whose mechanism is `compiler` or
-`review`.
+The check reads `REQUIREMENTS.md` as the source of truth, extracts the ids marked `unit`, and looks for
+each one in a test's name or on a rule's first line. It fails three ways: a `unit` requirement nothing
+claims, a claim on an id the document does not list, and a claim on an id whose mechanism is `compiler`
+or `review`.
 
-It also fails when a test that names a requirement contains no assertion. That is not hypothetical
-paranoia: an earlier version of this project had seventeen empty test bodies carrying requirement
-annotations, and its coverage gate reported them as covered. A gate that rewards the claim rather than
-the check produces claims.
+It also fails when a claim is not backed. For a test that means no assertion, and for a rule it means
+no expected event, since a fixture expecting nothing passes against an engine that does nothing. That
+is not hypothetical paranoia: an earlier version of this project had seventeen empty test bodies
+carrying requirement annotations, and its coverage gate reported them as covered. A gate that rewards
+the claim rather than the check produces claims.
 
 The gate is gameable, as any gate is. An empty test that fails a build is easier to notice and reject
 than a missing test that produces a slightly shorter report.
@@ -94,7 +99,9 @@ implementation's package, so it cannot reach an internal even by accident. Those
 rewrite has to keep passing.
 
 A test that must observe an internal structure lives in that implementation's package, and each one
-carries a written reason why the public interface was insufficient. There should be few of them.
+carries a written reason why the public interface was insufficient. There should be few of them, and
+they are about a representation rather than the remit: aggregate quantities agreeing with the orders
+under them means nothing until something aggregates.
 
 The corpus depends on the api and the protocol and on no implementation, so it cannot be flattered by
 one's internals. The gates depend on nothing at all, and read the documents and the sources as text.

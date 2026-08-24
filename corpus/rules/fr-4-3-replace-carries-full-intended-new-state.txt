@@ -1,0 +1,15 @@
+# FR-4.3 a replace carries the full intended new state rather than a delta
+#
+# Forty means forty. Read as a delta it would mean ten.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION CONTINUOUS
+STATE   CONTINUOUS
+
+NEW      BUY LIMIT GTC 100000 50
+ACCEPTED #1
+RESTED   #1 BUY 100000 50
+
+REPLACE  #1 40 100000
+REDUCED  #1 40

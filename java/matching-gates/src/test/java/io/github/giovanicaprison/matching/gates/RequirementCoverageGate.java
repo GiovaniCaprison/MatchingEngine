@@ -16,6 +16,10 @@ import org.junit.jupiter.api.Test;
  * <p>A coverage report would be the softer option and the worse one. An unmet requirement that
  * produces a slightly shorter report is easy not to notice, where a failing build has to be either
  * fixed or argued with. Both are gameable; one is gameable in a way that leaves evidence.
+ *
+ * <p>A requirement is claimed either by a test that names it or by a rule in the corpus that opens
+ * with it. Most are the second, since the suite belongs to the specification rather than to any one
+ * implementation, and a claim in a fixture is checked the same way: it has to expect an event.
  */
 class RequirementCoverageGate {
 
@@ -30,17 +34,17 @@ class RequirementCoverageGate {
     assumeTrue(anImplementationExists(), "no implementation yet, so there is no suite to hold");
 
     final Set<String> unclaimed = new LinkedHashSet<>(Requirements.coveredByUnitTests());
-    unclaimed.removeAll(TestSources.requirementsClaimed());
+    unclaimed.removeAll(claimed());
 
     assertThat(unclaimed)
-        .as("requirements marked unit that no test names in its display name")
+        .as("requirements marked unit that nothing claims, in a test name or a rule fixture")
         .isEmpty();
   }
 
   @Test
   @DisplayName("no test claims a requirement the document does not list")
   void claims_name_real_requirements() {
-    final Set<String> unknown = new LinkedHashSet<>(TestSources.requirementsClaimed());
+    final Set<String> unknown = new LinkedHashSet<>(claimed());
     unknown.removeAll(Requirements.ids());
 
     assertThat(unknown)
@@ -53,7 +57,7 @@ class RequirementCoverageGate {
   @Test
   @DisplayName("no test claims a requirement the document says has no test")
   void claims_do_not_contradict_the_mechanism() {
-    final Set<String> contradicted = new LinkedHashSet<>(TestSources.requirementsClaimed());
+    final Set<String> contradicted = new LinkedHashSet<>(claimed());
     contradicted.retainAll(Requirements.withoutTests());
 
     assertThat(contradicted)
@@ -78,6 +82,35 @@ class RequirementCoverageGate {
             "tests that name a requirement and check nothing. An earlier version of this project"
                 + " had seventeen of these and its coverage report called them covered")
         .isEmpty();
+  }
+
+  @Test
+  @DisplayName("a rule claiming a requirement expects an event")
+  void rules_are_backed_by_an_expectation() {
+    final Set<String> hollow =
+        Fixtures.all(verbs()).stream()
+            .filter(fixture -> !fixture.requirements().isEmpty())
+            .filter(fixture -> !fixture.expectsOutput())
+            .map(Fixtures.Fixture::describe)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    assertThat(hollow)
+        .as(
+            "rules that name a requirement and expect nothing. A fixture with no expected output"
+                + " passes against an engine that does nothing at all")
+        .isEmpty();
+  }
+
+  /** Everything anything claims, whether a test named it or a rule opened with it. */
+  private static Set<String> claimed() {
+    final Set<String> claimed = new LinkedHashSet<>(TestSources.requirementsClaimed());
+    claimed.addAll(Fixtures.requirementsClaimed(verbs()));
+    return claimed;
+  }
+
+  /** The output verbs, read from the runner rather than kept here as a second list. */
+  private static Set<String> verbs() {
+    return Repository.enumConstants(Repository.RUNNER + "Verb.java");
   }
 
   private static boolean anImplementationExists() {

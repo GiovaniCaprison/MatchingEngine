@@ -38,16 +38,23 @@ public final class FixtureParser {
 
   public static Fixture parse(final String name, final String content) {
     final List<Fixture.Element> elements = new ArrayList<>();
+    String title = "";
     int number = 0;
     for (final String raw : content.lines().toList()) {
       number++;
       final String line = raw.strip();
-      if (line.isEmpty() || line.startsWith("#")) {
+      if (line.startsWith("#")) {
+        if (title.isEmpty()) {
+          title = line.substring(1).strip();
+        }
+        continue;
+      }
+      if (line.isEmpty()) {
         continue;
       }
       elements.add(element(name, number, line));
     }
-    final Fixture fixture = new Fixture(name, List.copyOf(elements));
+    final Fixture fixture = new Fixture(name, title, List.copyOf(elements));
     requireInstrumentFirst(fixture);
     return fixture;
   }

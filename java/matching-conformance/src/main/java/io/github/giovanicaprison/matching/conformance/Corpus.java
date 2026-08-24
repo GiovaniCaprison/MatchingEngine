@@ -13,6 +13,11 @@ import java.util.stream.Stream;
  * <p>They sit above both language trees, so neither owns the file that holds both to the same
  * behaviour. The directory is found by walking up rather than configured, so this works from a
  * module, from the repository root and from an IDE.
+ *
+ * <p>Two kinds, in two directories. A rule states one requirement, with its id on the first line,
+ * and is what a unit test used to be. A scenario states an interaction that no single rule
+ * describes. Both are the same file format replayed the same way, and every implementation runs all
+ * of them.
  */
 public final class Corpus {
 
@@ -25,8 +30,12 @@ public final class Corpus {
   }
 
   public static List<Path> files() {
-    try (Stream<Path> entries = Files.list(directory())) {
-      return entries.filter(path -> path.toString().endsWith(".txt")).sorted().toList();
+    try (Stream<Path> entries = Files.walk(directory())) {
+      return entries
+          .filter(Files::isRegularFile)
+          .filter(path -> path.toString().endsWith(".txt"))
+          .sorted()
+          .toList();
     } catch (final IOException e) {
       throw new UncheckedIOException("cannot list the corpus", e);
     }
