@@ -149,7 +149,7 @@ public final class FlowGenerator {
         .participantId(participant)
         .side(side)
         .pricing(intent == Intent.MARKET ? PricingInstruction.MARKET : PricingInstruction.LIMIT)
-        .timeInForce(timeInForce(crossing))
+        .timeInForce(timeInForce(intent))
         .price(price)
         .quantity(quantity)
         .minQuantity(minimumQuantity(crossing, quantity))
@@ -255,8 +255,13 @@ public final class FlowGenerator {
     return withinBounds(moved) ? moved : price;
   }
 
-  private TimeInForce timeInForce(final boolean crossing) {
-    if (!crossing) {
+  private TimeInForce timeInForce(final Intent intent) {
+    if (intent == Intent.MARKET) {
+      // A market order cannot rest, so it cannot be told to. Anything else contradicts itself and
+      // the engine refuses it, which is a rejection this generator has no business producing.
+      return TimeInForce.IMMEDIATE_OR_CANCEL;
+    }
+    if (intent != Intent.CROSSING) {
       return TimeInForce.GOOD_TILL_CANCEL;
     }
     if (sequence.chance(thresholds.fillOrKill())) {

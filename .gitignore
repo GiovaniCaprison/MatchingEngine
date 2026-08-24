@@ -4,6 +4,9 @@ target/
 # CMake build output, including the fetched generator and test framework
 cpp/build/
 
+# Measurement runs, which are pulled off the machine that made them rather than committed
+results/
+
 # Eclipse / m2e / jdtls generated project metadata
 .classpath
 .project
