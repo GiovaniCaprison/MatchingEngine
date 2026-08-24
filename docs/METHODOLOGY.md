@@ -77,6 +77,11 @@ could not publish at its intended moment and the engine counts the times it wait
 reporting either is flagged, because those numbers describe a harness that could not keep up rather
 than an engine.
 
+Every command carries four timestamps, so a wait is attributable rather than lumped together. Intended
+to offered is the driver being late, which is harness cost. Offered to started is time on the ring,
+which is queueing. Started to finished is the engine, which is service time. Intended to finished is
+what a client would have seen. A number nobody can decompose is a number somebody will argue about.
+
 ## Steady state and book state
 
 Two kinds of warm-up matter and they are separate.
@@ -137,11 +142,14 @@ Profiling follows a measured difference and never substitutes for one. A finding
 mechanism; a difference alone is an observation. The order below runs from cheapest and broadest to
 most expensive and narrowest, and every entry names the instrument for both languages.
 
-**Latency.** HdrHistogram, which exists for both languages with a compatible encoding, so one analysis
-pipeline reads both. Encoded logs are stored and percentiles computed at analysis time. The harness is
-ours and open loop; JMH and Google Benchmark are both closed loop and cannot observe a stall, so they
-are used only for microbenchmarks of a single operation, where they handle warm-up, forking and dead
-code elimination better than we would.
+**Latency.** Four timestamps a command, kept raw. Two stores into a preallocated array cost less on
+the measured core than recording into a histogram, which computes a bucket index and then touches a
+counts array large enough to miss cache, and the series answers what a histogram cannot: when a stall
+happened, whether stalls cluster, and what the run looked like as it went. Histograms are produced
+from it afterwards and stored encoded, in HdrHistogram's format, which exists for both languages so
+one analysis pipeline reads both. The harness is ours and open loop; JMH and Google Benchmark are both
+closed loop and cannot observe a stall, so they are used only for microbenchmarks of a single
+operation, where they handle warm-up, forking and dead code elimination better than we would.
 
 **Aggregate counters.** `perf stat` for both: cycles, instructions, instructions per cycle, cache
 misses at each level, TLB misses, branch mispredictions, and stalled cycles front and back end. Per
@@ -249,7 +257,7 @@ A standard run carries only counters and produces the numbers that get reported:
 
 - the manifest: run identity, commit, environment as verified, configuration including generator seed
   and flow parameters, and the command line
-- the encoded latency histogram
+- the raw timings, four to a command, and the encoded histograms produced from them
 - aggregate and bracketed counter output
 - a verification record: event counts by type, and a checksum of the output stream
 - environment samples before and after: frequency, thermal state, context switches and involuntary
