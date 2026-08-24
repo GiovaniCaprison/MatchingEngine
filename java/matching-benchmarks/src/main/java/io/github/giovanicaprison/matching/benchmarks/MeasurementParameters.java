@@ -1,5 +1,6 @@
 package io.github.giovanicaprison.matching.benchmarks;
 
+import java.util.Set;
 import org.agrona.BitUtil;
 
 /**
@@ -15,9 +16,15 @@ import org.agrona.BitUtil;
  * @param inputRing capacity in bytes of the queue between the driver and the engine
  * @param outputRing capacity in bytes of the queue between the engine and the verifier
  * @param cores which core each of the three threads runs on
+ * @param counters the hardware counters to bracket the measured region with
  */
 public record MeasurementParameters(
-    long ratePerSecond, int compilationWarmup, int inputRing, int outputRing, Cores cores) {
+    long ratePerSecond,
+    int compilationWarmup,
+    int inputRing,
+    int outputRing,
+    Cores cores,
+    Set<Counter> counters) {
 
   /** No core in particular. */
   public static final int UNPINNED = -1;
@@ -60,7 +67,8 @@ public record MeasurementParameters(
    * that is worth knowing about.
    */
   public static MeasurementParameters at(final long ratePerSecond, final Cores cores) {
-    return new MeasurementParameters(ratePerSecond, 2_000_000, 1 << 24, 1 << 24, cores);
+    return new MeasurementParameters(
+        ratePerSecond, 2_000_000, 1 << 24, 1 << 24, cores, Counter.few());
   }
 
   public long periodNanos() {

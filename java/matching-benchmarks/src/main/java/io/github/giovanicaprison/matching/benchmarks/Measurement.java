@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.HdrHistogram.Histogram;
 import org.agrona.concurrent.MessageHandler;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -43,6 +45,8 @@ public final class Measurement {
   private final List<Setting> placement = new ArrayList<>();
 
   private volatile boolean ended;
+  private Map<Counter, Long> counted = Map.of();
+  private boolean countersMultiplexed;
   private long publishRetries;
   private long commandsQueued;
   private long eventsQueued;
@@ -131,6 +135,9 @@ public final class Measurement {
   /**
    * The engine's thread. One message per read, so each command is timed on its own rather than
    * amortised over a batch the harness chose.
+   *
+   * <p>Split into two phases so that the counters bracket the region that gets reported, and so
+   * that nothing decides per command which phase it is in.
    */
   private void apply(final MatchingEngine engine) {
     final int measuredFrom = log.measuredFrom();
@@ -145,13 +152,42 @@ public final class Measurement {
           }
           applied++;
         };
-    while (applied < log.count()) {
+
+    final int reportFrom = Math.min(log.count(), measuredFrom + parameters.compilationWarmup());
+    applyUntil(handler, reportFrom);
+    count(handler);
+
+    while (!events.write(Rings.END, nothing, 0, 0)) {
+      Thread.onSpinWait();
+    }
+  }
+
+  /**
+   * The reported region, with the counters open across it and nothing else.
+   *
+   * <p>Opened here rather than at startup because counting is per thread, and this is the thread.
+   * Compiler threads, collector threads and everything before the runtime settled are on other
+   * threads and are not counted, which is the whole reason to do this in process instead of running
+   * the process under a profiler.
+   */
+  private void count(final MessageHandler handler) {
+    final Optional<Counters> counters = Counters.open(parameters.counters());
+    final Optional<Counters.Reading> before = counters.map(Counters::read);
+    applyUntil(handler, log.count());
+    counters.ifPresent(
+        open -> {
+          final Counters.Reading after = open.read();
+          counted = after.since(before.orElseThrow());
+          countersMultiplexed = after.multiplexed();
+          open.close();
+        });
+  }
+
+  private void applyUntil(final MessageHandler handler, final int bound) {
+    while (applied < bound) {
       if (commands.read(handler, 1) == 0) {
         Thread.onSpinWait();
       }
-    }
-    while (!events.write(Rings.END, nothing, 0, 0)) {
-      Thread.onSpinWait();
     }
   }
 
@@ -179,6 +215,8 @@ public final class Measurement {
         timings,
         verification,
         List.copyOf(placement),
+        counted,
+        countersMultiplexed,
         publishRetries,
         publisher.waits(),
         publisher.waitedNanos(),
@@ -212,6 +250,9 @@ public final class Measurement {
    * @param timings every command's four timestamps
    * @param verification what the engine emitted, counted and hashed
    * @param placement where each thread ended up, as read back from the kernel
+   * @param counted what the hardware counted over the reported region, empty where it could not
+   * @param countersMultiplexed whether the processor had to share counter slots, which makes every
+   *     value above an extrapolation rather than a count
    * @param publishRetries times the driver found the input ring full
    * @param publisherWaits times the engine found the output ring full
    * @param publisherWaitedNanos how long those waits cost in total
@@ -223,6 +264,8 @@ public final class Measurement {
       Timings timings,
       VerificationRecord verification,
       List<Setting> placement,
+      Map<Counter, Long> counted,
+      boolean countersMultiplexed,
       long publishRetries,
       long publisherWaits,
       long publisherWaitedNanos,
@@ -276,6 +319,9 @@ public final class Measurement {
               .field("digest", Long.toHexString(verification.digest()));
       json.object("counts");
       verification.countsByName().forEach(json::field);
+      json.end();
+      json.object("counters").field("multiplexed", countersMultiplexed);
+      counted.forEach((counter, value) -> json.field(counter.name(), value));
       json.end();
       json.array("placement");
       for (final Setting setting : placement) {
