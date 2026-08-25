@@ -43,6 +43,11 @@ final class CpuList {
     return cores.get(core);
   }
 
+  /** Whether the list is the one core and nothing else, which is what a sibling list should be. */
+  boolean containsOnly(final int core) {
+    return cores.get(core) && cores.cardinality() == 1;
+  }
+
   boolean isEmpty() {
     return cores.isEmpty();
   }

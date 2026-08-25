@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.giovanicaprison.matching.flow.FlowParameters;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -50,12 +51,34 @@ class ManifestTest {
     assertThat(manifest.run().file("manifest.json")).isNotEmptyFile();
   }
 
+  @Test
+  @DisplayName("a core nobody isolated is written down and keeps the run exploratory")
+  void the_grade_follows_the_measured_core() {
+    final Manifest manifest =
+        Manifest.of(
+            Run.create(results, "naive-java"),
+            "naive-java",
+            results.resolve("no-checkout"),
+            Environment.reading(results.resolve("no-machine")),
+            List.of(Setting.required("core isolated", "isolcpus", "true", "false")),
+            FlowParameters.standard(4242, 10_000));
+
+    manifest.write();
+
+    assertThat(manifest.grade()).isEqualTo("exploratory");
+    assertThat(manifest.run().file("manifest.json"))
+        .content()
+        .contains("\"isolation\"")
+        .contains("\"core isolated\"");
+  }
+
   private Manifest manifest() {
     return Manifest.of(
         Run.create(results, "naive-java"),
         "naive-java",
         results.resolve("no-checkout"),
         Environment.reading(results.resolve("no-machine")),
+        List.of(),
         FlowParameters.standard(4242, 10_000));
   }
 }

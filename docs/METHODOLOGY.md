@@ -271,8 +271,9 @@ A standard run carries only counters and produces the numbers that get reported:
 - the raw timings, four to a command, and the encoded histograms produced from them
 - aggregate and bracketed counter output
 - a verification record: event counts by type, and a checksum of the output stream
-- environment samples before and after: frequency, thermal state, context switches and involuntary
-  preemptions on the measured core, and steal time
+- environment samples before and after: the measured core's frequency, context switches and steal
+  time, the package temperature, and the engine thread's own voluntary and involuntary switch counts,
+  which the thread reads from its own status file because they belong to a thread rather than a core
 - the hardware counters over the reported region, and whether the kernel had to multiplex them
 - the ring buffer record: capacity, high water mark, and the stalls at each end
 - where each thread was placed, read back from the kernel rather than taken from the request

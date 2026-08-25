@@ -44,6 +44,13 @@ public final class Measurement {
 
   private final List<Setting> placement = new ArrayList<>();
 
+  // Written by one thread at a time: the main thread before the others start and after they are
+  // joined, the engine's thread in between. The joins order every write before the read.
+  private final List<Setting> sampledBefore = new ArrayList<>();
+  private final List<Setting> sampledAfter = new ArrayList<>();
+
+  private static final Path MACHINE = Path.of("/");
+
   private volatile boolean ended;
   private Map<Counter, Long> counted = Map.of();
   private boolean countersMultiplexed;
@@ -72,6 +79,7 @@ public final class Measurement {
   private Outcome execute(final MatchingEngineFactory factory) {
     final MatchingEngine engine = factory.create(publisher);
     final MeasurementParameters.Cores cores = parameters.cores();
+    sampledBefore.addAll(Sample.ofCore(MACHINE, cores.engine()));
     final Thread verifier =
         thread("verifier", () -> pinned("verifier", cores.verifier(), this::verify));
     final Thread runner =
@@ -81,6 +89,7 @@ public final class Measurement {
     pinned("driver", cores.driver(), this::drive);
     join(runner);
     join(verifier);
+    sampledAfter.addAll(Sample.ofCore(MACHINE, cores.engine()));
     return outcome();
   }
 
@@ -140,6 +149,9 @@ public final class Measurement {
    * that nothing decides per command which phase it is in.
    */
   private void apply(final MatchingEngine engine) {
+    // The thread's own switch counts, read here because they belong to this thread and by the time
+    // anything else could look the thread is gone. Well before the measured region either way.
+    sampledBefore.addAll(Sample.ofThisThread(MACHINE));
     final int measuredFrom = log.measuredFrom();
     final MessageHandler handler =
         (type, buffer, index, length) -> {
@@ -156,6 +168,7 @@ public final class Measurement {
     final int reportFrom = Math.min(log.count(), measuredFrom + parameters.compilationWarmup());
     applyUntil(handler, reportFrom);
     count(handler);
+    sampledAfter.addAll(Sample.ofThisThread(MACHINE));
 
     while (!events.write(Rings.END, nothing, 0, 0)) {
       Thread.onSpinWait();
@@ -215,6 +228,8 @@ public final class Measurement {
         timings,
         verification,
         List.copyOf(placement),
+        List.copyOf(sampledBefore),
+        List.copyOf(sampledAfter),
         counted,
         countersMultiplexed,
         publishRetries,
@@ -250,6 +265,8 @@ public final class Measurement {
    * @param timings every command's four timestamps
    * @param verification what the engine emitted, counted and hashed
    * @param placement where each thread ended up, as read back from the kernel
+   * @param sampledBefore the machine's transient state around the measured core before the run
+   * @param sampledAfter the same readings afterwards, so the pair says what moved during the run
    * @param counted what the hardware counted over the reported region, empty where it could not
    * @param countersMultiplexed whether the processor had to share counter slots, which makes every
    *     value above an extrapolation rather than a count
@@ -264,6 +281,8 @@ public final class Measurement {
       Timings timings,
       VerificationRecord verification,
       List<Setting> placement,
+      List<Setting> sampledBefore,
+      List<Setting> sampledAfter,
       Map<Counter, Long> counted,
       boolean countersMultiplexed,
       long publishRetries,
@@ -333,9 +352,25 @@ public final class Measurement {
             .end();
       }
       json.end();
+      samples(json, "sampledBefore", sampledBefore);
+      samples(json, "sampledAfter", sampledAfter);
       summary(json, "service", timings.service());
       summary(json, "response", timings.response());
       return json.end().toString();
+    }
+
+    /** A sample's settings carry no expectation, so only what was found is written. */
+    private static void samples(final Json json, final String name, final List<Setting> values) {
+      json.array(name);
+      for (final Setting setting : values) {
+        json.object()
+            .field("name", setting.name())
+            .field("source", setting.source())
+            .field("actual", setting.actual())
+            .field("status", setting.status().name())
+            .end();
+      }
+      json.end();
     }
 
     /**

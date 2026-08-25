@@ -5,6 +5,7 @@ import io.github.giovanicaprison.matching.flow.CommandLog;
 import io.github.giovanicaprison.matching.flow.FlowGenerator;
 import io.github.giovanicaprison.matching.flow.FlowParameters;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * One run of one implementation, from the command line.
@@ -47,7 +48,14 @@ public final class Runner {
 
     final Run run = Run.create(Path.of(parsed.text("results", "results")), label);
     final Environment environment = Environment.ofThisMachine();
-    final Manifest manifest = Manifest.of(run, implementation, Path.of("."), environment, flow);
+    final Manifest manifest =
+        Manifest.of(
+            run,
+            implementation,
+            Path.of("."),
+            environment,
+            isolationOf(environment, parameters.cores()),
+            flow);
     manifest.write();
 
     final Measurement.Outcome outcome = Measurement.run(log, factoryOf(implementation), parameters);
@@ -79,6 +87,19 @@ public final class Runner {
         1 << 24,
         coresOf(parsed.text("cores", "")),
         Counter.few());
+  }
+
+  /**
+   * Whether the engine's core is one the kernel was told to leave alone, which cannot be judged
+   * until a core has been chosen. A run that chose none has nothing to judge and is graded on that,
+   * since an unpinned engine is on whatever core the scheduler liked at the time.
+   */
+  private static List<Setting> isolationOf(
+      final Environment environment, final MeasurementParameters.Cores cores) {
+    if (cores.engine() == MeasurementParameters.UNPINNED) {
+      return List.of(Setting.required("engine core", "cores", "chosen", null));
+    }
+    return environment.isolationOf(cores.engine());
   }
 
   /** Three core numbers, driver first, or nothing at all on a machine nobody controls. */

@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * What a run was: which engine, on which machine, from which commit, over which flow.
@@ -18,6 +19,8 @@ import java.nio.file.Path;
  * @param commit the source it was built from
  * @param commandLine how it was invoked, including the flags that decide a runtime's behaviour
  * @param environment the machine and runtime as verified
+ * @param isolation whether the engine's core is one the kernel leaves alone, judged for the core
+ *     the run chose, or the fact that it chose none
  * @param flow the input, by seed and composition rather than by copy
  */
 public record Manifest(
@@ -26,6 +29,7 @@ public record Manifest(
     String commit,
     String commandLine,
     Environment environment,
+    List<Setting> isolation,
     FlowParameters flow) {
 
   /**
@@ -33,10 +37,14 @@ public record Manifest(
    *
    * <p>A run on an uncontrolled machine is still useful while an implementation is being written,
    * so it is allowed and labelled rather than refused. The label is what stops it turning into a
-   * result.
+   * result. The measured core counts as much as the machine does: a run on a controlled box that
+   * pinned its engine to a core the kernel still schedules on, or to no core at all, looks
+   * controlled and is not.
    */
   public String grade() {
-    return environment.measurementGrade() ? "measurement" : "exploratory";
+    return environment.measurementGrade() && isolation.stream().allMatch(Setting::satisfied)
+        ? "measurement"
+        : "exploratory";
   }
 
   public static Manifest of(
@@ -44,8 +52,10 @@ public record Manifest(
       final String implementation,
       final Path repository,
       final Environment environment,
+      final List<Setting> isolation,
       final FlowParameters flow) {
-    return new Manifest(run, implementation, Git.head(repository), invocation(), environment, flow);
+    return new Manifest(
+        run, implementation, Git.head(repository), invocation(), environment, isolation, flow);
   }
 
   public String toJson() {
@@ -70,17 +80,27 @@ public record Manifest(
 
     json.array("environment");
     for (final Setting setting : environment.settings()) {
-      json.object()
-          .field("name", setting.name())
-          .field("source", setting.source())
-          .field("expected", setting.expected())
-          .field("actual", setting.actual())
-          .field("status", setting.status().name())
-          .end();
+      write(json, setting);
+    }
+    json.end();
+
+    json.array("isolation");
+    for (final Setting setting : isolation) {
+      write(json, setting);
     }
     json.end();
 
     return json.end().toString();
+  }
+
+  private static void write(final Json json, final Setting setting) {
+    json.object()
+        .field("name", setting.name())
+        .field("source", setting.source())
+        .field("expected", setting.expected())
+        .field("actual", setting.actual())
+        .field("status", setting.status().name())
+        .end();
   }
 
   public void write() {
