@@ -150,13 +150,19 @@ public record FlowParameters(
    * lot, with the ninety ninth percentile at three, so a uniform draw over forty lots was around
    * twenty times too large and the wrong shape besides.
    *
+   * <p>The size tail is cut at forty lots where the session's largest order was eight hundred. The
+   * shape up to the ninety ninth percentile is the measured one; past it, an order hundreds of lots
+   * deep arrives rarely enough that whether a run happened to draw one would decide what the run
+   * measured.
+   *
+   * <p>The participant count is not measured either, since a feed carries no firm identity, but it
+   * has to be of the right order. A mass cancel removes everything one participant has, so eight
+   * participants make every one of them take out an eighth of the book. Hundreds of firms quote a
+   * liquid stock, and at fifty the command stays the large one P-9 says it is without dominating a
+   * run on its own.
+   *
    * @param depthTicks how far from the reference price an order can be placed
    * @param maximumLots the largest order the tail reaches, in lots
-   *     <p>The participant count is not measured either, since a feed carries no firm identity, but
-   *     it has to be of the right order. A mass cancel removes everything one participant has, so
-   *     eight participants make every one of them take out an eighth of the book. Hundreds of firms
-   *     quote a liquid stock, and at fifty the command stays the large one P-9 says it is without
-   *     dominating a run on its own.
    * @param participants how many participants the flow comes from
    */
   public record Placement(int depthTicks, int maximumLots, int participants) {

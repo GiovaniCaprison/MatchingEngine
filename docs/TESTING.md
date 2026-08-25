@@ -56,6 +56,10 @@ Several seeds rather than one, and checked after every command rather than at th
 holds for a single sequence is a fixture with more steps, and one checked only at the end says nothing
 about where it stopped being true.
 
+The generated flow carries one property of its own. NFR-4.7 holds its rejection rate under a stated
+budget, because a flow that spends itself on being refused measures the validation path, and a
+rejection is a legitimate outcome that no other check would ever flag.
+
 ## Differential
 
 Two implementations fed identical generated input, output diffed. A disagreement means one is wrong,
@@ -64,12 +68,6 @@ and the naive engine is the one written to be obviously right, so it is the arbi
 This is the only mechanism that catches an allocation error nobody thought to write a fixture for.
 An invariant cannot find it, because a book that allocated to the wrong order at the same price is
 internally consistent.
-
-## Compiler
-
-Where a violation fails the build there is no test. An exhaustive switch over an enum with no default
-arm, and mutators that cannot be named outside their package, are enforced at compile time. A test
-that restates a declaration is a worse copy of the source text.
 
 ## Review
 
@@ -83,8 +81,7 @@ The build fails when a requirement marked `unit` is claimed by nothing.
 
 The check reads `REQUIREMENTS.md` as the source of truth, extracts the ids marked `unit`, and looks for
 each one in a test's name or on a rule's first line. It fails three ways: a `unit` requirement nothing
-claims, a claim on an id the document does not list, and a claim on an id whose mechanism is `compiler`
-or `review`.
+claims, a claim on an id the document does not list, and a claim on an id whose mechanism is `review`.
 
 It also fails when a claim is not backed. For a test that means no assertion, and for a rule it means
 no expected event, since a fixture expecting nothing passes against an engine that does nothing. That
@@ -96,11 +93,19 @@ The gate is gameable, as any gate is. An empty test that fails a build is easier
 than a missing test that produces a slightly shorter report.
 
 A second gate fails the build on documents that have drifted apart. Every requirement id cited
-anywhere must exist in `REQUIREMENTS.md` and every principle id in `PRINCIPLES.md`. Every message the
-schema defines must be described in `PROTOCOL.md` and reachable from a corpus directive, and every
-identifier `PROTOCOL.md` quotes must be defined in the schema. Documents disagreeing with each other
-is the failure this project has actually had, more than once, and it is not a thing review reliably
-catches: a stale claim reads perfectly well on its own page.
+anywhere, the corpus and the C++ tree included, must exist in `REQUIREMENTS.md` and every principle id
+in `PRINCIPLES.md`. Every message the schema defines must be described in `PROTOCOL.md` and reachable
+from a corpus directive, every corpus word must reach a message, and every identifier `PROTOCOL.md`
+quotes must be defined in the schema. Documents disagreeing with each other is the failure this
+project has actually had, more than once, and it is not a thing review reliably catches: a stale
+claim reads perfectly well on its own page.
+
+The same gate holds this document and `REQUIREMENTS.md` to their own claims. The corpus format's
+words below must be exactly the directives and verbs the runner accepts, since this section is the
+specification a second runner is written from and a word missing from either side is a fixture one
+language cannot read. The mechanisms `REQUIREMENTS.md` opens with must be exactly the ones its rows
+name, so no mechanism sits documented and unused. And every event the schema defines must be one a
+run can count, because an event nobody counts is one a wrong engine can hide behind.
 
 ## Where tests live
 
@@ -181,6 +186,9 @@ and not of two readings of a specification.
 
 ## What has no test
 
-If the compiler guarantees it, nothing is written. If it is a judgement about a future substitution,
-it is reviewed. Both are recorded as such in `REQUIREMENTS.md`, so a reader asking why a line has no
-test finds an answer instead of an omission.
+If the compiler guarantees it, nothing is written, and no requirement line restates it either. An
+exhaustive switch over an enum with no default arm, and mutators that cannot be named outside their
+package, are enforced at compile time, and a test or a requirement restating a declaration is a worse
+copy of the source text. If it is a judgement about a future substitution, it is reviewed, and those
+lines are marked `review` in `REQUIREMENTS.md`, so a reader asking why one has no test finds an
+answer instead of an omission.

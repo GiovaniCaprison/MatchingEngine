@@ -250,7 +250,7 @@ own.
 ## Fairness between the languages
 
 A flow that spends its time being refused measures the validation path, so the rejection rate is held
-under a stated budget by a test rather than by attention.
+under a stated budget by a test rather than by attention (NFR-4.7).
 
 One generator produces the input, and both languages replay the same encoded bytes from a file. A
 generator written twice would put a difference between two flows inside a comparison of two engines,

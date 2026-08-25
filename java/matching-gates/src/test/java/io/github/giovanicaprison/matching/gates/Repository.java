@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,6 +45,7 @@ final class Repository {
     try (Stream<Path> walk = Files.walk(start)) {
       return walk.filter(Files::isRegularFile)
           .filter(path -> !path.toString().contains("/target/"))
+          .filter(path -> !path.toString().contains("/build/"))
           .filter(path -> Stream.of(extensions).anyMatch(path.getFileName().toString()::endsWith))
           .sorted()
           .toList();
@@ -67,15 +69,19 @@ final class Repository {
   }
 
   /**
-   * Everything a requirement or a principle can be cited from: the documents, and the sources that
-   * cite one in a comment to say why the code below exists.
+   * Everything a requirement or a principle can be cited from: the documents, the sources in both
+   * languages, the schema, and the corpus, whose comments cite ids beyond the title line the
+   * coverage gate reads. A stale id reads perfectly well wherever it sits, so nowhere an id can sit
+   * is left out.
    */
   static List<Path> citingFiles() {
-    return Stream.concat(
-            Stream.concat(filesUnder("docs", ".md").stream(), Stream.of(ROOT.resolve("README.md"))),
-            Stream.concat(
-                filesUnder("java", ".java").stream(), filesUnder("schema", ".xml").stream()))
-        .toList();
+    final List<Path> found = new ArrayList<>(filesUnder("docs", ".md"));
+    found.add(ROOT.resolve("README.md"));
+    found.addAll(filesUnder("java", ".java"));
+    found.addAll(filesUnder("cpp", ".cpp", ".hpp"));
+    found.addAll(filesUnder("corpus", ".txt"));
+    found.addAll(filesUnder("schema", ".xml"));
+    return List.copyOf(found);
   }
 
   /** Where the fixture format's vocabulary is declared, which two gates need to read. */

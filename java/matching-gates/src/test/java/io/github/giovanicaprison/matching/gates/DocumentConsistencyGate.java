@@ -156,6 +156,23 @@ class DocumentConsistencyGate {
   }
 
   @Test
+  @DisplayName("the mechanisms the document names are the ones its requirements use")
+  void documented_mechanisms_are_the_ones_used() {
+    final Set<String> used =
+        Requirements.mechanisms().values().stream()
+            .flatMap(Set::stream)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    assertThat(Requirements.documentedMechanisms())
+        .as(
+            "the mechanism list REQUIREMENTS.md opens with, against the mechanisms its rows name."
+                + " A mechanism named by no row is a capability the suite claims and does not"
+                + " exercise, and a row naming an unlisted mechanism is held by something"
+                + " TESTING.md never defined")
+        .isEqualTo(used);
+  }
+
+  @Test
   @DisplayName("every event the schema defines is one a run counts")
   void every_event_can_be_counted() {
     final Set<String> counted =
