@@ -10,9 +10,22 @@
   <description>Measures a real venue's flow from an ITCH session, so the generator's parameters are found rather than chosen.</description>
   <dependencies>
     <!--
-      Nothing from this project. This reads somebody else's feed and prints numbers; it has no
-      business knowing what an engine is.
+      Still no engine. Measuring reads somebody else's feed and prints numbers; replaying turns
+      that feed into this project's own command log, which needs the protocol and the log format
+      and nothing about what an engine is.
     -->
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-flow</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

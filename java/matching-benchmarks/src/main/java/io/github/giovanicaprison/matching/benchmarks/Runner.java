@@ -24,6 +24,7 @@ public final class Runner {
   private static final String[] KNOWN = {
     "implementation",
     "label",
+    "log",
     "rate",
     "commands",
     "warmup",
@@ -43,7 +44,11 @@ public final class Runner {
     final String label = parsed.text("label", simpleName(implementation));
 
     final FlowParameters flow = flowOf(parsed);
-    final CommandLog log = FlowGenerator.generate(flow);
+    // A real session converted by matching-calibration replays from a file; otherwise the flow is
+    // generated here. Either way the manifest records which, since findings are conditional on it.
+    final String source = parsed.text("log", "");
+    final CommandLog log =
+        source.isEmpty() ? FlowGenerator.generate(flow) : CommandLog.readFrom(Path.of(source));
     final MeasurementParameters parameters = parametersOf(parsed);
 
     final Run run = Run.create(Path.of(parsed.text("results", "results")), label);
@@ -55,7 +60,8 @@ public final class Runner {
             Path.of("."),
             environment,
             isolationOf(environment, parameters.cores()),
-            flow);
+            flow,
+            source.isEmpty() ? "generated" : source);
     manifest.write();
 
     final Measurement.Outcome outcome = Measurement.run(log, factoryOf(implementation), parameters);

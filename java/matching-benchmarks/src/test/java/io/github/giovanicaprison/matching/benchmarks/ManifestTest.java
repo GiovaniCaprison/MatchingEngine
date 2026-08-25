@@ -61,7 +61,8 @@ class ManifestTest {
             results.resolve("no-checkout"),
             Environment.reading(results.resolve("no-machine")),
             List.of(Setting.required("core isolated", "isolcpus", "true", "false")),
-            FlowParameters.standard(4242, 10_000));
+            FlowParameters.standard(4242, 10_000),
+            "generated");
 
     manifest.write();
 
@@ -79,6 +80,7 @@ class ManifestTest {
         results.resolve("no-checkout"),
         Environment.reading(results.resolve("no-machine")),
         List.of(),
-        FlowParameters.standard(4242, 10_000));
+        FlowParameters.standard(4242, 10_000),
+        "generated");
   }
 }

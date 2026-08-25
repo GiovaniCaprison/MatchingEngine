@@ -37,7 +37,11 @@ public final class CommandLog {
   private final int count;
   private final int measuredFrom;
 
-  CommandLog(
+  /**
+   * A log from whoever encoded one: the generator here, a file read back, or a real session's feed
+   * converted into commands. The buffer and the index are taken as given (P-14).
+   */
+  public CommandLog(
       final DirectBuffer buffer,
       final int[] offsets,
       final int[] lengths,
