@@ -1,0 +1,27 @@
+# FR-4.10 a replaced order keeps the display size it was entered with
+#
+# An iceberg showing forty of a hundred, with thirty traded so ten of the tranche is left. Repriced,
+# it shows forty again rather than the ten that happened to be showing. Keeping the tranche instead
+# of the size would leave it trickling out in tens for the rest of its life.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    CONTINUOUS
+STATE      CONTINUOUS
+
+NEW        BUY LIMIT GTC 100000 100 display=40 p=2
+ACCEPTED   #1
+RESTED     #1 BUY 100000 40
+
+NEW        SELL LIMIT GTC 100000 30 p=3
+ACCEPTED   #2
+EXECUTED   @1 aggressor=#2 resting=#1 100000 30
+
+REPLACE    #1 100 99995
+REMOVED    #1 10 REPLACED
+RESTED     #1 BUY 99995 40
+
+NEW        SELL LIMIT GTC 99995 40 p=4
+ACCEPTED   #3
+EXECUTED   @2 aggressor=#3 resting=#1 99995 40
+RESTED     #1 BUY 99995 30

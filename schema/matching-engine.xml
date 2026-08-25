@@ -68,6 +68,7 @@
       <validValue name="FILL_OR_KILL_UNFILLABLE">11</validValue>
       <validValue name="STATE_NOT_PERMITTED">12</validValue>
       <validValue name="UNKNOWN_ORDER">13</validValue>
+      <validValue name="QUANTITY_BELOW_EXECUTED">14</validValue>
     </enum>
     <enum name="RemoveReason" encodingType="uint8">
       <validValue name="CANCELLED">0</validValue>

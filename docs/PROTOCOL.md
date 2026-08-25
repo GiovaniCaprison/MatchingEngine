@@ -42,7 +42,9 @@ price and self match id. Zero means absent for all four.
 
 `CancelOrder` carries the participant id and the client order id of the order to cancel.
 
-`ReplaceOrder` carries the same pair, and the full intended new quantity and price.
+`ReplaceOrder` carries the same pair, and the order's whole intended quantity and price. Whole rather
+than remaining: a client asking for sixty shares means sixty, and the engine works out what is left by
+subtracting what has traded.
 
 `MassCancel` carries client order id and the participant id whose resting orders are to be removed.
 
@@ -124,9 +126,11 @@ above needs no special handling for replace. The order keeps its engine id acros
 A resting order that is fully executed gets no removal event; a consumer tracking quantity sees it
 reach zero. Recorded here because the other reading is that an event is missing.
 
-Hidden quantity is never reported. An iceberg's displayed tranche executes to zero, which a consumer
-tracking quantity has already seen, and the next tranche appears as an `OrderRested`, which is
-indistinguishable from a new order arriving at that price. There is no removal between the two, for the
+Hidden quantity is never reported, and it is displayed before it trades. An iceberg's tranche executes
+to zero, which a consumer tracking quantity has already seen, and the next tranche appears as an
+`OrderRested`, indistinguishable from a new order arriving at that price. An auction does the same,
+which costs an event pair per tranche and buys the property that no execution ever reports more
+quantity against an order than the feed said was there. There is no removal between the two, for the
 same reason a fully executed order gets none. That is the point of an iceberg, and it means the feed
 stays sufficient to rebuild the visible book without revealing what it cannot see.
 

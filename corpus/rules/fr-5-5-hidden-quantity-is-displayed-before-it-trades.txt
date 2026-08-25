@@ -1,0 +1,28 @@
+# FR-5.5 hidden quantity is displayed before it executes, in an auction too
+#
+# Thirty behind a tranche of ten, uncrossed against a plain thirty. The whole thirty trades, because
+# hidden quantity is real liquidity and counts toward the uncrossing volume, but it is revealed a
+# tranche at a time. Taking it out in one execution would report thirty against an order the feed
+# had only ever said was ten, and a consumer's book would go negative.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    OPENING_AUCTION
+STATE      OPENING_AUCTION
+
+NEW        BUY LIMIT GTC 100000 30 display=10 p=2
+ACCEPTED   #1
+RESTED     #1 BUY 100000 10
+
+NEW        SELL LIMIT GTC 100000 30 p=3
+ACCEPTED   #2
+RESTED     #2 SELL 100000 30
+INDICATIVE 100000 30
+
+SESSION    CONTINUOUS
+EXECUTED   @1 aggressor=#1 resting=#2 100000 10
+RESTED     #1 BUY 100000 10
+EXECUTED   @2 aggressor=#1 resting=#2 100000 10
+RESTED     #1 BUY 100000 10
+EXECUTED   @3 aggressor=#1 resting=#2 100000 10
+STATE      CONTINUOUS

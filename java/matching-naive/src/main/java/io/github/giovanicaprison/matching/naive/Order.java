@@ -32,6 +32,7 @@ final class Order {
   private long remaining;
   private long displayed;
   private long arrival;
+  private long executed;
 
   Order(
       final long id,
@@ -48,6 +49,42 @@ final class Order {
       final long triggerPrice,
       final long smpId,
       final long arrival) {
+    this(
+        id,
+        clientOrderId,
+        participantId,
+        side,
+        pricing,
+        timeInForce,
+        postOnly,
+        price,
+        quantity,
+        minQuantity,
+        displayQuantity,
+        triggerPrice,
+        smpId,
+        arrival,
+        0);
+  }
+
+  /** The same order under a new price or quantity, carrying what it has already executed. */
+  Order(
+      final long id,
+      final long clientOrderId,
+      final int participantId,
+      final Side side,
+      final PricingInstruction pricing,
+      final TimeInForce timeInForce,
+      final boolean postOnly,
+      final long price,
+      final long quantity,
+      final long minQuantity,
+      final long displayQuantity,
+      final long triggerPrice,
+      final long smpId,
+      final long arrival,
+      final long executed) {
+    this.executed = executed;
     this.id = id;
     this.clientOrderId = clientOrderId;
     this.participantId = participantId;
@@ -122,6 +159,21 @@ final class Order {
     return arrival;
   }
 
+  /**
+   * How much of this order has traded, over its whole life and across every replace.
+   *
+   * <p>A replace names the order's total quantity, so this is what the remainder is worked out from
+   * (FR-4.9). It survives a replace because the order does.
+   */
+  long executed() {
+    return executed;
+  }
+
+  /** The tranche size an iceberg shows at a time, which a replace has to preserve (FR-4.10). */
+  long displaySize() {
+    return displaySize;
+  }
+
   boolean iceberg() {
     return displaySize > 0;
   }
@@ -145,6 +197,7 @@ final class Order {
   boolean take(final long quantity) {
     remaining -= quantity;
     displayed -= quantity;
+    executed += quantity;
     return displayed == 0 && remaining > 0;
   }
 
@@ -154,10 +207,14 @@ final class Order {
     arrival = arrivalSequence;
   }
 
-  /** A replace that keeps queue position (FR-4.4) changes quantity and nothing else. */
-  void reduceTo(final long quantity) {
-    remaining = quantity;
-    displayed = displaySize == 0 ? quantity : Math.min(displaySize, quantity);
+  /**
+   * A replace that keeps queue position (FR-4.4) changes what is left and nothing else.
+   *
+   * @param remainder what should still be working, which the caller derives from the order's total
+   */
+  void reduceTo(final long remainder) {
+    remaining = remainder;
+    displayed = displaySize == 0 ? remainder : Math.min(displaySize, remainder);
   }
 
   /** A triggered stop becomes an ordinary order of its own pricing instruction (FR-6.3). */
