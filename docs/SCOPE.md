@@ -57,6 +57,12 @@ and on firing it becomes an ordinary order which then enters or crosses the limi
 - expiry of good-till-date orders, which needs a calendar the engine does not have. The scheduler
   cancels them and the engine sees an ordinary cancel
 
+A real session says the boundary above holds. Every message Nasdaq sent for one instrument across an
+hour and a half of continuous trading corresponds to one of the nine events, except the one that
+reports an execution against hidden quantity, and that is a difference of method rather than a gap:
+`PROTOCOL.md` says what this engine does instead and what each choice costs. Nothing in the feed needed
+an event the protocol does not have.
+
 Recovery is listed here because its absence reads as an omission. A deterministic engine plus the
 upstream journal is the recovery mechanism: replaying the log reproduces the book exactly, so there
 is nothing further for the engine to implement.

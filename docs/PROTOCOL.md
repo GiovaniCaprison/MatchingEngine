@@ -130,7 +130,14 @@ Hidden quantity is never reported, and it is displayed before it trades. An iceb
 to zero, which a consumer tracking quantity has already seen, and the next tranche appears as an
 `OrderRested`, indistinguishable from a new order arriving at that price. An auction does the same,
 which costs an event pair per tranche and buys the property that no execution ever reports more
-quantity against an order than the feed said was there. There is no removal between the two, for the
+quantity against an order than the feed said was there.
+
+Nasdaq does the opposite, and it is worth recording which of the two this is. ITCH reports an execution
+against hidden quantity as a trade naming no order at all, so the volume reaches the tape and the
+visible book is untouched. That costs a message type and gives up attributing the volume to an order;
+revealing first costs the events and keeps every execution attributable. A session's worth of AAPL says
+the choice is not marginal: hidden executions were under one percent of messages and twenty eight
+percent of the volume that traded. There is no removal between the two, for the
 same reason a fully executed order gets none. That is the point of an iceberg, and it means the feed
 stays sufficient to rebuild the visible book without revealing what it cannot see.
 

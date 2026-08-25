@@ -98,15 +98,29 @@ class MeasurementTest {
   }
 
   @Test
-  @DisplayName("the offered rate is the rate the driver holds")
+  @DisplayName("the driver offers at its own rate whatever the engine is doing")
   void the_rate_is_offered_whatever_happens() {
-    final CommandLog log = log(10_000);
+    // The open loop property, as a relation rather than a wall clock bound. An engine that stalls
+    // makes commands wait, and the question is where they wait: on the ring, or in a driver that
+    // has
+    // stopped offering. A number of nanoseconds asserted here would measure this laptop, and README
+    // says as much about wall clock assertions in a unit suite.
+    final CommandLog log = log(20_000);
 
-    final Measurement.Outcome outcome =
-        Measurement.run(log, new CountingEngine(1), parameters(500_000));
+    final Measurement.Outcome quick =
+        Measurement.run(log, new CountingEngine(1), parameters(100_000));
+    final Measurement.Outcome stalling =
+        Measurement.run(log, new CountingEngine(1, 2_000, 300_000), parameters(100_000));
 
-    // Two microseconds of slack a command, which a laptop can be behind by and metal cannot.
-    assertThat(outcome.timings().offered().getValueAtPercentile(99)).isLessThan(2_000L);
+    final long stalled = stalling.timings().response().getValueAtPercentile(99);
+    final long unstalled = quick.timings().response().getValueAtPercentile(99);
+    assertThat(stalled)
+        .as("the stalling engine has to be visibly worse, or this proves nothing")
+        .isGreaterThan(unstalled * 10);
+
+    assertThat(stalling.timings().offered().getValueAtPercentile(99))
+        .as("the driver kept offering, so the waiting happened on the ring and not in the harness")
+        .isLessThan(stalled / 10);
   }
 
   private static MeasurementParameters parameters(final long rate) {

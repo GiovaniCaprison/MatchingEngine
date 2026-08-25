@@ -109,10 +109,24 @@ public record FlowParameters(
       double minimumQuantity,
       double selfMatch) {
 
-    /** Every feature present, at rates loosely in the shape of a liquid equity book. */
+    /**
+     * Every feature present, in the shape of a real book.
+     *
+     * <p>The first four are measured. AAPL on 30 January 2020, 09:30 to 11:08, from Nasdaq's public
+     * TotalView-ITCH session: of 626,538 commands, 42.5% were deletes and 9.0% were replaces or
+     * partial cancels. `matching-calibration` is the tool and the numbers reproduce.
+     *
+     * <p>The crossing share is fitted rather than read, because a market data feed cannot show it:
+     * an order that filled completely never rested, so it never appears. What the feed does show is
+     * that only 5.1% of posted shares ever executed, and these rates put the generator near that.
+     *
+     * <p>The qualifiers are chosen. None of iceberg, stop, post-only, minimum quantity or self
+     * match is a field in a feed, so nothing observable constrains them. The one hint the session
+     * gives is that 28% of executed shares were hidden, which is why the iceberg rate is not lower.
+     */
     public static Composition standard() {
       return new Composition(
-          0.15, 0.05, 0.35, 0.05, 0.0005, 0.04, 0.02, 0.06, 0.005, 0.08, 0.02, 0.10);
+          0.020, 0.005, 0.425, 0.090, 0.0002, 0.06, 0.02, 0.06, 0.005, 0.08, 0.02, 0.10);
     }
 
     /**
@@ -123,21 +137,32 @@ public record FlowParameters(
      * composition against the engine that has only these gives the cost of it existing (P-16).
      */
     public static Composition limitAndMarketOnly() {
-      return new Composition(0.15, 0.05, 0.35, 0.05, 0, 0, 0, 0, 0, 0, 0, 0);
+      return new Composition(0.020, 0.005, 0.425, 0.090, 0, 0, 0, 0, 0, 0, 0, 0);
     }
   }
 
   /**
-   * Where orders land.
+   * Where orders land and how large they are.
+   *
+   * <p>Both measured from the same session. Half of AAPL's orders were placed within six ticks of
+   * the touch and nine tenths within eighty nine, so the draw is biased hard toward the touch and
+   * the tail is cut where the instrument's band ends. And nine tenths of orders were a single round
+   * lot, with the ninety ninth percentile at three, so a uniform draw over forty lots was around
+   * twenty times too large and the wrong shape besides.
    *
    * @param depthTicks how far from the reference price an order can be placed
-   * @param maximumLots the largest order, in lots
+   * @param maximumLots the largest order the tail reaches, in lots
+   *     <p>The participant count is not measured either, since a feed carries no firm identity, but
+   *     it has to be of the right order. A mass cancel removes everything one participant has, so
+   *     eight participants make every one of them take out an eighth of the book. Hundreds of firms
+   *     quote a liquid stock, and at fifty the command stays the large one P-9 says it is without
+   *     dominating a run on its own.
    * @param participants how many participants the flow comes from
    */
   public record Placement(int depthTicks, int maximumLots, int participants) {
 
     public static Placement standard() {
-      return new Placement(20, 40, 8);
+      return new Placement(60, 40, 50);
     }
   }
 
