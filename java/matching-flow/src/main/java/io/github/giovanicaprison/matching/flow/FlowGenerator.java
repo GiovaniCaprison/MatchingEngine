@@ -57,7 +57,8 @@ public final class FlowGenerator {
   private final FlowParameters parameters;
   private final FlowParameters.Instrument instrument;
   private final Sequence sequence;
-  private final Thresholds thresholds;
+  private Thresholds thresholds;
+  private FlowParameters.Placement placement;
 
   private final MutableDirectBuffer out = new ExpandableArrayBuffer(1 << 20);
   private final MessageHeaderEncoder header = new MessageHeaderEncoder();
@@ -84,10 +85,17 @@ public final class FlowGenerator {
     this.instrument = parameters.instrument();
     this.sequence = new Sequence(parameters.seed());
     this.thresholds = Thresholds.of(parameters.composition());
+    this.placement = parameters.placement();
     final int total = 2 + parameters.restingOrders() + parameters.commands();
     this.offsets = new int[total];
     this.lengths = new int[total];
     this.resting = new Resting(total);
+  }
+
+  /** From here on the flow is the other regime, mid-log, with nothing marking the seam. */
+  private void shiftRegime(final FlowParameters.Shift shift) {
+    thresholds = Thresholds.of(shift.composition());
+    placement = shift.placement();
   }
 
   public static CommandLog generate(final FlowParameters parameters) {
@@ -100,6 +108,9 @@ public final class FlowGenerator {
     }
     final int measuredFrom = generator.written;
     for (int command = 0; command < parameters.commands(); command++) {
+      if (parameters.shift() != null && command == parameters.shift().atCommand()) {
+        generator.shiftRegime(parameters.shift());
+      }
       generator.command();
     }
     return new CommandLog(
@@ -153,7 +164,7 @@ public final class FlowGenerator {
 
   private void enter(final Intent intent) {
     final Side side = side();
-    final int participant = 1 + sequence.nextInt(parameters.placement().participants());
+    final int participant = 1 + sequence.nextInt(placement.participants());
     final long quantity = quantity();
     final boolean crossing = intent == Intent.CROSSING || intent == Intent.MARKET;
     final long price = intent == Intent.MARKET ? 0 : price(side, crossing);
@@ -213,7 +224,7 @@ public final class FlowGenerator {
   }
 
   private void massCancel() {
-    final int participant = 1 + sequence.nextInt(parameters.placement().participants());
+    final int participant = 1 + sequence.nextInt(placement.participants());
     massCancel.wrapAndApplyHeader(out, at, header);
     massCancel.frame().instrumentId(INSTRUMENT_ID).sequence(++inputSequence);
     massCancel.clientOrderId(inputSequence).participantId(participant);
@@ -283,7 +294,7 @@ public final class FlowGenerator {
     if (sequence.chance(900_000)) {
       return lot * (2 + sequence.nextInt(2));
     }
-    return lot * (1 + sequence.nearer(parameters.placement().maximumLots()));
+    return lot * (1 + sequence.nearer(placement.maximumLots()));
   }
 
   /** A price some ticks from the reference, on the side that rests or across it. */
@@ -342,7 +353,7 @@ public final class FlowGenerator {
   }
 
   private long ticks() {
-    return instrument.tickSize() * (1 + sequence.nearer(parameters.placement().depthTicks()));
+    return instrument.tickSize() * (1 + sequence.nearer(placement.depthTicks()));
   }
 
   private long half(final long quantity) {
@@ -366,8 +377,15 @@ public final class FlowGenerator {
   }
 
   private static void requireInsideTheBand(final FlowParameters parameters) {
-    final FlowParameters.Instrument instrument = parameters.instrument();
-    final long reach = instrument.tickSize() * parameters.placement().depthTicks();
+    requireInsideTheBand(parameters.instrument(), parameters.placement());
+    if (parameters.shift() != null) {
+      requireInsideTheBand(parameters.instrument(), parameters.shift().placement());
+    }
+  }
+
+  private static void requireInsideTheBand(
+      final FlowParameters.Instrument instrument, final FlowParameters.Placement placement) {
+    final long reach = instrument.tickSize() * placement.depthTicks();
     if (reach > instrument.bandWidth()) {
       throw new IllegalArgumentException(
           "orders would reach "
