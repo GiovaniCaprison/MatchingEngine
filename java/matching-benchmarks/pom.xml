@@ -44,6 +44,11 @@
       <artifactId>matching-lean-naive</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-indexed</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <!-- The histogram is an output format here, produced after a run from the timings it kept. -->
     <dependency>
       <groupId>org.hdrhistogram</groupId>

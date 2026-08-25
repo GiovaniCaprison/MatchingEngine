@@ -1,0 +1,98 @@
+package io.github.giovanicaprison.matching.indexed;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.github.giovanicaprison.matching.conformance.ConsumerBook;
+import io.github.giovanicaprison.matching.conformance.FlowReplay;
+import io.github.giovanicaprison.matching.flow.CommandLog;
+import io.github.giovanicaprison.matching.flow.FlowGenerator;
+import io.github.giovanicaprison.matching.flow.FlowParameters;
+import io.github.giovanicaprison.matching.protocol.Side;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+/**
+ * What has to be true of the indexed structures after any sequence at all.
+ *
+ * <p>This is the rung the deferred invariants were waiting for. Rung zero had nothing that
+ * aggregates and no level to leave empty, so asserting NFR-3.1 and NFR-3.2 there would have
+ * asserted that a sum equals itself; here the aggregates are cached, the levels are entries in a
+ * map, and the index is a second copy of who is resting, which is three kinds of bookkeeping that
+ * can drift. Checked after every command over generated flow, because drift is the failure where
+ * every operation looks correct and the structure is slowly wrong.
+ */
+class InvariantsTest {
+
+  @DisplayName("NFR-3.1 NFR-3.2 the bookkeeping never parts from the book across generated flow")
+  @ParameterizedTest(name = "seed {0}")
+  @ValueSource(longs = {1, 2, 3, 20260826})
+  void nothing_drifts(final long seed) {
+    final CommandLog log = FlowGenerator.generate(FlowParameters.withAuctions(seed, 40_000, 2_000));
+    final Engines engines = new Engines();
+
+    final long events =
+        FlowReplay.replay(
+            log, engines, (command, rebuilt) -> check(engines.engine, rebuilt, command));
+
+    assertThat(events).as("a flow this size has to make the engine say something").isPositive();
+  }
+
+  private static void check(
+      final IndexedEngine engine, final ConsumerBook rebuilt, final int command) {
+    final String where = "after command " + command;
+    final Book book = engine.book();
+    final List<Order> resting = engine.resting();
+
+    // (NFR-3.1) The cached aggregate at every price equals the sum of the orders under it. This is
+    // the number a fast path would quote, so the moment it drifts every answer built on it lies.
+    // (NFR-3.2) And no empty level survives, on either side.
+    long queued = 0;
+    for (final Side side : Side.values()) {
+      if (side == Side.NULL_VAL) {
+        continue;
+      }
+      for (final Book.Level level : book.levels(side)) {
+        assertThat(level.queue())
+            .as("%s: an empty level at %d survived", where, level.price())
+            .isNotEmpty();
+        long sum = 0;
+        for (final Order order : level.queue()) {
+          sum += order.displayed();
+          assertThat(order.side())
+              .as("%s: %d rests on the wrong side", where, order.id())
+              .isEqualTo(side);
+          assertThat(order.price())
+              .as("%s: %d rests at the wrong price", where, order.id())
+              .isEqualTo(level.price());
+          queued++;
+        }
+        assertThat(level.displayed())
+            .as(
+                "%s: level %d says %d displayed and holds %d",
+                where, level.price(), level.displayed(), sum)
+            .isEqualTo(sum);
+      }
+    }
+
+    // (NFR-3.2) No unreferenced order remains: the index holds exactly what the queues hold.
+    assertThat(resting.size())
+        .as("%s: the index and the queues disagree about who is resting", where)
+        .isEqualTo((int) queued);
+    final Set<Long> ids = new HashSet<>();
+    for (final Order order : resting) {
+      assertThat(ids.add(order.id())).as("%s: %d is indexed twice", where, order.id()).isTrue();
+    }
+    for (final Order stop : engine.waiting()) {
+      assertThat(ids.add(stop.id())).as("%s: %d is in both books", where, stop.id()).isTrue();
+    }
+
+    // The book a consumer holds is the book the engine holds, at this layout as at the last.
+    assertThat(Engines.visible(resting))
+        .as("%s: the two books have parted company", where)
+        .isEqualTo(rebuilt.entries());
+  }
+}
