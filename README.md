@@ -46,9 +46,14 @@ java/       matching-protocol      the generated codecs
             matching-gates         the two build gates
             matching-naive         rung zero, the whole remit
             matching-lean-naive    rung zero's lean twin, the feature cost arm (P-16)
+            matching-indexed       rung one, sorted levels and an index
+            matching-lean-indexed  rung one's lean twin
+            matching-pooled        rung two, the allocation taken out
+            matching-lean-pooled   rung two's lean twin
             matching-calibration   a real session measured, and replayed as commands
             matching-benchmarks    the measurement harness and the runner
-cpp/        protocol, api, conformance, naive, lean-naive, benchmarks: the same shapes, matched
+cpp/        protocol, api, conformance, benchmarks, and one directory per rung and twin: the same
+            shapes, matched
 results/    one directory per run: manifest, histograms, counters
 ```
 
