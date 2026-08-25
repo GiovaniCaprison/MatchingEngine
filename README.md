@@ -34,11 +34,23 @@ disabled feature behind a branch still occupies the method and the object layout
 ```
 schema/     the SBE schema, generated into both languages
 corpus/     rules and scenarios with their blessed output, language neutral
-docs/
-java/       parent pom, then api, protocol, flow, conformance, gates, calibration, rungs, benchmarks
-cpp/        one target per rung, conformance, benchmarks
+docs/       scope, protocol, requirements, principles, testing, methodology
+scripts/    the analysis, the campaign matrix, and the metal box setup
+java/       matching-protocol      the generated codecs
+            matching-api           the three-method boundary
+            matching-flow          the generator and the command log
+            matching-conformance   the corpus runner and the consumer's book
+            matching-gates         the two build gates
+            matching-naive         rung zero, the whole remit
+            matching-lean          the limit-and-market arm of the feature cost question (P-16)
+            matching-calibration   a real session measured, and replayed as commands
+            matching-benchmarks    the measurement harness and the runner
+cpp/        protocol, api, conformance, naive, lean, benchmarks: the same shapes at matched layouts
 results/    one directory per run: manifest, histograms, counters
 ```
+
+That block is the map. Each module says the rest of what it is at the top of its own sources, so
+there is no per-directory documentation to fall out of date.
 
 Language first at the top level, so each build system owns its own subtree and the two sides stay
 symmetric as rungs are added.
@@ -85,8 +97,9 @@ build directory, so it needs the network once and never again. Formatting is `go
 one side and `clang-format` on the other, both at a hundred columns, so the two trees wrap alike. The
 Java formatter is pinned in the parent pom and `mvn verify` fails on a file it would change, so the
 format is part of the build rather than a habit; `mvn spotless:apply` fixes what it refuses. A
-pre-commit hook formats what is being committed in either language, and
-`git config core.hooksPath hooks` installs it.
+pre-commit hook formats what is being committed in either language, and the first Maven build
+installs it by pointing `core.hooksPath` at `hooks/`. A machine that only ever builds the C++ side
+runs `git config core.hooksPath hooks` once by hand.
 
 Agrona reaches `jdk.internal.misc.Unsafe` for buffer access, so the build passes
 `--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`, and the harness places its threads and reads
@@ -101,8 +114,12 @@ Benchmarks run outside the test phase, one implementation per process, and write
 
 ```
 mvn package && java -jar java/matching-benchmarks/target/benchmarks.jar
-cpp/build/benchmarks
+cpp/build/benchmarks/benchmarks --implementation naive --log session.log
 ```
+
+The C++ runner always replays a log file, because one generator exists and neither language owns
+it. A campaign is one process per cell via `scripts/matrix.py`, and every table comes out of the
+run directories via `scripts/analyze.py`.
 
 Neither runs under the test command. A wall clock assertion in a unit suite is flaky and measures
 nothing that can be compared. Measurement runs belong on a controlled machine, and the requirements

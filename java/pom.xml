@@ -18,6 +18,7 @@
     <surefire.version>3.5.1</surefire.version>
     <shade.plugin.version>3.6.0</shade.plugin.version>
     <spotless.version>3.10.0</spotless.version>
+    <githook.plugin.version>3.6.0</githook.plugin.version>
     <googlejavaformat.version>1.35.0</googlejavaformat.version>
     <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED --enable-native-access=ALL-UNNAMED</jvm.access.flags>
   </properties>
@@ -114,6 +115,30 @@
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <!--
+          Points git at the committed hooks on the first build, so formatting-on-commit installs
+          itself for anyone who builds. Git never activates hooks from a clone on its own, which is
+          a security decision and not an omission, so some build has to do this once.
+        -->
+        <groupId>com.rudikershaw.gitbuildhook</groupId>
+        <artifactId>git-build-hook-maven-plugin</artifactId>
+        <version>${githook.plugin.version}</version>
+        <inherited>false</inherited>
+        <configuration>
+          <gitConfig>
+            <core.hooksPath>hooks</core.hooksPath>
+          </gitConfig>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>configure</goal>
+            </goals>
+            <phase>initialize</phase>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
