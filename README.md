@@ -94,7 +94,9 @@ ctest --test-dir build
 
 Configuring fetches the codec generator and the test framework by exact version and checksum into the
 build directory, so it needs the network once and never again. Formatting is `google-java-format` on
-one side and `clang-format` on the other, both at a hundred columns, so the two trees wrap alike. The
+one side and `clang-format` on the other, both at a hundred columns and both pinned, one in the
+parent pom and one in `.clang-format-version`, so the two trees wrap alike and no two machines
+disagree about how. The
 Java formatter is pinned in the parent pom and `mvn verify` fails on a file it would change, so the
 format is part of the build rather than a habit; `mvn spotless:apply` fixes what it refuses. A
 pre-commit hook formats what is being committed in either language, and the first Maven build

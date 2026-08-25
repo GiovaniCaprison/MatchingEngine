@@ -38,9 +38,10 @@ jobs:
         working-directory: cpp
       - run: ctest --test-dir build --output-on-failure
         working-directory: cpp
-      # The Java formatter is checked inside the build; clang-format has no build to live in yet,
-      # so the tree is checked here, with the fetched dependencies left out of it.
+      # Both formatters are pinned: the Java one in the parent pom, this one in
+      # .clang-format-version, fetched exactly by pipx so the runner and a laptop cannot disagree
+      # about wrapping. The fetched dependencies stay out of the sweep.
       - run: |
           find . -path ./build -prune -o \( -name '*.cpp' -o -name '*.hpp' \) -print0 \
-            | xargs -0 clang-format --dry-run --Werror
+            | xargs -0 pipx run clang-format==$(cat ../.clang-format-version) --dry-run --Werror
         working-directory: cpp
