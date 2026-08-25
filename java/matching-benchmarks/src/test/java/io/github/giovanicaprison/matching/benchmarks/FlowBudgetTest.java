@@ -19,8 +19,9 @@ import org.junit.jupiter.api.Test;
  * because a rejection is a perfectly good outcome and a run reporting thousands of them looks like
  * it is working.
  *
- * <p>So the budget is a test rather than a note. It holds against the engine that is written to be
- * obviously right, since a rejection rate is a property of the flow and the engine together.
+ * <p>So the budget is a test rather than a note (NFR-4.7). It holds against the engine that is
+ * written to be obviously right, since a rejection rate is a property of the flow and the engine
+ * together.
  */
 class FlowBudgetTest {
 
@@ -38,7 +39,7 @@ class FlowBudgetTest {
   private static final double EXECUTED_AT_MOST = 0.15;
 
   @Test
-  @DisplayName("the flow spends almost nothing on being refused")
+  @DisplayName("the flow spends almost nothing on being refused (NFR-4.7)")
   void the_flow_stays_within_its_budget() throws Exception {
     final CommandLog log = FlowGenerator.generate(FlowParameters.standard(11, 60_000));
 

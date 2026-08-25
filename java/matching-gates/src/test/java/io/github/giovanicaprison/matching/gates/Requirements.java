@@ -41,11 +41,27 @@ final class Requirements {
     return withMechanism("unit");
   }
 
-  /** The ids the document says have no test at all, and so must not be claimed by one. */
+  /** The ids the document says are held by judgement, and so must not be claimed by a test. */
   static Set<String> withoutTests() {
-    final Set<String> untested = withMechanism("compiler");
-    untested.addAll(withMechanism("review"));
-    return untested;
+    return withMechanism("review");
+  }
+
+  /**
+   * The mechanisms the document's own preamble names, which are the ones {@code TESTING.md}
+   * defines.
+   */
+  static Set<String> documentedMechanisms() {
+    final String text = Repository.read("docs/REQUIREMENTS.md");
+    final int start = text.indexOf("The mechanism column");
+    if (start < 0) {
+      throw new IllegalStateException("REQUIREMENTS.md no longer introduces the mechanism column");
+    }
+    final int end = text.indexOf("\n\n", start);
+    return Pattern.compile("`([a-z]+)`")
+        .matcher(text.substring(start, end < 0 ? text.length() : end))
+        .results()
+        .map(result -> result.group(1))
+        .collect(Collectors.toCollection(LinkedHashSet::new));
   }
 
   /** Every principle id the document defines, taken from its headings. */

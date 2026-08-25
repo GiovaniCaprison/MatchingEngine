@@ -8,8 +8,9 @@ Ids are cited from source comments. A comment reading `(FR-3.5)` means the code 
 satisfy that line.
 
 The mechanism column names how a requirement is shown to hold: `unit`, `corpus`, `property`,
-`differential`, `benchmark`, `compiler` or `review`. `TESTING.md` defines each and what it can catch;
-`METHODOLOGY.md` covers `benchmark`.
+`differential`, `benchmark` or `review`. `TESTING.md` defines each and what it can catch;
+`METHODOLOGY.md` covers `benchmark`. What the compiler guarantees gets no line here at all, for the
+reason `TESTING.md` gives.
 
 ## FR-1: configuration and order entry
 
@@ -165,6 +166,7 @@ itself.
 | NFR-4.4 | Latency is reported as p50, p99, p99.9 and max, at a fixed offered rate, per command type | benchmark |
 | NFR-4.5 | Every reported measurement names the implementation, the input parameters and the environment | benchmark |
 | NFR-4.6 | Decode cost is attributed separately from matching cost | benchmark |
+| NFR-4.7 | The generated flow's rejection rate stays under a stated budget, so a run measures matching rather than validation | property |
 
 These are obligations on measurement, not targets an implementation must hit. A deliberately naive
 implementation is linear in resting count, and a requirement forbidding that would forbid the baseline

@@ -62,8 +62,8 @@ class RequirementCoverageGate {
 
     assertThat(contradicted)
         .as(
-            "ids claimed by a test whose mechanism is compiler or review. Either the test is"
-                + " restating a declaration, or the document is wrong about the mechanism")
+            "ids claimed by a test whose mechanism is review. Either the test automates a"
+                + " judgement it cannot hold, or the document is wrong about the mechanism")
         .isEmpty();
   }
 

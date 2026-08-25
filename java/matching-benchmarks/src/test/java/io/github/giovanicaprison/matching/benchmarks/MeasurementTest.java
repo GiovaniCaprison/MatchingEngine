@@ -102,9 +102,8 @@ class MeasurementTest {
   void the_rate_is_offered_whatever_happens() {
     // The open loop property, as a relation rather than a wall clock bound. An engine that stalls
     // makes commands wait, and the question is where they wait: on the ring, or in a driver that
-    // has
-    // stopped offering. A number of nanoseconds asserted here would measure this laptop, and README
-    // says as much about wall clock assertions in a unit suite.
+    // has stopped offering. A number of nanoseconds asserted here would measure this laptop, and
+    // README says as much about wall clock assertions in a unit suite.
     final CommandLog log = log(20_000);
 
     final Measurement.Outcome quick =
