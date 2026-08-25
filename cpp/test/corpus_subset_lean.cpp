@@ -8,7 +8,7 @@
 
 #include "conformance/corpus.hpp"
 #include "conformance/corpus_runner.hpp"
-#include "lean/lean_engine.hpp"
+#include "lean-naive/lean_engine.hpp"
 
 using namespace io::github::giovanicaprison::matching;
 
@@ -54,9 +54,10 @@ TEST_CASE("the corpus subset inside the shared remit passes against the lean eng
       continue;
     }
     inside++;
-    const conformance::CorpusRunner::Result result = conformance::CorpusRunner::run(
-        fixture,
-        [](api::EventPublisher& events) { return std::make_unique<lean::LeanEngine>(events); });
+    const conformance::CorpusRunner::Result result =
+        conformance::CorpusRunner::run(fixture, [](api::EventPublisher& events) {
+          return std::make_unique<lean::naive::LeanEngine>(events);
+        });
     INFO(result.describe());
     CHECK(result.passed());
   }

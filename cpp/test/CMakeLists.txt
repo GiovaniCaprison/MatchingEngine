@@ -22,7 +22,7 @@ target_link_libraries(corpus-conformance
 
 add_executable(corpus-subset-lean corpus_subset_lean.cpp)
 target_link_libraries(corpus-subset-lean
-  PRIVATE matching-conformance matching-lean Catch2::Catch2WithMain)
+  PRIVATE matching-conformance matching-lean-naive Catch2::Catch2WithMain)
 
 add_executable(harness harness.cpp)
 target_link_libraries(harness

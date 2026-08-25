@@ -20,7 +20,7 @@
 #include "benchmarks/measurement.hpp"
 #include "benchmarks/run.hpp"
 #include "io_github_giovanicaprison_matching_protocol/MessageHeader.h"
-#include "lean/lean_engine.hpp"
+#include "lean-naive/lean_engine.hpp"
 #include "naive/naive_engine.hpp"
 
 namespace {
@@ -36,9 +36,9 @@ benchmarks::Measurement::EngineFactory factoryOf(const std::string& name) {
       return std::make_unique<matching::naive::NaiveEngine>(events);
     };
   }
-  if (name == "lean") {
+  if (name == "lean-naive") {
     return [](matching::api::EventPublisher& events) {
-      return std::make_unique<matching::lean::LeanEngine>(events);
+      return std::make_unique<matching::lean::naive::LeanEngine>(events);
     };
   }
   if (name == "decode") {
@@ -109,7 +109,7 @@ int main(const int count, char** arguments) {
   const std::string implementation = argument(count, arguments, "--implementation", "");
   const std::string logFile = argument(count, arguments, "--log", "");
   if (implementation.empty() || logFile.empty()) {
-    std::cerr << "usage: benchmarks --implementation naive|lean|decode --log FILE"
+    std::cerr << "usage: benchmarks --implementation naive|lean-naive|decode --log FILE"
               << " [--label L] [--rate N] [--warmup N] [--cores a,b,c] [--counters NAMES]"
               << " [--results DIR]\n";
     return 2;

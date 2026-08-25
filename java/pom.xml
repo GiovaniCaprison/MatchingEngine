@@ -30,7 +30,7 @@
     <module>matching-conformance</module>
     <module>matching-gates</module>
     <module>matching-naive</module>
-    <module>matching-lean</module>
+    <module>matching-lean-naive</module>
     <module>matching-calibration</module>
     <module>matching-benchmarks</module>
   </modules>
@@ -73,7 +73,7 @@
       </dependency>
       <dependency>
         <groupId>io.github.giovanicaprison</groupId>
-        <artifactId>matching-lean</artifactId>
+        <artifactId>matching-lean-naive</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
