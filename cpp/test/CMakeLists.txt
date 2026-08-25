@@ -13,5 +13,9 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(schema-round-trip schema_round_trip.cpp)
 target_link_libraries(schema-round-trip PRIVATE matching-protocol Catch2::Catch2WithMain)
 
+add_executable(conformance-format conformance_format.cpp)
+target_link_libraries(conformance-format PRIVATE matching-conformance Catch2::Catch2WithMain)
+
 include(Catch)
 catch_discover_tests(schema-round-trip)
+catch_discover_tests(conformance-format)
