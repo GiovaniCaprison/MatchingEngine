@@ -25,28 +25,16 @@ final class Triggers {
     stops.add(stop);
   }
 
-  boolean remove(final Order stop) {
-    return stops.remove(stop);
+  void remove(final Order stop) {
+    stops.remove(stop);
   }
 
   Order named(final int participantId, final long clientOrderId) {
-    for (final Order stop : stops) {
-      if (stop.participantId() == participantId && stop.clientOrderId() == clientOrderId) {
-        return stop;
-      }
-    }
-    return null;
+    return Orders.named(stops, participantId, clientOrderId);
   }
 
   List<Order> of(final int participantId) {
-    final List<Order> found = new ArrayList<>();
-    for (final Order stop : stops) {
-      if (stop.participantId() == participantId) {
-        found.add(stop);
-      }
-    }
-    found.sort((left, right) -> Long.compare(left.arrival(), right.arrival()));
-    return found;
+    return Orders.of(stops, participantId);
   }
 
   /**
@@ -66,7 +54,7 @@ final class Triggers {
         fired.add(stop);
       }
     }
-    fired.sort((left, right) -> Long.compare(left.arrival(), right.arrival()));
+    fired.sort(Order.BY_ARRIVAL);
     stops.removeAll(fired);
     return fired;
   }

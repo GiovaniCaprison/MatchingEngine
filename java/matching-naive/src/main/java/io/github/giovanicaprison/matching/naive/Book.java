@@ -23,8 +23,8 @@ final class Book {
     orders.add(order);
   }
 
-  boolean remove(final Order order) {
-    return orders.remove(order);
+  void remove(final Order order) {
+    orders.remove(order);
   }
 
   List<Order> orders() {
@@ -37,12 +37,7 @@ final class Book {
    * <p>A scan, because an index on the pair is the next rung's idea.
    */
   Order named(final int participantId, final long clientOrderId) {
-    for (final Order order : orders) {
-      if (order.participantId() == participantId && order.clientOrderId() == clientOrderId) {
-        return order;
-      }
-    }
-    return null;
+    return Orders.named(orders, participantId, clientOrderId);
   }
 
   /**
@@ -74,7 +69,7 @@ final class Book {
         found.add(order);
       }
     }
-    found.sort((left, right) -> Long.compare(left.arrival(), right.arrival()));
+    found.sort(Order.BY_ARRIVAL);
     return found;
   }
 
@@ -82,14 +77,7 @@ final class Book {
    * Every order for one participant, in arrival order, which is how a mass cancel reports (FR-4.7).
    */
   List<Order> of(final int participantId) {
-    final List<Order> found = new ArrayList<>();
-    for (final Order order : orders) {
-      if (order.participantId() == participantId) {
-        found.add(order);
-      }
-    }
-    found.sort((left, right) -> Long.compare(left.arrival(), right.arrival()));
-    return found;
+    return Orders.of(orders, participantId);
   }
 
   /** How much of a taker's order the book could fill, for the orders that have to know first. */

@@ -115,11 +115,7 @@ final class Auction {
   private static long quantityWilling(final Book book, final Side side, final long price) {
     long total = 0;
     for (final Order order : book.orders()) {
-      if (order.side() != side) {
-        continue;
-      }
-      final boolean willing = side == Side.BUY ? order.price() >= price : order.price() <= price;
-      if (willing) {
+      if (order.side() == side && order.willingAt(price)) {
         total += order.remaining();
       }
     }

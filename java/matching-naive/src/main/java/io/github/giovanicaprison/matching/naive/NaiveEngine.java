@@ -17,6 +17,7 @@ import io.github.giovanicaprison.matching.protocol.SessionStateChangeDecoder;
 import io.github.giovanicaprison.matching.protocol.Side;
 import io.github.giovanicaprison.matching.protocol.TimeInForce;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import org.agrona.DirectBuffer;
@@ -428,9 +429,9 @@ public final class NaiveEngine implements MatchingEngine {
     final int participantId = (int) massCancel.participantId();
     final List<Order> resting = book.of(participantId);
     final List<Order> stops = triggers.of(participantId);
-    final List<Order> everything = new java.util.ArrayList<>(resting);
+    final List<Order> everything = new ArrayList<>(resting);
     everything.addAll(stops);
-    everything.sort((left, right) -> Long.compare(left.arrival(), right.arrival()));
+    everything.sort(Order.BY_ARRIVAL);
     for (final Order order : everything) {
       if (order.stop()) {
         triggers.remove(order);
@@ -520,17 +521,13 @@ public final class NaiveEngine implements MatchingEngine {
 
   /** Everyone who would trade at a price, earliest first. */
   private List<Order> willing(final Side side, final long price) {
-    final List<Order> found = new java.util.ArrayList<>();
+    final List<Order> found = new ArrayList<>();
     for (final Order order : book.orders()) {
-      if (order.side() != side) {
-        continue;
-      }
-      final boolean would = side == Side.BUY ? order.price() >= price : order.price() <= price;
-      if (would) {
+      if (order.side() == side && order.willingAt(price)) {
         found.add(order);
       }
     }
-    found.sort((left, right) -> Long.compare(left.arrival(), right.arrival()));
+    found.sort(Order.BY_ARRIVAL);
     return found;
   }
 
@@ -612,14 +609,9 @@ public final class NaiveEngine implements MatchingEngine {
   }
 
   private RejectReason refusalForPrice(final long price) {
-    if (price <= 0) {
-      return RejectReason.NON_POSITIVE_PRICE;
-    }
-    if (price % instrument.tickSize() != 0) {
-      return RejectReason.TICK_VIOLATION;
-    }
-    if (price < instrument.minPrice() || price > instrument.maxPrice()) {
-      return RejectReason.STATIC_BAND_VIOLATION;
+    final RejectReason onTheInstrument = refusalOnTheInstrument(price);
+    if (onTheInstrument != null) {
+      return onTheInstrument;
     }
     if (Math.abs(price - reference) > instrument.bandWidth()) {
       return RejectReason.DYNAMIC_BAND_VIOLATION;
@@ -635,6 +627,11 @@ public final class NaiveEngine implements MatchingEngine {
    * stops anybody actually sends.
    */
   private RejectReason refusalForTriggerPrice(final long price) {
+    return refusalOnTheInstrument(price);
+  }
+
+  /** What any price on this instrument has to satisfy, trigger prices included. */
+  private RejectReason refusalOnTheInstrument(final long price) {
     if (price <= 0) {
       return RejectReason.NON_POSITIVE_PRICE;
     }
