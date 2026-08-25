@@ -10,7 +10,7 @@ set(MATCHING_PGO "" CACHE STRING "profile guided optimisation: empty, generate, 
 option(MATCHING_LTO "link time optimisation for the measured binaries" OFF)
 
 add_executable(benchmarks runner_main.cpp)
-target_link_libraries(benchmarks PRIVATE matching-api matching-conformance matching-naive matching-indexed matching-lean-naive)
+target_link_libraries(benchmarks PRIVATE matching-api matching-conformance matching-naive matching-indexed matching-lean-naive matching-lean-indexed)
 target_include_directories(benchmarks PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 if(MATCHING_LTO)

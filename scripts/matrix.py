@@ -27,6 +27,7 @@ IMPLEMENTATIONS = {
     "naive-java": "io.github.giovanicaprison.matching.naive.NaiveEngineFactory",
     "indexed-java": "io.github.giovanicaprison.matching.indexed.IndexedEngineFactory",
     "lean-naive-java": "io.github.giovanicaprison.matching.lean.naive.LeanEngineFactory",
+    "lean-indexed-java": "io.github.giovanicaprison.matching.lean.indexed.LeanEngineFactory",
     "decode-java": "io.github.giovanicaprison.matching.benchmarks.DecodeOnlyEngine$Factory",
 }
 
@@ -39,6 +40,7 @@ CELLS = [
     ("indexed-java", "standard"),
     ("indexed-java", "limit-and-market"),
     ("lean-naive-java", "limit-and-market"),
+    ("lean-indexed-java", "limit-and-market"),
     # Decode alone, on both flows, so matching cost is an engine's number minus this one
     # (NFR-4.6).
     ("decode-java", "standard"),
