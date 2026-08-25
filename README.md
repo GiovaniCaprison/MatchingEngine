@@ -33,9 +33,9 @@ disabled feature behind a branch still occupies the method and the object layout
 
 ```
 schema/     the SBE schema, generated into both languages
-corpus/     scenario fixtures and their blessed output, language neutral
+corpus/     rules and scenarios with their blessed output, language neutral
 docs/
-java/       parent pom, then api, protocol, flow, conformance, gates, one module per rung, benchmarks
+java/       parent pom, then api, protocol, flow, conformance, gates, calibration, rungs, benchmarks
 cpp/        one target per rung, conformance, benchmarks
 results/    one directory per run: manifest, histograms, counters
 ```
