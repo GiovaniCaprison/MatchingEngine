@@ -191,19 +191,35 @@ final class Order {
   /**
    * Takes quantity from the displayed part first, since that is all a taker can see.
    *
+   * <p>What an order shows only means anything while it is resting, and a resting order is never
+   * asked for more than it shows. An order taking liquidity can take more than its tranche in one
+   * step, and what it shows is worked out again from what is left if it goes on to rest, so there
+   * is nothing to guard here.
+   *
    * <p>Returns whether the displayed part is now empty while quantity remains, which is when a
    * further tranche is displayed and joins the back of its queue (FR-5.4).
    */
   boolean take(final long quantity) {
     remaining -= quantity;
-    displayed -= quantity;
     executed += quantity;
+    displayed -= quantity;
     return displayed == 0 && remaining > 0;
   }
 
-  /** The next tranche, which is the smaller of the display size and what is left. */
-  void replenish(final long arrivalSequence) {
-    displayed = Math.min(displaySize, remaining);
+  /**
+   * This order is joining the queue at its price: what it shows and where it stands are settled
+   * now.
+   *
+   * <p>Now, rather than when the command arrived. An order that crossed on the way in spent its
+   * tranche against whatever it took, and it queues behind anything that joined while it was
+   * walking, including a tranche some other iceberg replenished on the way. Keeping the arrival it
+   * had when it was created would put it in front of orders the feed already said were ahead of it.
+   *
+   * <p>The same operation serves a replenishment, because that is the same thing: a tranche joining
+   * the back of the queue at its price.
+   */
+  void rest(final long arrivalSequence) {
+    displayed = displaySize == 0 ? remaining : Math.min(displaySize, remaining);
     arrival = arrivalSequence;
   }
 

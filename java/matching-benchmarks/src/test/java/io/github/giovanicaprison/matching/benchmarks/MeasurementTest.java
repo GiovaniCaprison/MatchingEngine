@@ -169,6 +169,7 @@ class MeasurementTest {
             200,
             FlowParameters.Instrument.standard(),
             FlowParameters.Composition.standard(),
-            FlowParameters.Placement.standard()));
+            FlowParameters.Placement.standard(),
+            0));
   }
 }

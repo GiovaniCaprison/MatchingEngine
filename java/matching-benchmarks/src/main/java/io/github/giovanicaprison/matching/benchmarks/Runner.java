@@ -30,7 +30,8 @@ public final class Runner {
     "seed",
     "results",
     "cores",
-    "composition"
+    "composition",
+    "auction-every"
   };
 
   private Runner() {}
@@ -66,7 +67,8 @@ public final class Runner {
         (int) parsed.number("resting", 5_000),
         FlowParameters.Instrument.standard(),
         composition,
-        FlowParameters.Placement.standard());
+        FlowParameters.Placement.standard(),
+        (int) parsed.number("auction-every", 0));
   }
 
   private static MeasurementParameters parametersOf(final Arguments parsed) {

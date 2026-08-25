@@ -30,6 +30,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-2.4 | A fill-or-kill order executes in full or not at all, and a kill leaves the book untouched | unit |
 | FR-2.5 | A post-only order never takes liquidity, and is refused if it would | unit |
 | FR-2.6 | An order carrying a minimum quantity executes at least that quantity on entry or is refused without executing | unit |
+| FR-2.7 | An order whose remainder rests joins the queue at its price behind everything that joined while it was matching | unit |
 
 ## FR-3: matching, allocation and self match prevention
 
@@ -67,6 +68,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-5.3 | Displayed quantity at a price is consumed before hidden quantity at that price | unit |
 | FR-5.4 | When an order's displayed quantity is exhausted, a further tranche is displayed and joins the back of the queue at its price | unit |
 | FR-5.5 | Hidden quantity is displayed before it executes, in an auction as in continuous trading | unit |
+| FR-5.6 | What an order displays is a tranche of what it has left, so one that crossed on entry shows a tranche of its remainder | unit |
 
 ## FR-6: stop orders
 
@@ -77,6 +79,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-6.3 | A triggered stop enters the book as an order of its pricing instruction | unit |
 | FR-6.4 | Triggers are evaluated after each execution, and a cascade runs to completion before the next command is applied | unit |
 | FR-6.5 | A stop is reported on acceptance, on triggering and on cancellation | unit |
+| FR-6.6 | A stop entered with a trigger price the last executed price has already reached fires at once | unit |
 
 ## FR-7: trading state and auctions
 
@@ -145,6 +148,12 @@ hand writing the wire format, which is a separate project and a worse one.
 | NFR-3.1 | Aggregate resting quantity at a price equals the sum of the orders at it | property |
 | NFR-3.2 | No empty price level and no unreferenced order remains | property |
 | NFR-3.3 | The trigger book holds exactly the stops that have not fired | property |
+| NFR-3.4 | No order is in the book and the trigger book at once | property |
+
+Two of these describe structures a naive implementation does not have. With one unsorted list there is
+nothing that aggregates and no price level to leave empty, so NFR-3.1 and NFR-3.2 are checked from the
+first implementation that indexes anything. Writing them earlier would mean asserting that a sum equals
+itself.
 
 ## NFR-4: measurement
 

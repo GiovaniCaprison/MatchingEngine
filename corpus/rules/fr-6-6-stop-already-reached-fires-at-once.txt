@@ -1,0 +1,27 @@
+# FR-6.6 a stop entered with its price already reached fires at once
+#
+# The market has traded at 100010, so a buy stop triggered at 100000 is already due. Left waiting
+# it would fire on whatever executed next, at a price with nothing to do with its condition, or
+# never fire at all if the market did not come back.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    CONTINUOUS
+STATE      CONTINUOUS
+
+NEW        SELL LIMIT GTC 100010 10 p=2
+ACCEPTED   #1
+RESTED     #1 SELL 100010 10
+
+NEW        BUY LIMIT GTC 100010 10 p=3
+ACCEPTED   #2
+EXECUTED   @1 aggressor=#2 resting=#1 100010 10
+
+NEW        SELL LIMIT GTC 100005 10 p=4
+ACCEPTED   #3
+RESTED     #3 SELL 100005 10
+
+NEW        BUY MARKET IOC - 10 trigger=100000 p=5
+ACCEPTED   #4
+TRIGGERED  #4
+EXECUTED   @2 aggressor=#4 resting=#3 100005 10

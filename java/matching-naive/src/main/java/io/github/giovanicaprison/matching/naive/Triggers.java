@@ -17,6 +17,10 @@ final class Triggers {
 
   private final List<Order> stops = new ArrayList<>();
 
+  List<Order> stops() {
+    return stops;
+  }
+
   void add(final Order stop) {
     stops.add(stop);
   }

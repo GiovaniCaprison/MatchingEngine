@@ -42,13 +42,19 @@ at it was paying attention to.
 
 ## Property
 
-Invariants that must hold after any sequence, checked over generated input. Aggregate quantity at a
-price equals the sum of its orders. No empty level and no unreferenced order survives. The trigger
-book holds exactly the stops that have not fired.
+Invariants that must hold after any sequence, checked over generated flow rather than over fixtures.
+The trigger book holds exactly the stops that have not fired. No order is in two structures at once.
+Aggregate quantity at a price equals the sum of its orders, and no empty level survives, from the first
+implementation that has levels to be empty.
 
 These catch drift, which is the failure mode where every individual operation is correct and the
 structure is slowly wrong. No fixture finds that, because a fixture only checks the states somebody
-imagined.
+imagined. The flow is generated with call phases, so an uncrossing happens every few thousand commands
+and the features meet each other in states nobody wrote down.
+
+Several seeds rather than one, and checked after every command rather than at the end. A property that
+holds for a single sequence is a fixture with more steps, and one checked only at the end says nothing
+about where it stopped being true.
 
 ## Differential
 

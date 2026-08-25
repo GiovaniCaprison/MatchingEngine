@@ -190,7 +190,8 @@ class FlowGeneratorTest {
             0,
             instrument,
             FlowParameters.Composition.standard(),
-            new FlowParameters.Placement(1_000, 10, 4));
+            new FlowParameters.Placement(1_000, 10, 4),
+            0);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> FlowGenerator.generate(parameters))

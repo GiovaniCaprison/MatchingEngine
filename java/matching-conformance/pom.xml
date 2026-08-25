@@ -26,6 +26,11 @@
       <groupId>org.agrona</groupId>
       <artifactId>agrona</artifactId>
     </dependency>
+    <!-- Generated flow, because the states a fixture reaches are the states somebody imagined. -->
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-flow</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
