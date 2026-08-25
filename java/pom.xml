@@ -27,6 +27,7 @@
     <module>matching-conformance</module>
     <module>matching-gates</module>
     <module>matching-naive</module>
+    <module>matching-calibration</module>
     <module>matching-benchmarks</module>
   </modules>
   <dependencyManagement>

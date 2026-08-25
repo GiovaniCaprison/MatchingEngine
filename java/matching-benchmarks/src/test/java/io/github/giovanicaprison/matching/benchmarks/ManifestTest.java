@@ -25,7 +25,9 @@ class ManifestTest {
     manifest.write();
     final Path file = manifest.run().file("manifest.json");
 
-    assertThat(file).content().contains("\"seed\": 4242").contains("\"cancel\": 0.35");
+    // The composition's numbers are measured and will move when the session is measured again, so
+    // what has to be here is every parameter, not any particular value of one.
+    assertThat(file).content().contains("\"seed\": 4242").contains("\"cancel\":");
     assertThat(file).content().contains("\"allocation\": \"PRICE_TIME\"");
     assertThat(file).content().contains("\"implementation\": \"naive-java\"");
     assertThat(file).content().contains("\"name\": \"clocksource\"");

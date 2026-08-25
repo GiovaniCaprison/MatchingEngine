@@ -266,8 +266,24 @@ public final class FlowGenerator {
     return sequence.chance(Sequence.SCALE / 2) ? Side.BUY : Side.SELL;
   }
 
+  /**
+   * An order's size, in the shape the session showed rather than uniform.
+   *
+   * <p>Nine tenths of a lot, a little more sometimes, and rarely a great deal more. AAPL's orders
+   * were a single round lot at the median and at the ninetieth percentile, three lots at the ninety
+   * ninth, and eight hundred at the largest. A uniform draw has no such shape: it puts as much
+   * quantity at forty lots as at one, which fills the book with orders nobody sends and changes
+   * what every walk costs.
+   */
   private long quantity() {
-    return instrument.lotSize() * (1 + sequence.nextInt(parameters.placement().maximumLots()));
+    final long lot = instrument.lotSize();
+    if (sequence.chance(900_000)) {
+      return lot;
+    }
+    if (sequence.chance(900_000)) {
+      return lot * (2 + sequence.nextInt(2));
+    }
+    return lot * (1 + sequence.nearer(parameters.placement().maximumLots()));
   }
 
   /** A price some ticks from the reference, on the side that rests or across it. */

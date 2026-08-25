@@ -249,6 +249,9 @@ own.
 
 ## Fairness between the languages
 
+A flow that spends its time being refused measures the validation path, so the rejection rate is held
+under a stated budget by a test rather than by attention.
+
 One generator produces the input, and both languages replay the same encoded bytes from a file. A
 generator written twice would put a difference between two flows inside a comparison of two engines,
 and the difference would look like a finding.
@@ -306,9 +309,18 @@ which run each figure came from.
 
 ## Threats to validity
 
-Generated flow is not real flow. The generator produces plausible arrival, placement and cancellation
-behaviour, and it does not react to the book. Findings are conditional on the flow parameters, which
-every result carries.
+Generated flow is not real flow, and it does not react to the book. What it does have is a measured
+shape: the command mix, order size and placement depth come from a Nasdaq TotalView-ITCH session,
+AAPL on 30 January 2020 between 09:30 and 11:08, read by `matching-calibration`. Before that they were
+chosen, and they were wrong in ways that mattered: orders around twenty times too large and uniformly
+distributed where a real book is nine tenths single lots, and a quarter of every run spent being
+refused.
+
+What a feed cannot show is what an order was. An iceberg, a stop, a post-only and a minimum quantity
+are all invisible in market data, and an aggressive order that filled completely never rested and so
+never appears at all. Those rates are chosen, the crossing share is fitted so that the fraction of
+posted quantity which executes lands near the 5% the session showed, and the manifest records every one
+of them. Findings are conditional on all of it.
 
 One instrument, one book, one machine. Nothing here measures a multi-instrument deployment, cross
 core publication, or contention, because the engine is single writer by construction.
