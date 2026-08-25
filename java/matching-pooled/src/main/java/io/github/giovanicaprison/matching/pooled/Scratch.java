@@ -13,7 +13,7 @@ import java.util.Arrays;
  */
 final class Scratch {
 
-  private Order[] orders = new Order[64];
+  private Order[] orders = new Order[1024];
   private int count;
 
   void clear() {

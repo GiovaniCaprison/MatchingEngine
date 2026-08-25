@@ -36,7 +36,7 @@ public final class PooledEngine implements MatchingEngine {
   private final Feed feed;
   private final Book book = new Book();
   private final Triggers triggers = new Triggers();
-  private final Pool pool = new Pool(1024);
+  private final Pool pool = new Pool(1 << 16);
   private final Auction auction = new Auction();
 
   private final ArrayDeque<Order> pending = new ArrayDeque<>();
