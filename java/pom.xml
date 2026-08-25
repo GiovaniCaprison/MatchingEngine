@@ -33,6 +33,7 @@
     <module>matching-indexed</module>
     <module>matching-lean-naive</module>
     <module>matching-lean-indexed</module>
+    <module>matching-pooled</module>
     <module>matching-calibration</module>
     <module>matching-benchmarks</module>
   </modules>
@@ -86,6 +87,11 @@
       <dependency>
         <groupId>io.github.giovanicaprison</groupId>
         <artifactId>matching-lean-indexed</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.giovanicaprison</groupId>
+        <artifactId>matching-pooled</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
