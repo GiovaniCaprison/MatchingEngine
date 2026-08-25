@@ -13,4 +13,4 @@ target_link_libraries(matching-naive PUBLIC matching-api matching-protocol)
 # for the Java side to diff. The Java test finds this binary by its build path and abstains when it
 # is absent, so building it is what arms that test.
 add_executable(differential-naive differential_main.cpp)
-target_link_libraries(differential-naive PRIVATE matching-naive)
+target_link_libraries(differential-naive PRIVATE matching-naive matching-conformance)

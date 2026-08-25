@@ -20,7 +20,12 @@ add_executable(corpus-conformance corpus_conformance.cpp)
 target_link_libraries(corpus-conformance
   PRIVATE matching-conformance matching-naive Catch2::Catch2WithMain)
 
+add_executable(corpus-subset-lean corpus_subset_lean.cpp)
+target_link_libraries(corpus-subset-lean
+  PRIVATE matching-conformance matching-lean Catch2::Catch2WithMain)
+
 include(Catch)
 catch_discover_tests(schema-round-trip)
 catch_discover_tests(conformance-format)
 catch_discover_tests(corpus-conformance)
+catch_discover_tests(corpus-subset-lean)
