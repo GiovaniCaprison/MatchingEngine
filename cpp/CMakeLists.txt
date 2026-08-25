@@ -20,5 +20,7 @@ set(MATCHING_SCHEMA ${MATCHING_ROOT}/schema/matching-engine.xml)
 enable_testing()
 
 add_subdirectory(protocol)
+add_subdirectory(api)
 add_subdirectory(conformance)
+add_subdirectory(naive)
 add_subdirectory(test)
