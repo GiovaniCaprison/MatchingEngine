@@ -1,0 +1,39 @@
+#!/bin/sh
+# Formats what is about to be committed, so the build's format check never fires on style.
+#
+# Install once:
+#
+#   git config core.hooksPath hooks
+#
+# The whole file is formatted and restaged, so a partially staged file gets its unstaged hunks
+# staged with it. Formatting on save keeps that from ever mattering.
+
+staged() {
+  git diff --cached --name-only --diff-filter=ACMR -- "$@"
+}
+
+java_files=$(staged '*.java')
+if [ -n "$java_files" ]; then
+  formatter=$(command -v google-java-format)
+  if [ -z "$formatter" ] && [ -x "$HOME/.local/share/nvim/mason/bin/google-java-format" ]; then
+    formatter="$HOME/.local/share/nvim/mason/bin/google-java-format"
+  fi
+  if [ -n "$formatter" ]; then
+    printf '%s\n' "$java_files" | tr '\n' '\0' | xargs -0 "$formatter" --replace || exit 1
+    printf '%s\n' "$java_files" | tr '\n' '\0' | xargs -0 git add
+  else
+    echo "pre-commit: no google-java-format on this machine; mvn verify checks instead" >&2
+  fi
+fi
+
+cpp_files=$(staged 'cpp/*.cpp' 'cpp/*.hpp' | grep -v '^cpp/build/')
+if [ -n "$cpp_files" ]; then
+  if command -v clang-format >/dev/null 2>&1; then
+    printf '%s\n' "$cpp_files" | tr '\n' '\0' | xargs -0 clang-format -i || exit 1
+    printf '%s\n' "$cpp_files" | tr '\n' '\0' | xargs -0 git add
+  else
+    echo "pre-commit: no clang-format on this machine; the ci workflow checks instead" >&2
+  fi
+fi
+
+exit 0

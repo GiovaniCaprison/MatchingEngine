@@ -1,0 +1,46 @@
+# Every change runs the whole build on a runner. The gates in matching-gates only bite when
+# something runs them, and a gate that waits for somebody to remember is a gate that fires late.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A follow-up push cancels the run it obsoleted, since two runs of one branch answer the same
+# question twice and the second answer is the one that matters.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      # verify rather than test, because the format check binds there. This is the command a
+      # working tree is held to, so the runner and a laptop can only disagree about the machine.
+      - run: mvn --batch-mode verify
+        working-directory: java
+
+  cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        working-directory: cpp
+      - run: cmake --build build
+        working-directory: cpp
+      - run: ctest --test-dir build --output-on-failure
+        working-directory: cpp
+      # The Java formatter is checked inside the build; clang-format has no build to live in yet,
+      # so the tree is checked here, with the fetched dependencies left out of it.
+      - run: |
+          find . -path ./build -prune -o \( -name '*.cpp' -o -name '*.hpp' \) -print0 \
+            | xargs -0 clang-format --dry-run --Werror
+        working-directory: cpp

@@ -22,8 +22,8 @@ final class Schema {
   }
 
   /**
-   * The messages an engine emits, told apart from the ones it consumes by the frame they carry rather
-   * than by a list kept here.
+   * The messages an engine emits, told apart from the ones it consumes by the frame they carry
+   * rather than by a list kept here.
    */
   static Set<String> events() {
     return Pattern.compile("<sbe:message\\s+name=\"([^\"]+)\"(.*?)</sbe:message>", Pattern.DOTALL)
