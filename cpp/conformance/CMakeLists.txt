@@ -6,8 +6,9 @@ add_library(matching-conformance STATIC
   command_writer.cpp
   consumer_book.cpp
   corpus.cpp
+  corpus_runner.cpp
   event_reader.cpp
   fixture_parser.cpp)
 
 target_include_directories(matching-conformance PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
-target_link_libraries(matching-conformance PUBLIC matching-protocol)
+target_link_libraries(matching-conformance PUBLIC matching-api matching-protocol)
