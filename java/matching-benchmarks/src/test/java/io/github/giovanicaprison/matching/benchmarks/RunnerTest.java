@@ -36,6 +36,7 @@ class RunnerTest {
           "--warmup", "0",
           "--resting", "100",
           "--seed", "3",
+          "--counters", "CYCLES,INSTRUCTIONS",
           "--results", results.toString()
         });
 
@@ -45,6 +46,7 @@ class RunnerTest {
     assertThat(run.resolve("verification.json")).isNotEmptyFile();
     assertThat(run.resolve("latency.hdr")).isNotEmptyFile();
     assertThat(run.resolve("timings.bin")).isNotEmptyFile();
+    assertThat(run.resolve("types.bin")).isNotEmptyFile();
     assertThat(run.resolve("manifest.json"))
         .content()
         .contains("\"implementation\": \"" + NAIVE + "\"");
