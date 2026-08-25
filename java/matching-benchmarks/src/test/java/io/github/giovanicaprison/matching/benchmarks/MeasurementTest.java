@@ -1,6 +1,7 @@
 package io.github.giovanicaprison.matching.benchmarks;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.giovanicaprison.matching.flow.CommandLog;
 import io.github.giovanicaprison.matching.flow.FlowGenerator;
@@ -21,6 +22,14 @@ import org.junit.jupiter.api.io.TempDir;
 class MeasurementTest {
 
   private static final int EVENTS_PER_COMMAND = 2;
+
+  // The injected stall the two stall tests lean on: large enough to dominate a quiet machine's
+  // tail and small enough to keep the suite quick. A machine whose own noise reaches the stall
+  // cannot see the signal, so those tests abstain there rather than measure the scheduler; the
+  // first shared runner this ran on had a baseline tail forty times the stall.
+  private static final int STALL_EVERY = 2_000;
+  private static final int STALL_NANOS = 300_000;
+  private static final int QUIET_ENOUGH = STALL_NANOS / 3;
 
   @TempDir private Path results;
 
@@ -60,15 +69,15 @@ class MeasurementTest {
   @DisplayName("an engine that stalls shows up as queueing, not as samples nobody took")
   void the_tail_survives_a_stall() {
     // The point of an open loop driver. A harness that waited for the previous command would take
-    // no
-    // sample during the stall and none of the ones behind it, and the tail would disappear.
+    // no sample during the stall and none of the ones behind it, and the tail would disappear.
     final CommandLog log = log(20_000);
-    final CountingEngine engine = new CountingEngine(1, 2_000, 300_000);
+    final CountingEngine engine = new CountingEngine(1, STALL_EVERY, STALL_NANOS);
 
     final Measurement.Outcome outcome = Measurement.run(log, engine, parameters(100_000));
 
     final long serviceAt99 = outcome.timings().service().getValueAtPercentile(99);
     final long responseAt99 = outcome.timings().response().getValueAtPercentile(99);
+    assumeTrue(serviceAt99 < QUIET_ENOUGH, "this machine's noise is louder than the stall");
     assertThat(responseAt99)
         .as("commands behind a stall are quick to serve and slow to answer")
         .isGreaterThan(serviceAt99 * 10);
@@ -102,18 +111,20 @@ class MeasurementTest {
   void the_rate_is_offered_whatever_happens() {
     // The open loop property, as a relation rather than a wall clock bound. An engine that stalls
     // makes commands wait, and the question is where they wait: on the ring, or in a driver that
-    // has
-    // stopped offering. A number of nanoseconds asserted here would measure this laptop, and README
-    // says as much about wall clock assertions in a unit suite.
+    // has stopped offering. A number of nanoseconds asserted here would measure this laptop, and
+    // README says as much about wall clock assertions in a unit suite. A relation still needs a
+    // floor of quiet, so a box whose baseline tail reaches the stall abstains: it cannot say who
+    // caused the waiting.
     final CommandLog log = log(20_000);
 
     final Measurement.Outcome quick =
         Measurement.run(log, new CountingEngine(1), parameters(100_000));
     final Measurement.Outcome stalling =
-        Measurement.run(log, new CountingEngine(1, 2_000, 300_000), parameters(100_000));
+        Measurement.run(log, new CountingEngine(1, STALL_EVERY, STALL_NANOS), parameters(100_000));
 
     final long stalled = stalling.timings().response().getValueAtPercentile(99);
     final long unstalled = quick.timings().response().getValueAtPercentile(99);
+    assumeTrue(unstalled < QUIET_ENOUGH, "this machine's noise is louder than the stall");
     assertThat(stalled)
         .as("the stalling engine has to be visibly worse, or this proves nothing")
         .isGreaterThan(unstalled * 10);
