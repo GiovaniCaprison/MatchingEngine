@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.github.giovanicaprison</groupId>
+    <artifactId>matching-engine</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>matching-flyweight</artifactId>
+  <description>Rung three: the book as a flat price ladder, the orders as slots in one slab of primitives, and every command's fields read in place from the buffer, so the step from rung two isolates indirection and nothing else.</description>
+  <dependencies>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-conformance</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-flow</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.github.giovanicaprison</groupId>
+      <artifactId>matching-naive</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+  </dependencies>
+</project>
