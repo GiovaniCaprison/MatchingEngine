@@ -38,6 +38,16 @@ final class Order {
   private long arrival;
   private long executed;
 
+  /**
+   * The order's own place in its price level's queue, which is what makes leaving it O(1). The
+   * links belong to the order rather than to a node wrapping it, because a wrapper is an allocation
+   * per rest and finding one's own node is a search; carrying them is what a real indexed book
+   * ships (P-16). The book owns them, and this rung's book only.
+   */
+  Order previous;
+
+  Order next;
+
   Order(
       final long id,
       final long clientOrderId,
