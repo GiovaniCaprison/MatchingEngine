@@ -86,8 +86,14 @@ public record Manifest(
         .field("commands", flow.commands())
         .field("restingOrders", flow.restingOrders());
     instrument(json);
-    composition(json);
-    placement(json);
+    composition(json, "composition", flow.composition());
+    placement(json, "placement", flow.placement());
+    if (flow.shift() != null) {
+      json.object("shift").field("atCommand", flow.shift().atCommand());
+      composition(json, "composition", flow.shift().composition());
+      placement(json, "placement", flow.shift().placement());
+      json.end();
+    }
     json.end();
 
     json.array("environment");
@@ -124,9 +130,9 @@ public record Manifest(
         .end();
   }
 
-  private void composition(final Json json) {
-    final FlowParameters.Composition composition = flow.composition();
-    json.object("composition")
+  private static void composition(
+      final Json json, final String name, final FlowParameters.Composition composition) {
+    json.object(name)
         .field("aggressive", composition.aggressive())
         .field("market", composition.market())
         .field("cancel", composition.cancel())
@@ -142,9 +148,9 @@ public record Manifest(
         .end();
   }
 
-  private void placement(final Json json) {
-    final FlowParameters.Placement placement = flow.placement();
-    json.object("placement")
+  private static void placement(
+      final Json json, final String name, final FlowParameters.Placement placement) {
+    json.object(name)
         .field("depthTicks", placement.depthTicks())
         .field("maximumLots", placement.maximumLots())
         .field("participants", placement.participants())

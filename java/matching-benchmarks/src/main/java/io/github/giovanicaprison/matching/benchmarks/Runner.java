@@ -36,7 +36,9 @@ public final class Runner {
     "cores",
     "composition",
     "auction-every",
-    "counters"
+    "counters",
+    "shift-at",
+    "shift-composition"
   };
 
   private Runner() {}
@@ -76,9 +78,15 @@ public final class Runner {
 
   private static FlowParameters flowOf(final Arguments parsed) {
     final FlowParameters.Composition composition =
-        "limit-and-market".equals(parsed.text("composition", "standard"))
-            ? FlowParameters.Composition.limitAndMarketOnly()
-            : FlowParameters.Composition.standard();
+        compositionOf(parsed.text("composition", "standard"));
+    final int shiftAt = (int) parsed.number("shift-at", 0);
+    final FlowParameters.Shift shift =
+        shiftAt == 0
+            ? null
+            : new FlowParameters.Shift(
+                shiftAt,
+                compositionOf(parsed.text("shift-composition", "standard")),
+                FlowParameters.Placement.standard());
     return new FlowParameters(
         parsed.number("seed", 1),
         (int) parsed.number("commands", 1_000_000),
@@ -86,7 +94,14 @@ public final class Runner {
         FlowParameters.Instrument.standard(),
         composition,
         FlowParameters.Placement.standard(),
-        (int) parsed.number("auction-every", 0));
+        (int) parsed.number("auction-every", 0),
+        shift);
+  }
+
+  private static FlowParameters.Composition compositionOf(final String name) {
+    return "limit-and-market".equals(name)
+        ? FlowParameters.Composition.limitAndMarketOnly()
+        : FlowParameters.Composition.standard();
   }
 
   private static MeasurementParameters parametersOf(final Arguments parsed) {

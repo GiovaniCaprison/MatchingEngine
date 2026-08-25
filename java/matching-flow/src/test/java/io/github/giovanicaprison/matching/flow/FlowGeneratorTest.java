@@ -30,6 +30,60 @@ class FlowGeneratorTest {
   private static final FlowParameters PARAMETERS = FlowParameters.standard(20_260_824L, 40_000);
 
   @Test
+  @DisplayName("the regime changes where the shift says, and nowhere before")
+  void the_shift_changes_the_mix() {
+    final FlowParameters.Shift shift =
+        new FlowParameters.Shift(
+            20_000,
+            FlowParameters.Composition.limitAndMarketOnly(),
+            FlowParameters.Placement.standard());
+    final CommandLog log =
+        FlowGenerator.generate(
+            new FlowParameters(
+                7,
+                40_000,
+                5_000,
+                FlowParameters.Instrument.standard(),
+                FlowParameters.Composition.standard(),
+                FlowParameters.Placement.standard(),
+                0,
+                shift));
+
+    final MessageHeaderDecoder header = new MessageHeaderDecoder();
+    final NewOrderDecoder decoder = new NewOrderDecoder();
+    int qualifiedBefore = 0;
+    int qualifiedAfter = 0;
+    for (int command = log.measuredFrom(); command < log.count(); command++) {
+      if (log.templateId(command) != NewOrderDecoder.TEMPLATE_ID) {
+        continue;
+      }
+      header.wrap(log.buffer(), log.offset(command));
+      decoder.wrap(
+          log.buffer(),
+          log.offset(command) + MessageHeaderDecoder.ENCODED_LENGTH,
+          header.blockLength(),
+          header.version());
+      final boolean qualified =
+          decoder.minQuantity() != 0
+              || decoder.displayQuantity() != 0
+              || decoder.triggerPrice() != 0
+              || decoder.smpId() != 0
+              || decoder.flags().postOnly();
+      if (command - log.measuredFrom() < shift.atCommand()) {
+        qualifiedBefore += qualified ? 1 : 0;
+      } else {
+        qualifiedAfter += qualified ? 1 : 0;
+      }
+    }
+    assertThat(qualifiedBefore)
+        .as("the standard regime uses the qualifiers, so some must appear before the seam")
+        .isPositive();
+    assertThat(qualifiedAfter)
+        .as("after the seam the composition carries no qualifiers, so none may appear")
+        .isZero();
+  }
+
+  @Test
   @DisplayName("the same seed produces the same bytes")
   void generation_is_reproducible() {
     final CommandLog first = FlowGenerator.generate(PARAMETERS);

@@ -22,7 +22,35 @@ public record FlowParameters(
     Instrument instrument,
     Composition composition,
     Placement placement,
-    int auctionEvery) {
+    int auctionEvery,
+    Shift shift) {
+
+  /** Flow that stays in one regime for its whole run, which is what most measurement wants. */
+  public FlowParameters(
+      final long seed,
+      final int commands,
+      final int restingOrders,
+      final Instrument instrument,
+      final Composition composition,
+      final Placement placement,
+      final int auctionEvery) {
+    this(seed, commands, restingOrders, instrument, composition, placement, auctionEvery, null);
+  }
+
+  /**
+   * The regime change, where the flow stops being what the runtime warmed on.
+   *
+   * <p>A runtime compiles against the flow it has seen, and a venue's flow does not hold still: a
+   * session that opens tight and shallow turns wide, deep and bursty, and an engine specialised on
+   * the first may deoptimise on the second or continue on a badly fitting profile. A native
+   * implementation has no equivalent failure, which is what makes it the control. The shift is the
+   * probe for that, and it is a property of the input rather than a runtime flag (P-16).
+   *
+   * @param atCommand which measured command the new regime starts at, counting from zero
+   * @param composition the mix from that command on
+   * @param placement where orders land from that command on
+   */
+  public record Shift(int atCommand, Composition composition, Placement placement) {}
 
   public FlowParameters {
     if (commands <= 0) {

@@ -73,6 +73,39 @@ class ManifestTest {
         .contains("\"core isolated\"");
   }
 
+  @org.junit.jupiter.api.Test
+  @DisplayName("a manifest carries the regime shift when the flow has one")
+  void the_shift_is_recorded() {
+    final FlowParameters flow = FlowParameters.standard(1, 1_000);
+    final Manifest manifest =
+        Manifest.of(
+            Run.create(results, "naive-java"),
+            "naive-java",
+            results.resolve("no-checkout"),
+            Environment.reading(results.resolve("no-machine")),
+            List.of(),
+            new FlowParameters(
+                flow.seed(),
+                flow.commands(),
+                flow.restingOrders(),
+                flow.instrument(),
+                flow.composition(),
+                flow.placement(),
+                0,
+                new FlowParameters.Shift(
+                    500,
+                    FlowParameters.Composition.limitAndMarketOnly(),
+                    FlowParameters.Placement.standard())),
+            "generated");
+
+    manifest.write();
+
+    assertThat(manifest.run().file("manifest.json"))
+        .content()
+        .contains("\"shift\"")
+        .contains("\"atCommand\": 500");
+  }
+
   private Manifest manifest() {
     return Manifest.of(
         Run.create(results, "naive-java"),
