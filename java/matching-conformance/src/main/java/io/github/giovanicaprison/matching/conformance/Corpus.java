@@ -29,7 +29,7 @@ public final class Corpus {
     return files().stream().map(FixtureParser::parse).toList();
   }
 
-  public static List<Path> files() {
+  private static List<Path> files() {
     try (Stream<Path> entries = Files.walk(directory())) {
       return entries
           .filter(Files::isRegularFile)

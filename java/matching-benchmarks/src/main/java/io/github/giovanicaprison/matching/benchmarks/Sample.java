@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -37,19 +36,23 @@ final class Sample {
    */
   static List<Setting> ofCore(final Path root, final int core) {
     if (core < 0) {
-      return List.of(
-          Setting.recorded("core frequency kHz", "cpufreq/scaling_cur_freq", null),
-          Setting.recorded("package temperature", "thermal_zone*/temp", null),
-          Setting.recorded("core context switches", "proc/schedstat", null),
-          Setting.recorded("core steal ticks", "proc/stat", null));
+      return ofCore(null, null, null, null);
     }
-    final String frequency = "sys/devices/system/cpu/cpu" + core + "/cpufreq/scaling_cur_freq";
+    return ofCore(
+        KernelFiles.firstLine(
+            root, "sys/devices/system/cpu/cpu" + core + "/cpufreq/scaling_cur_freq"),
+        packageTemperature(root),
+        token(root, "proc/schedstat", core, 3),
+        token(root, "proc/stat", core, 8));
+  }
+
+  private static List<Setting> ofCore(
+      final String frequency, final String temperature, final String switches, final String steal) {
     return List.of(
-        Setting.recorded("core frequency kHz", frequency, firstLine(root, frequency)),
-        Setting.recorded("package temperature", "thermal_zone*/temp", packageTemperature(root)),
-        Setting.recorded(
-            "core context switches", "proc/schedstat", token(root, "proc/schedstat", core, 3)),
-        Setting.recorded("core steal ticks", "proc/stat", token(root, "proc/stat", core, 8)));
+        Setting.recorded("core frequency kHz", "cpufreq/scaling_cur_freq", frequency),
+        Setting.recorded("package temperature", "thermal_zone*/temp", temperature),
+        Setting.recorded("core context switches", "proc/schedstat", switches),
+        Setting.recorded("core steal ticks", "proc/stat", steal));
   }
 
   /**
@@ -63,11 +66,13 @@ final class Sample {
     final String status = "proc/thread-self/status";
     return List.of(
         Setting.recorded(
-            "thread voluntary switches", status, keyed(root, status, "voluntary_ctxt_switches")),
+            "thread voluntary switches",
+            status,
+            KernelFiles.keyed(root, status, "voluntary_ctxt_switches")),
         Setting.recorded(
             "thread involuntary switches",
             status,
-            keyed(root, status, "nonvoluntary_ctxt_switches")));
+            KernelFiles.keyed(root, status, "nonvoluntary_ctxt_switches")));
   }
 
   /** The temperature of the zone the processor package reports, where a machine has one. */
@@ -78,8 +83,8 @@ final class Sample {
     }
     try (Stream<Path> zones = Files.list(thermal)) {
       for (final Path zone : zones.sorted().toList()) {
-        if ("x86_pkg_temp".equals(firstLineOf(zone.resolve("type")))) {
-          return firstLineOf(zone.resolve("temp"));
+        if ("x86_pkg_temp".equals(KernelFiles.firstLine(zone.resolve("type")))) {
+          return KernelFiles.firstLine(zone.resolve("temp"));
         }
       }
     } catch (final IOException e) {
@@ -90,7 +95,7 @@ final class Sample {
 
   /** One field of the line describing the core, in a file of space separated counters. */
   private static String token(final Path root, final String path, final int core, final int field) {
-    return read(root.resolve(path))
+    return KernelFiles.read(root.resolve(path))
         .flatMap(
             text ->
                 text.lines()
@@ -100,35 +105,5 @@ final class Sample {
                     .map(tokens -> tokens[field])
                     .findFirst())
         .orElse(null);
-  }
-
-  private static String keyed(final Path root, final String path, final String key) {
-    return read(root.resolve(path))
-        .flatMap(
-            text ->
-                text.lines()
-                    .filter(line -> line.startsWith(key) && line.contains(":"))
-                    .map(line -> line.substring(line.indexOf(':') + 1).strip())
-                    .findFirst())
-        .orElse(null);
-  }
-
-  private static String firstLine(final Path root, final String path) {
-    return firstLineOf(root.resolve(path));
-  }
-
-  private static String firstLineOf(final Path file) {
-    return read(file).flatMap(text -> text.lines().findFirst()).map(String::strip).orElse(null);
-  }
-
-  private static Optional<String> read(final Path file) {
-    if (!Files.isReadable(file) || Files.isDirectory(file)) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(Files.readString(file));
-    } catch (final IOException e) {
-      return Optional.empty();
-    }
   }
 }

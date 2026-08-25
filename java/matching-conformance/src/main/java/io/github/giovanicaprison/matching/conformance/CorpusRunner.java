@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
 
 /**
  * Replays a fixture against an implementation and compares what it emitted to what the fixture says
@@ -31,10 +30,7 @@ import org.agrona.concurrent.UnsafeBuffer;
  */
 public final class CorpusRunner implements EventPublisher {
 
-  /** Room for the largest burst one command can produce, with no reason to be tight about it. */
-  private static final int CAPACITY = 1 << 20;
-
-  private final MutableDirectBuffer events = new UnsafeBuffer(new byte[CAPACITY]);
+  private final ClaimedBuffer events = new ClaimedBuffer();
   private final References references = new References();
   private final CommandWriter writer = new CommandWriter(references);
   private final ConsumerBook rebuilt = new ConsumerBook();
@@ -43,9 +39,6 @@ public final class CorpusRunner implements EventPublisher {
   private final List<String> emitted = new ArrayList<>();
 
   private List<String> inFlight = new ArrayList<>();
-  private int cursor;
-  private int claimed;
-  private int claimedLength;
 
   private CorpusRunner() {}
 
@@ -81,23 +74,17 @@ public final class CorpusRunner implements EventPublisher {
 
   @Override
   public int claim(final int length) {
-    if (cursor + length > CAPACITY) {
-      cursor = 0;
-    }
-    claimed = cursor;
-    claimedLength = length;
-    cursor += length;
-    return claimed;
+    return events.claim(length);
   }
 
   @Override
   public MutableDirectBuffer buffer() {
-    return events;
+    return events.buffer();
   }
 
   @Override
   public void commit() {
-    final String line = reader.read(events, claimed, claimedLength);
+    final String line = reader.read(events.buffer(), events.claimed(), events.claimedLength());
     emitted.add(line);
     inFlight.add(line);
   }
@@ -152,7 +139,7 @@ public final class CorpusRunner implements EventPublisher {
     }
 
     /** The commands as written, each followed by the events it actually produced. */
-    public String asFixture() {
+    private String asFixture() {
       final StringBuilder text = new StringBuilder();
       byCommand.forEach(
           (command, events) -> {

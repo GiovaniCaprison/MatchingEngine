@@ -24,10 +24,6 @@ final class Repository {
 
   private Repository() {}
 
-  static Path root() {
-    return ROOT;
-  }
-
   static String read(final String relativePath) {
     try {
       return Files.readString(ROOT.resolve(relativePath));

@@ -342,34 +342,17 @@ public final class Measurement {
       json.object("counters").field("multiplexed", countersMultiplexed);
       counted.forEach((counter, value) -> json.field(counter.name(), value));
       json.end();
-      json.array("placement");
-      for (final Setting setting : placement) {
-        json.object()
-            .field("name", setting.name())
-            .field("expected", setting.expected())
-            .field("actual", setting.actual())
-            .field("status", setting.status().name())
-            .end();
-      }
-      json.end();
-      samples(json, "sampledBefore", sampledBefore);
-      samples(json, "sampledAfter", sampledAfter);
+      settings(json, "placement", placement);
+      settings(json, "sampledBefore", sampledBefore);
+      settings(json, "sampledAfter", sampledAfter);
       summary(json, "service", timings.service());
       summary(json, "response", timings.response());
       return json.end().toString();
     }
 
-    /** A sample's settings carry no expectation, so only what was found is written. */
-    private static void samples(final Json json, final String name, final List<Setting> values) {
+    private static void settings(final Json json, final String name, final List<Setting> values) {
       json.array(name);
-      for (final Setting setting : values) {
-        json.object()
-            .field("name", setting.name())
-            .field("source", setting.source())
-            .field("actual", setting.actual())
-            .field("status", setting.status().name())
-            .end();
-      }
+      values.forEach(setting -> setting.writeTo(json));
       json.end();
     }
 

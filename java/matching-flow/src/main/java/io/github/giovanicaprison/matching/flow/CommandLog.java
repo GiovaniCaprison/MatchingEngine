@@ -34,7 +34,6 @@ public final class CommandLog {
   private final DirectBuffer buffer;
   private final int[] offsets;
   private final int[] lengths;
-  private final int[] templateIds;
   private final int count;
   private final int measuredFrom;
 
@@ -49,8 +48,6 @@ public final class CommandLog {
     this.lengths = lengths;
     this.count = count;
     this.measuredFrom = measuredFrom;
-    this.templateIds = new int[count];
-    index();
   }
 
   /** How many commands the log holds, warm-up included. */
@@ -80,8 +77,13 @@ public final class CommandLog {
     return lengths[command];
   }
 
+  /**
+   * What the command at this position is, read from its own header rather than from a side table
+   * that could disagree with the messages. Tests ask this; a measurement never does, so nothing is
+   * decoded or held for it on the production path.
+   */
   public int templateId(final int command) {
-    return templateIds[command];
+    return new MessageHeaderDecoder().wrap(buffer, offsets[command]).templateId();
   }
 
   public void writeTo(final Path file) {
@@ -146,17 +148,5 @@ public final class CommandLog {
       longest = Math.max(longest, lengths[command]);
     }
     return longest;
-  }
-
-  /**
-   * Reads back what each command is, so that a log loaded from a file knows as much as one just
-   * generated. The alternative is a side table in the file that can disagree with the messages.
-   */
-  private void index() {
-    final MessageHeaderDecoder header = new MessageHeaderDecoder();
-    for (int command = 0; command < count; command++) {
-      header.wrap(buffer, offsets[command]);
-      templateIds[command] = header.templateId();
-    }
   }
 }

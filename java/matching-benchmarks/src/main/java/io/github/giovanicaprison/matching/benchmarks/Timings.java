@@ -42,7 +42,6 @@ public final class Timings {
   private final long[] published;
   private final long[] started;
   private final long[] finished;
-  private final int capacity;
   private final int reportFrom;
 
   private int recorded;
@@ -53,7 +52,6 @@ public final class Timings {
    *     settled
    */
   Timings(final int capacity, final int reportFrom) {
-    this.capacity = capacity;
     this.reportFrom = reportFrom;
     this.intended = new long[capacity];
     this.published = new long[capacity];
@@ -66,10 +64,6 @@ public final class Timings {
    */
   void intended(final int command, final long at) {
     intended[command] = at;
-  }
-
-  public long intended(final int command) {
-    return intended[command];
   }
 
   /** Called by the driver once the command is on the ring. */
@@ -86,10 +80,6 @@ public final class Timings {
 
   public int recorded() {
     return recorded;
-  }
-
-  public int capacity() {
-    return capacity;
   }
 
   /** How long the engine took, which is the service time. */

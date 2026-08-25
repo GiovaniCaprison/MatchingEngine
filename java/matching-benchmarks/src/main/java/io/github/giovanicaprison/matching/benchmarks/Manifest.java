@@ -79,28 +79,14 @@ public record Manifest(
     json.end();
 
     json.array("environment");
-    for (final Setting setting : environment.settings()) {
-      write(json, setting);
-    }
+    environment.settings().forEach(setting -> setting.writeTo(json));
     json.end();
 
     json.array("isolation");
-    for (final Setting setting : isolation) {
-      write(json, setting);
-    }
+    isolation.forEach(setting -> setting.writeTo(json));
     json.end();
 
     return json.end().toString();
-  }
-
-  private static void write(final Json json, final Setting setting) {
-    json.object()
-        .field("name", setting.name())
-        .field("source", setting.source())
-        .field("expected", setting.expected())
-        .field("actual", setting.actual())
-        .field("status", setting.status().name())
-        .end();
   }
 
   public void write() {
