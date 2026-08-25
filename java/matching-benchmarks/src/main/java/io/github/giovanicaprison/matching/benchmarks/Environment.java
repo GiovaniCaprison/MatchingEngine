@@ -73,7 +73,29 @@ public final class Environment {
     return List.of(
         isolates("core isolated", "isolcpus", core),
         isolates("core tickless", "nohz_full", core),
-        isolates("core callback offloaded", "rcu_nocbs", core));
+        isolates("core callback offloaded", "rcu_nocbs", core),
+        siblingOffline(core));
+  }
+
+  /**
+   * Whether the core shares its pipeline with nothing.
+   *
+   * <p>The methodology takes the hyperthread sibling offline, because a sibling the kernel can
+   * schedule on shares the execution units and the L1 with the measured thread. An offline sibling
+   * disappears from the topology, so the core's sibling list naming only the core itself is the
+   * setting having taken.
+   */
+  private Setting siblingOffline(final int core) {
+    final String source = "topology/thread_siblings_list";
+    final String siblings = firstLine("sys/devices/system/cpu/cpu" + core + "/" + source);
+    if (siblings == null) {
+      return Setting.required("sibling offline", source, "true", null);
+    }
+    return Setting.required(
+        "sibling offline",
+        source,
+        "true",
+        String.valueOf(CpuList.parse(siblings).containsOnly(core)));
   }
 
   private Setting isolates(final String name, final String parameter, final int core) {

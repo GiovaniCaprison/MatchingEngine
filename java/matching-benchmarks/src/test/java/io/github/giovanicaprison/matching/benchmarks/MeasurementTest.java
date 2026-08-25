@@ -94,7 +94,9 @@ class MeasurementTest {
         .contains("\"harnessKeptUp\": true")
         .contains("\"OrderAccepted\"")
         .contains("\"service\"")
-        .contains("\"response\"");
+        .contains("\"response\"")
+        .contains("\"sampledBefore\"")
+        .contains("\"sampledAfter\"");
   }
 
   @Test

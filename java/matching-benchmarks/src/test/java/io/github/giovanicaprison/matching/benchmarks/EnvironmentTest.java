@@ -134,6 +134,9 @@ class EnvironmentTest {
     write("proc/sys/kernel/perf_event_paranoid", "1\n");
     write("proc/sys/kernel/kptr_restrict", "0\n");
     write("sys/kernel/mm/transparent_hugepage/enabled", "always [madvise] never\n");
+    // Core 4's sibling is offline, so its list names only itself. Core 0 still shares its pipe.
+    write("sys/devices/system/cpu/cpu4/topology/thread_siblings_list", "4\n");
+    write("sys/devices/system/cpu/cpu0/topology/thread_siblings_list", "0,64\n");
   }
 
   private void write(final String path, final String content) throws IOException {
