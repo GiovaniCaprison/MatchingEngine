@@ -3,6 +3,7 @@ package io.github.giovanicaprison.matching.naive;
 import io.github.giovanicaprison.matching.protocol.PricingInstruction;
 import io.github.giovanicaprison.matching.protocol.Side;
 import io.github.giovanicaprison.matching.protocol.TimeInForce;
+import java.util.Comparator;
 
 /**
  * One order, mutable, with every kind of order in the same shape (P-7).
@@ -15,6 +16,9 @@ import io.github.giovanicaprison.matching.protocol.TimeInForce;
  * difference between them is the measurement.
  */
 final class Order {
+
+  /** Earliest first, which is every tie-break and every report order in the venue. */
+  static final Comparator<Order> BY_ARRIVAL = Comparator.comparingLong(Order::arrival);
 
   private final long id;
   private final long clientOrderId;
@@ -172,6 +176,11 @@ final class Order {
   /** The tranche size an iceberg shows at a time, which a replace has to preserve (FR-4.10). */
   long displaySize() {
     return displaySize;
+  }
+
+  /** Whether this order would trade at a candidate price: at it, or better from its own side. */
+  boolean willingAt(final long candidate) {
+    return side == Side.BUY ? price >= candidate : price <= candidate;
   }
 
   /** A stop rests in the trigger book and is not book liquidity (FR-6.1). */

@@ -2,16 +2,12 @@ package io.github.giovanicaprison.matching.naive;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.giovanicaprison.matching.api.EventPublisher;
-import io.github.giovanicaprison.matching.api.MatchingEngine;
-import io.github.giovanicaprison.matching.api.MatchingEngineFactory;
 import io.github.giovanicaprison.matching.conformance.ConsumerBook;
 import io.github.giovanicaprison.matching.conformance.FlowReplay;
 import io.github.giovanicaprison.matching.flow.CommandLog;
 import io.github.giovanicaprison.matching.flow.FlowGenerator;
 import io.github.giovanicaprison.matching.flow.FlowParameters;
 import io.github.giovanicaprison.matching.protocol.Side;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -90,29 +86,8 @@ class InvariantsTest {
     // (FR-8.2) And the book a consumer is holding is the book the engine is holding, over flow
     // nobody
     // wrote down rather than only over the fixtures.
-    assertThat(visible(resting))
+    assertThat(Engines.visible(resting))
         .as("%s: the two books have parted company", where)
         .isEqualTo(rebuilt.entries());
-  }
-
-  private static List<ConsumerBook.Entry> visible(final List<Order> resting) {
-    return resting.stream()
-        .sorted(Comparator.comparingLong(Order::arrival))
-        .map(
-            order ->
-                new ConsumerBook.Entry(order.id(), order.side(), order.price(), order.displayed()))
-        .toList();
-  }
-
-  /** Keeps the engine the replay built, which is the only way to see inside it afterwards. */
-  private static final class Engines implements MatchingEngineFactory {
-
-    private NaiveEngine engine;
-
-    @Override
-    public MatchingEngine create(final EventPublisher events) {
-      engine = new NaiveEngine(events);
-      return engine;
-    }
   }
 }
