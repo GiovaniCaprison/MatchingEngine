@@ -27,11 +27,20 @@ import java.util.TreeMap;
  */
 final class Book {
 
-  /** One price: its queue in arrival order, and the total the queue must always sum to. */
+  /**
+   * One price: its queue as an intrusive chain in arrival order, and the total the queue must
+   * always sum to.
+   *
+   * <p>Intrusive because the orders carry their own links, so joining, leaving and re-queueing are
+   * each a handful of pointer writes with nothing searched and nothing allocated. That is the
+   * production shape of an indexed book, and it is more bookkeeping that can drift, which is what
+   * the invariants walk both directions to catch (NFR-3.1, NFR-3.2).
+   */
   static final class Level {
 
     private final long price;
-    private final List<Order> queue = new ArrayList<>();
+    private Order head;
+    private Order tail;
     private long displayed;
 
     private Level(final long price) {
@@ -47,8 +56,52 @@ final class Book {
       return displayed;
     }
 
+    private void append(final Order order) {
+      order.previous = tail;
+      order.next = null;
+      if (tail == null) {
+        head = order;
+      } else {
+        tail.next = order;
+      }
+      tail = order;
+    }
+
+    private void unlink(final Order order) {
+      if (order.previous == null) {
+        head = order.next;
+      } else {
+        order.previous.next = order.next;
+      }
+      if (order.next == null) {
+        tail = order.previous;
+      } else {
+        order.next.previous = order.previous;
+      }
+      order.previous = null;
+      order.next = null;
+    }
+
+    private boolean isEmpty() {
+      return head == null;
+    }
+
+    /** The queue front to back, materialised for the walks that want a list and for the tests. */
     List<Order> queue() {
-      return queue;
+      final List<Order> orders = new ArrayList<>();
+      for (Order order = head; order != null; order = order.next) {
+        orders.add(order);
+      }
+      return orders;
+    }
+
+    /** The queue back to front, so a test can prove the two directions tell one story. */
+    List<Order> queueReversed() {
+      final List<Order> orders = new ArrayList<>();
+      for (Order order = tail; order != null; order = order.previous) {
+        orders.add(order);
+      }
+      return orders;
     }
   }
 
@@ -67,16 +120,16 @@ final class Book {
   void add(final Order order) {
     final Level level =
         side(order.side()).computeIfAbsent(order.price(), price -> new Level(price));
-    level.queue.add(order);
+    level.append(order);
     level.displayed += order.displayed();
     byName.put(Name.of(order), order);
   }
 
   void remove(final Order order) {
     final Level level = side(order.side()).get(order.price());
-    level.queue.remove(order);
+    level.unlink(order);
     level.displayed -= order.displayed();
-    if (level.queue.isEmpty()) {
+    if (level.isEmpty()) {
       // (NFR-3.2) An empty level does not survive: a book that kept them would answer best-price
       // questions from prices nobody is at.
       side(order.side()).remove(order.price());
@@ -92,8 +145,8 @@ final class Book {
   /** A replenished tranche joins the back of the queue at its price (FR-5.4). */
   void requeued(final Order order, final long displayedBefore) {
     final Level level = side(order.side()).get(order.price());
-    level.queue.remove(order);
-    level.queue.add(order);
+    level.unlink(order);
+    level.append(order);
     level.displayed += order.displayed() - displayedBefore;
   }
 
@@ -110,13 +163,13 @@ final class Book {
     if (best == null || !crosses(takerSide, limit, best.getKey())) {
       return null;
     }
-    return best.getValue().queue.getFirst();
+    return best.getValue().head;
   }
 
   /** Everything resting at one price on one side, in arrival order, for a pro-rata allocation. */
   List<Order> atPrice(final Side side, final long price) {
     final Level level = side(side).get(price);
-    return level == null ? List.of() : List.copyOf(level.queue);
+    return level == null ? List.of() : level.queue();
   }
 
   /** Every order for one participant, in arrival order (FR-4.7). Still a walk, on purpose. */
@@ -138,7 +191,7 @@ final class Book {
       if (!crosses(takerSide, limit, level.price)) {
         return total;
       }
-      for (final Order order : level.queue) {
+      for (Order order = level.head; order != null; order = order.next) {
         if (smpId == 0 || order.smpId() != smpId) {
           total += order.remaining();
         }

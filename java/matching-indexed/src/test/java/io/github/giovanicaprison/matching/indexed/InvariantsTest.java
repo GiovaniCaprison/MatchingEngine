@@ -56,11 +56,16 @@ class InvariantsTest {
         continue;
       }
       for (final Book.Level level : book.levels(side)) {
-        assertThat(level.queue())
+        final List<Order> forward = level.queue();
+        assertThat(forward)
             .as("%s: an empty level at %d survived", where, level.price())
             .isNotEmpty();
+        // The chain read backwards tells the same story, or an unlink half-happened somewhere.
+        assertThat(level.queueReversed().reversed())
+            .as("%s: level %d reads differently backwards", where, level.price())
+            .isEqualTo(forward);
         long sum = 0;
-        for (final Order order : level.queue()) {
+        for (final Order order : forward) {
           sum += order.displayed();
           assertThat(order.side())
               .as("%s: %d rests on the wrong side", where, order.id())
