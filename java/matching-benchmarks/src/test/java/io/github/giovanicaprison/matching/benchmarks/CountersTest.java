@@ -3,6 +3,7 @@ package io.github.giovanicaprison.matching.benchmarks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,12 +45,20 @@ class CountersTest {
   }
 
   @Test
-  @DisplayName("a platform without perf_event_open says so rather than calling a number blindly")
-  void the_platform_is_checked_and_not_just_the_symbol() {
-    // Every system has syscall, read and close. The number is Linux's, and the same number
-    // elsewhere
-    // is a different call into a different kernel.
-    assertThat(Counters.available()).isEqualTo("Linux".equals(System.getProperty("os.name")));
+  @DisplayName("availability is learned from the kernel rather than from the platform's name")
+  void availability_is_probed_rather_than_assumed() {
+    // Every system has syscall, read and close, and the number is Linux's, so a non-Linux box is
+    // unavailable outright. A Linux box is the harder case: the first shared runner this ran on
+    // had the syscall and refused it, so availability has to mean the kernel said yes.
+    if (!"Linux".equals(System.getProperty("os.name"))) {
+      assertThat(Counters.available()).isFalse();
+      return;
+    }
+    final Optional<Counters> opened = Counters.open(Counter.few());
+    opened.ifPresent(Counters::close);
+    assertThat(Counters.available())
+        .as("what available() claims has to be what open() delivers")
+        .isEqualTo(opened.isPresent());
   }
 
   @Test

@@ -82,7 +82,11 @@ ctest --test-dir build
 
 Configuring fetches the codec generator and the test framework by exact version and checksum into the
 build directory, so it needs the network once and never again. Formatting is `google-java-format` on
-one side and `clang-format` on the other, both at a hundred columns, so the two trees wrap alike.
+one side and `clang-format` on the other, both at a hundred columns, so the two trees wrap alike. The
+Java formatter is pinned in the parent pom and `mvn verify` fails on a file it would change, so the
+format is part of the build rather than a habit; `mvn spotless:apply` fixes what it refuses. A
+pre-commit hook formats what is being committed in either language, and
+`git config core.hooksPath hooks` installs it.
 
 Agrona reaches `jdk.internal.misc.Unsafe` for buffer access, so the build passes
 `--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`, and the harness places its threads and reads
@@ -107,4 +111,6 @@ for one are in [METHODOLOGY.md](docs/METHODOLOGY.md).
 ## Conventions
 
 Commit messages read `(category): what I am actually doing`. Branches are one change each and land
-through a pull request.
+through a pull request, and every pull request runs the whole build on a runner: `mvn verify` on the
+Java side, then the CMake build, `ctest` and `clang-format` on the C++ side. What lands is what
+passed on a machine nobody's editor had prepared.

@@ -17,6 +17,8 @@
     <buildhelper.plugin.version>3.6.0</buildhelper.plugin.version>
     <surefire.version>3.5.1</surefire.version>
     <shade.plugin.version>3.6.0</shade.plugin.version>
+    <spotless.version>3.10.0</spotless.version>
+    <googlejavaformat.version>1.35.0</googlejavaformat.version>
     <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED --enable-native-access=ALL-UNNAMED</jvm.access.flags>
   </properties>
   <!-- Rungs land one at a time: indexed, pooled, flyweight. -->
@@ -105,5 +107,35 @@
         </plugin>
       </plugins>
     </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <!--
+              The same formatter the editors run, pinned to the version the tree is formatted
+              with. It takes no configuration, which is the point: there is no options file to
+              drift, so pinning the version pins the format. The formatter reaches javac's
+              internals, which is what .mvn/jvm.config opens for it.
+            -->
+            <googleJavaFormat>
+              <version>${googlejavaformat.version}</version>
+            </googleJavaFormat>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <!-- verify rather than test, so the development loop stays fast and nothing lands
+                 unformatted. spotless:apply fixes what check refuses. -->
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>

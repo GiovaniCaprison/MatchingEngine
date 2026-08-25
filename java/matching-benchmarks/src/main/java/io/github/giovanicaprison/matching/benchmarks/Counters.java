@@ -35,7 +35,8 @@ import java.util.Set;
  * one side of the comparison anyway. Bracketing a region of millions of commands makes the cost of
  * two syscalls irrelevant, which is why the region rather than the command is the unit here.
  *
- * <p>Linux only. Elsewhere every counter is unavailable and a run says so.
+ * <p>Linux only, and only a Linux whose kernel grants the call. Elsewhere every counter is
+ * unavailable and a run says so.
  */
 public final class Counters implements AutoCloseable {
 
@@ -69,6 +70,7 @@ public final class Counters implements AutoCloseable {
   private static final Optional<MethodHandle> SYSCALL = syscall();
   private static final Optional<MethodHandle> READ = readDowncall();
   private static final Optional<MethodHandle> CLOSE = closeDowncall();
+  private static final boolean OPENS = probe();
 
   private final Map<Counter, Integer> descriptors;
   private final Arena arena;
@@ -80,11 +82,29 @@ public final class Counters implements AutoCloseable {
     this.buffer = arena.allocate(READING_BYTES);
   }
 
+  /**
+   * Whether counters can actually be opened, learned by opening one rather than by finding symbols.
+   * Every symbol here exists on machines that still refuse the call: a hardened kernel, a
+   * container's seccomp filter, or {@code perf_event_paranoid} above what the instruments need all
+   * leave the syscall in place and the answer no. The first shared runner this ran on was exactly
+   * that machine.
+   */
   public static boolean available() {
-    return SYSCALL.isPresent()
-        && READ.isPresent()
-        && CLOSE.isPresent()
-        && SYSCALL_NUMBER.isPresent();
+    return OPENS;
+  }
+
+  private static boolean probe() {
+    if (SYSCALL.isEmpty() || READ.isEmpty() || CLOSE.isEmpty() || SYSCALL_NUMBER.isEmpty()) {
+      return false;
+    }
+    try (Arena arena = Arena.ofConfined()) {
+      final int descriptor = perfEventOpen(arena, Counter.INSTRUCTIONS);
+      if (descriptor < 0) {
+        return false;
+      }
+      closeDescriptor(descriptor);
+      return true;
+    }
   }
 
   /**

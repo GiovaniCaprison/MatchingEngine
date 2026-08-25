@@ -23,8 +23,8 @@ import org.HdrHistogram.HistogramLogWriter;
  * driver being late to offer it, the time it sat on the ring, and the engine's own work. A number
  * nobody can decompose is a number somebody will argue about.
  *
- * <p>Recording is the driver's business and reading is the caller's, which is why only the accessors
- * are public.
+ * <p>Recording is the driver's business and reading is the caller's, which is why only the
+ * accessors are public.
  *
  * <p>The arrays are sized up front. A run too large to hold its own timings is a run whose
  * parameters are wrong, and it fails here rather than quietly recording less than it claims.
