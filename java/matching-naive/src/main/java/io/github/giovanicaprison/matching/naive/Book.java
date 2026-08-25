@@ -45,20 +45,6 @@ final class Book {
     return null;
   }
 
-  /** The best price on one side, or zero when that side is empty. */
-  long bestPrice(final Side side) {
-    long best = 0;
-    for (final Order order : orders) {
-      if (order.side() != side) {
-        continue;
-      }
-      if (best == 0 || better(side, order.price(), best)) {
-        best = order.price();
-      }
-    }
-    return best;
-  }
-
   /**
    * The order a taker reaches next: best price first, then earliest arrival (FR-3.1, FR-3.3).
    *

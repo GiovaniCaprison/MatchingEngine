@@ -174,10 +174,6 @@ final class Order {
     return displaySize;
   }
 
-  boolean iceberg() {
-    return displaySize > 0;
-  }
-
   /** A stop rests in the trigger book and is not book liquidity (FR-6.1). */
   boolean stop() {
     return triggerPrice != 0;

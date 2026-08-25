@@ -45,4 +45,15 @@ public record Setting(
   public boolean satisfied() {
     return expected == null || status == Status.OK;
   }
+
+  /** Written one way wherever a setting lands in an artifact, expected null where none was. */
+  void writeTo(final Json json) {
+    json.object()
+        .field("name", name)
+        .field("source", source)
+        .field("expected", expected)
+        .field("actual", actual)
+        .field("status", status.name())
+        .end();
+  }
 }

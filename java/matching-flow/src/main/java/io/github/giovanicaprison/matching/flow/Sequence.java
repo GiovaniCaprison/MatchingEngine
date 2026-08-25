@@ -25,7 +25,7 @@ final class Sequence {
   }
 
   /** xorshift64*, from Marsaglia by way of Vigna. */
-  long next() {
+  private long next() {
     state ^= state >>> 12;
     state ^= state << 25;
     state ^= state >>> 27;

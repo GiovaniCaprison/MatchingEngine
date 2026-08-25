@@ -7,7 +7,6 @@ import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -59,17 +58,35 @@ public final class Counters implements AutoCloseable {
   private static final int NO_GROUP = -1;
 
   private static final MemoryLayout ERRNO = Linker.Option.captureStateLayout();
-  private static final VarHandle ERRNO_FIELD =
-      ERRNO.varHandle(MemoryLayout.PathElement.groupElement("errno"));
 
   private static final boolean LINUX = "Linux".equals(System.getProperty("os.name"));
   private static final Optional<Integer> SYSCALL_NUMBER =
       LINUX
           ? Optional.ofNullable(SYSCALL_NUMBERS.get(System.getProperty("os.arch")))
           : Optional.empty();
-  private static final Optional<MethodHandle> SYSCALL = syscall();
-  private static final Optional<MethodHandle> READ = readDowncall();
-  private static final Optional<MethodHandle> CLOSE = closeDowncall();
+  private static final Optional<MethodHandle> SYSCALL =
+      downcall(
+          "syscall",
+          FunctionDescriptor.of(
+              ValueLayout.JAVA_LONG,
+              ValueLayout.JAVA_LONG,
+              ValueLayout.ADDRESS,
+              ValueLayout.JAVA_INT,
+              ValueLayout.JAVA_INT,
+              ValueLayout.JAVA_INT,
+              ValueLayout.JAVA_LONG),
+          Linker.Option.captureCallState("errno"),
+          Linker.Option.firstVariadicArg(1));
+  private static final Optional<MethodHandle> READ =
+      downcall(
+          "read",
+          FunctionDescriptor.of(
+              ValueLayout.JAVA_LONG,
+              ValueLayout.JAVA_INT,
+              ValueLayout.ADDRESS,
+              ValueLayout.JAVA_LONG));
+  private static final Optional<MethodHandle> CLOSE =
+      downcall("close", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
   private static final boolean OPENS = probe();
 
   private final Map<Counter, Integer> descriptors;
@@ -199,52 +216,14 @@ public final class Counters implements AutoCloseable {
     }
   }
 
-  private static Optional<MethodHandle> syscall() {
+  /** One lookup for the three symbols, which differ only in name, shape and options. */
+  private static Optional<MethodHandle> downcall(
+      final String symbol, final FunctionDescriptor descriptor, final Linker.Option... options) {
     final Linker linker = Linker.nativeLinker();
     return linker
         .defaultLookup()
-        .find("syscall")
-        .map(
-            address ->
-                linker.downcallHandle(
-                    address,
-                    FunctionDescriptor.of(
-                        ValueLayout.JAVA_LONG,
-                        ValueLayout.JAVA_LONG,
-                        ValueLayout.ADDRESS,
-                        ValueLayout.JAVA_INT,
-                        ValueLayout.JAVA_INT,
-                        ValueLayout.JAVA_INT,
-                        ValueLayout.JAVA_LONG),
-                    Linker.Option.captureCallState("errno"),
-                    Linker.Option.firstVariadicArg(1)));
-  }
-
-  private static Optional<MethodHandle> readDowncall() {
-    final Linker linker = Linker.nativeLinker();
-    return linker
-        .defaultLookup()
-        .find("read")
-        .map(
-            address ->
-                linker.downcallHandle(
-                    address,
-                    FunctionDescriptor.of(
-                        ValueLayout.JAVA_LONG,
-                        ValueLayout.JAVA_INT,
-                        ValueLayout.ADDRESS,
-                        ValueLayout.JAVA_LONG)));
-  }
-
-  private static Optional<MethodHandle> closeDowncall() {
-    final Linker linker = Linker.nativeLinker();
-    return linker
-        .defaultLookup()
-        .find("close")
-        .map(
-            address ->
-                linker.downcallHandle(
-                    address, FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT)));
+        .find(symbol)
+        .map(address -> linker.downcallHandle(address, descriptor, options));
   }
 
   /**

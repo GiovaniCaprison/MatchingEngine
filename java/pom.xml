@@ -118,8 +118,11 @@
               The same formatter the editors run, pinned to the version the tree is formatted
               with. It takes no configuration, which is the point: there is no options file to
               drift, so pinning the version pins the format. The formatter reaches javac's
-              internals, which is what .mvn/jvm.config opens for it.
+              internals, which is what .mvn/jvm.config opens for it. Removing unused imports is
+              a separate step because the formatter deliberately leaves them alone, and a deleted
+              method's imports should go with it.
             -->
+            <removeUnusedImports/>
             <googleJavaFormat>
               <version>${googlejavaformat.version}</version>
             </googleJavaFormat>

@@ -34,7 +34,7 @@ import org.agrona.MutableDirectBuffer;
  */
 final class CommandWriter {
 
-  static final int INSTRUMENT_ID = 1;
+  private static final int INSTRUMENT_ID = 1;
 
   /** Fixtures write the time in force short. Four names, so they are written out here. */
   private static final Map<String, TimeInForce> TIME_IN_FORCE =

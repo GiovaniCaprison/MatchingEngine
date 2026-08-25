@@ -31,7 +31,6 @@ public final class Calibration {
   private final long from;
   private final long to;
 
-  private final Map<Integer, String> symbols = new HashMap<>();
   private final Map<Long, long[]> live = new HashMap<>();
   private final TreeMap<Long, Long> bids = new TreeMap<>();
   private final TreeMap<Long, Long> asks = new TreeMap<>();
@@ -89,7 +88,6 @@ public final class Calibration {
     while ((message = itch.next()) != null && read < limit) {
       read++;
       if (message.type == 'R') {
-        symbols.put(message.stockLocate, message.stock);
         if (stock.equals(message.stock)) {
           locate = message.stockLocate;
         }

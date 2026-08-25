@@ -4,7 +4,6 @@ import io.github.giovanicaprison.matching.api.MatchingEngine;
 import io.github.giovanicaprison.matching.api.MatchingEngineFactory;
 import io.github.giovanicaprison.matching.flow.CommandLog;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
 
 /**
  * Replays generated flow against an implementation, offering it up between commands.
@@ -22,17 +21,11 @@ import org.agrona.concurrent.UnsafeBuffer;
  */
 public final class FlowReplay implements io.github.giovanicaprison.matching.api.EventPublisher {
 
-  /** Room for the largest burst one command can produce, with no reason to be tight about it. */
-  private static final int CAPACITY = 1 << 20;
-
-  private final MutableDirectBuffer events = new UnsafeBuffer(new byte[CAPACITY]);
+  private final ClaimedBuffer events = new ClaimedBuffer();
   private final References references = new References();
   private final ConsumerBook rebuilt = new ConsumerBook();
   private final EventReader reader = new EventReader(references, rebuilt);
 
-  private int cursor;
-  private int claimed;
-  private int claimedLength;
   private long emitted;
 
   private FlowReplay() {}
@@ -72,23 +65,17 @@ public final class FlowReplay implements io.github.giovanicaprison.matching.api.
 
   @Override
   public int claim(final int length) {
-    if (cursor + length > CAPACITY) {
-      cursor = 0;
-    }
-    claimed = cursor;
-    claimedLength = length;
-    cursor += length;
-    return claimed;
+    return events.claim(length);
   }
 
   @Override
   public MutableDirectBuffer buffer() {
-    return events;
+    return events.buffer();
   }
 
   @Override
   public void commit() {
-    reader.read(events, claimed, claimedLength);
+    reader.read(events.buffer(), events.claimed(), events.claimedLength());
     emitted++;
   }
 }

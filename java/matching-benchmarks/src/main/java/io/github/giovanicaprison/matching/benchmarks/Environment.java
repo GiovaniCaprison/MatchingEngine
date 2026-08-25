@@ -1,12 +1,9 @@
 package io.github.giovanicaprison.matching.benchmarks;
 
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * The machine and the runtime, as they actually are at the moment of a run.
@@ -219,18 +216,11 @@ public final class Environment {
   }
 
   private String keyed(final String path, final String key) {
-    return read(path)
-        .flatMap(
-            text ->
-                text.lines()
-                    .filter(line -> line.startsWith(key) && line.contains(":"))
-                    .map(line -> line.substring(line.indexOf(':') + 1).strip())
-                    .findFirst())
-        .orElse(null);
+    return KernelFiles.keyed(root, path, key);
   }
 
   private String count(final String path, final String key) {
-    return read(path)
+    return KernelFiles.read(root.resolve(path))
         .map(
             text ->
                 String.valueOf(text.lines().filter(line -> line.startsWith(key + "\t")).count()))
@@ -238,19 +228,7 @@ public final class Environment {
   }
 
   private String firstLine(final String path) {
-    return read(path).flatMap(text -> text.lines().findFirst()).map(String::strip).orElse(null);
-  }
-
-  private Optional<String> read(final String path) {
-    final Path file = root.resolve(path);
-    if (!Files.isReadable(file) || Files.isDirectory(file)) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(Files.readString(file));
-    } catch (final IOException e) {
-      return Optional.empty();
-    }
+    return KernelFiles.firstLine(root, path);
   }
 
   private static String runtime() {
