@@ -21,6 +21,7 @@
 #include "benchmarks/run.hpp"
 #include "indexed/indexed_engine.hpp"
 #include "io_github_giovanicaprison_matching_protocol/MessageHeader.h"
+#include "lean-indexed/lean_engine.hpp"
 #include "lean-naive/lean_engine.hpp"
 #include "naive/naive_engine.hpp"
 
@@ -40,6 +41,11 @@ benchmarks::Measurement::EngineFactory factoryOf(const std::string& name) {
   if (name == "indexed") {
     return [](matching::api::EventPublisher& events) {
       return std::make_unique<matching::indexed::IndexedEngine>(events);
+    };
+  }
+  if (name == "lean-indexed") {
+    return [](matching::api::EventPublisher& events) {
+      return std::make_unique<matching::lean::indexed::LeanEngine>(events);
     };
   }
   if (name == "lean-naive") {
@@ -115,7 +121,8 @@ int main(const int count, char** arguments) {
   const std::string implementation = argument(count, arguments, "--implementation", "");
   const std::string logFile = argument(count, arguments, "--log", "");
   if (implementation.empty() || logFile.empty()) {
-    std::cerr << "usage: benchmarks --implementation naive|indexed|lean-naive|decode --log FILE"
+    std::cerr << "usage: benchmarks --implementation naive|indexed|lean-naive|lean-indexed|decode "
+                 "--log FILE"
               << " [--label L] [--rate N] [--warmup N] [--cores a,b,c] [--counters NAMES]"
               << " [--results DIR]\n";
     return 2;
