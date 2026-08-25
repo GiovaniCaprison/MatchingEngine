@@ -348,9 +348,12 @@ public final class NaiveEngine implements MatchingEngine {
       feed.rejected(clientOrderId, participantId, refusal);
       return;
     }
-    if (price == resting.price() && quantity < resting.remaining()) {
+    // The command names the order's whole quantity, so what should still be working is that less
+    // whatever has already traded (FR-4.3).
+    final long remainder = quantity - resting.executed();
+    if (price == resting.price() && remainder < resting.remaining()) {
       // (FR-4.4, FR-8.5) Less at the same price keeps its place, so nothing leaves the book.
-      resting.reduceTo(quantity);
+      resting.reduceTo(remainder);
       feed.reduced(resting);
       reportIndicative();
       return;
@@ -358,10 +361,17 @@ public final class NaiveEngine implements MatchingEngine {
     // (FR-4.5) Anything else is a removal and a fresh rest, and the id survives both (FR-4.8).
     book.remove(resting);
     feed.replaced(resting, resting.displayed());
-    admit(replacement(resting, quantity, price));
+    admit(replacement(resting, remainder, price));
   }
 
-  private Order replacement(final Order original, final long quantity, final long price) {
+  /**
+   * The same order at a new price or quantity.
+   *
+   * <p>It keeps its display size rather than whatever tranche happened to be showing (FR-4.10), and
+   * it carries what it has already executed, since a later replace works its remainder out from
+   * that.
+   */
+  private Order replacement(final Order original, final long remainder, final long price) {
     return new Order(
         original.id(),
         original.clientOrderId(),
@@ -371,12 +381,13 @@ public final class NaiveEngine implements MatchingEngine {
         original.timeInForce(),
         original.postOnly(),
         price,
-        quantity,
+        remainder,
         original.minQuantity(),
-        original.iceberg() ? original.displayed() : 0,
+        original.displaySize(),
         0,
         original.smpId(),
-        ++arrival);
+        ++arrival,
+        original.executed());
   }
 
   /** (FR-4.7) Everything for one participant, in arrival order, book and stops alike. */
@@ -431,30 +442,53 @@ public final class NaiveEngine implements MatchingEngine {
       return;
     }
     final long price = uncrossing.price();
-    long remaining = uncrossing.quantity();
+    long left = uncrossing.quantity();
     final List<Order> buys = willing(Side.BUY, price);
     final List<Order> sells = willing(Side.SELL, price);
     int sell = 0;
     for (final Order buy : buys) {
-      while (buy.remaining() > 0 && remaining > 0 && sell < sells.size()) {
+      while (buy.remaining() > 0 && left > 0 && sell < sells.size()) {
         final Order resting = sells.get(sell);
-        // (FR-7.6) Everything trades at the one price the auction found.
-        final long quantity = Math.min(Math.min(buy.remaining(), resting.remaining()), remaining);
-        buy.take(quantity);
-        resting.take(quantity);
-        remaining -= quantity;
-        feed.executed(nextExecutionId++, buy.id(), resting.id(), price, quantity);
+        left -= cross(buy, resting, price, left);
         if (resting.remaining() == 0) {
-          book.remove(resting);
           sell++;
         }
-      }
-      if (buy.remaining() == 0) {
-        book.remove(buy);
       }
     }
     reference = price;
     fireTriggers();
+  }
+
+  /**
+   * (FR-7.6) One execution inside an auction, at the one price the auction found.
+   *
+   * <p>Bounded by what both sides are showing, because hidden quantity is revealed before it trades
+   * here exactly as it is in continuous trading (FR-5.5). Taking it out in one go would report more
+   * quantity against an order than the feed had ever said was there, and a consumer's book would go
+   * negative.
+   *
+   * <p>Both sides can replenish, which is what separates this from continuous trading: neither of
+   * them aggressed, so both are in the book and both are visible to whoever is following it.
+   *
+   * @return how much traded
+   */
+  private long cross(final Order buy, final Order sell, final long price, final long left) {
+    final long quantity = Math.min(Math.min(buy.displayed(), sell.displayed()), left);
+    final boolean buyReplenishes = buy.take(quantity);
+    final boolean sellReplenishes = sell.take(quantity);
+    feed.executed(nextExecutionId++, buy.id(), sell.id(), price, quantity);
+    reveal(buy, buyReplenishes);
+    reveal(sell, sellReplenishes);
+    return quantity;
+  }
+
+  private void reveal(final Order order, final boolean replenishes) {
+    if (order.remaining() == 0) {
+      book.remove(order);
+    } else if (replenishes) {
+      order.replenish(++arrival);
+      feed.rested(order);
+    }
   }
 
   /** Everyone who would trade at a price, earliest first. */
@@ -653,6 +687,12 @@ public final class NaiveEngine implements MatchingEngine {
       final Order resting, final long quantity, final long price) {
     if (quantity <= 0) {
       return RejectReason.NON_POSITIVE_QUANTITY;
+    }
+    if (quantity <= resting.executed()) {
+      // (FR-4.9) Nothing can un-trade what has traded, so an order cannot be shrunk to less than it
+      // has already done. Equal is refused too: that order is finished and there is nothing to
+      // work.
+      return RejectReason.QUANTITY_BELOW_EXECUTED;
     }
     if (quantity % instrument.lotSize() != 0) {
       return RejectReason.LOT_VIOLATION;

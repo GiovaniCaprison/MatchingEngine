@@ -1,0 +1,23 @@
+# FR-3.4 pro-rata apportions by displayed quantity, and hidden takes no part
+#
+# A hundred behind a tranche of ten, beside a plain ten. Both show ten, so both get half of what
+# arrives. Apportioning by total quantity would have given the iceberg almost all of it, which is
+# the priority an iceberg gives up in exchange for staying hidden.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRO_RATA
+
+SESSION    CONTINUOUS
+STATE      CONTINUOUS
+
+NEW        BUY LIMIT GTC 100000 100 display=10 p=2
+ACCEPTED   #1
+RESTED     #1 BUY 100000 10
+
+NEW        BUY LIMIT GTC 100000 10 p=3
+ACCEPTED   #2
+RESTED     #2 BUY 100000 10
+
+NEW        SELL LIMIT GTC 100000 10 p=4
+ACCEPTED   #3
+EXECUTED   @1 aggressor=#3 resting=#1 100000 5
+EXECUTED   @2 aggressor=#3 resting=#2 100000 5

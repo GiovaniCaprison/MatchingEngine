@@ -1,0 +1,22 @@
+# FR-7.5 an auction with unfilled supply settles at the lower price
+#
+# The same tie the other way up. Unfilled supply is selling pressure, so the price settles low. The
+# two together are what stop the rule being a preference for one end of the book.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    OPENING_AUCTION
+STATE      OPENING_AUCTION
+
+NEW        BUY LIMIT GTC 100010 30 p=2
+ACCEPTED   #1
+RESTED     #1 BUY 100010 30
+
+NEW        SELL LIMIT GTC 99990 50 p=3
+ACCEPTED   #2
+RESTED     #2 SELL 99990 50
+INDICATIVE 99990 30
+
+SESSION    CONTINUOUS
+EXECUTED   @1 aggressor=#1 resting=#2 99990 30
+STATE      CONTINUOUS

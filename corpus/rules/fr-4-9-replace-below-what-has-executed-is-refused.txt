@@ -1,0 +1,24 @@
+# FR-4.9 a replace naming a quantity at or below what has executed is refused
+#
+# Sixty has traded, so thirty is not a quantity this order can have. Nothing can un-trade what has
+# traded, and the order is left exactly as it was.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    CONTINUOUS
+STATE      CONTINUOUS
+
+NEW        SELL LIMIT GTC 100000 100 p=2
+ACCEPTED   #1
+RESTED     #1 SELL 100000 100
+
+NEW        BUY LIMIT GTC 100000 60 p=3
+ACCEPTED   #2
+EXECUTED   @1 aggressor=#2 resting=#1 100000 60
+
+REPLACE    #1 30 100000
+REJECTED   #1 QUANTITY_BELOW_EXECUTED
+
+NEW        BUY LIMIT GTC 100000 40 p=4
+ACCEPTED   #3
+EXECUTED   @2 aggressor=#3 resting=#1 100000 40

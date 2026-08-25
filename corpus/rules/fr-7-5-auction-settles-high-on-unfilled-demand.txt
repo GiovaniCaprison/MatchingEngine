@@ -1,0 +1,24 @@
+# FR-7.5 an auction with unfilled demand settles at the higher price
+#
+# Both candidates trade thirty and leave a surplus of twenty, and the reference sits exactly between
+# them, so volume, surplus and distance all tie. The surplus is unfilled demand, which is buying
+# pressure, so the price settles high. Without that rule the bidder who bid the market up would be
+# filled below the price they named.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    OPENING_AUCTION
+STATE      OPENING_AUCTION
+
+NEW        BUY LIMIT GTC 100010 50 p=2
+ACCEPTED   #1
+RESTED     #1 BUY 100010 50
+
+NEW        SELL LIMIT GTC 99990 30 p=3
+ACCEPTED   #2
+RESTED     #2 SELL 99990 30
+INDICATIVE 100010 30
+
+SESSION    CONTINUOUS
+EXECUTED   @1 aggressor=#1 resting=#2 100010 30
+STATE      CONTINUOUS

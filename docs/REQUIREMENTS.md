@@ -38,7 +38,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-3.1 | Resting liquidity is consumed best price first | unit |
 | FR-3.2 | Within a price, allocation follows the algorithm configured for the instrument | unit |
 | FR-3.3 | Price-time allocation consumes in arrival order | unit |
-| FR-3.4 | Pro-rata allocation apportions in proportion to resting quantity, rounded down to lot, with the undistributed remainder allocated in arrival order | unit |
+| FR-3.4 | Pro-rata allocation apportions in proportion to displayed quantity, rounded down to lot, with the undistributed remainder allocated in arrival order | unit |
 | FR-3.5 | An execution happens at the resting order's price | unit |
 | FR-3.6 | Each execution reports an execution id, both order ids, price and quantity | unit |
 | FR-3.7 | An order never executes against a resting order carrying the same non-zero self match id. The resting order is removed and the walk continues | unit |
@@ -55,6 +55,8 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-4.6 | A replace refused by a liquidity flag leaves the original order resting | unit |
 | FR-4.7 | A mass cancel removes every resting order for a participant and reports each removal in arrival order | unit |
 | FR-4.8 | A replaced order keeps both of its ids, whether or not it keeps queue position | unit |
+| FR-4.9 | A replace naming a quantity at or below what the order has already executed is refused | unit |
+| FR-4.10 | A replaced order keeps the display size it was entered with | unit |
 
 ## FR-5: hidden quantity
 
@@ -64,6 +66,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-5.2 | Only displayed quantity appears as resting in the output stream | unit |
 | FR-5.3 | Displayed quantity at a price is consumed before hidden quantity at that price | unit |
 | FR-5.4 | When an order's displayed quantity is exhausted, a further tranche is displayed and joins the back of the queue at its price | unit |
+| FR-5.5 | Hidden quantity is displayed before it executes, in an auction as in continuous trading | unit |
 
 ## FR-6: stop orders
 
@@ -83,7 +86,7 @@ The mechanism column names how a requirement is shown to hold: `unit`, `corpus`,
 | FR-7.2 | The states are pre-open, opening auction, continuous, closing auction, halted and closed | unit |
 | FR-7.3 | Order entry, replacement and cancellation are legal in every state except closed | unit |
 | FR-7.4 | Continuous matching happens only in the continuous state | unit |
-| FR-7.5 | An auction uncrosses at the price maximising executable volume, breaking ties by minimum surplus and then by proximity to the reference price | unit |
+| FR-7.5 | An auction uncrosses at the price maximising executable volume, breaking ties by minimum surplus, then by the side the surplus sits on, then by proximity to the reference price, and finally by taking the higher price | unit |
 | FR-7.6 | An auction executes all matched quantity at one price | unit |
 | FR-7.7 | An indicative uncrossing price and volume are reported whenever they change during a call phase | corpus |
 | FR-7.8 | A halt cancels nothing, and the book is intact on resumption | unit |
@@ -178,6 +181,20 @@ applied; a price must satisfy the static band and the dynamic one.
 
 Pro-rata apportionment rounds each participant's share down to a whole lot. Whatever remains
 undistributed after rounding is allocated in arrival order, one lot at a time, until exhausted.
+
+A replace names the order's whole quantity rather than what is left of it, so what should still be
+working is that quantity less whatever has already executed. This is the FIX and OUCH convention and it
+is what a client means by making an order sixty shares. It costs the engine one field per order and one
+subtraction on the replace path, and it is why FR-4.9 exists: nothing can un-trade what has traded.
+
+Pro-rata apportions by displayed quantity. Hidden quantity takes no part, which is the trade an iceberg
+makes, concealment in exchange for allocation priority. It does count toward an auction's uncrossing
+volume, because it is real liquidity and a price that ignored it would leave the book crossed.
+
+An auction's tie-break reads an unfilled surplus as pressure: unfilled demand settles high and unfilled
+supply settles low. The reference price decides only below that, which covers candidates that balance
+exactly and candidates whose equal surpluses sit on opposite sides. The last rule takes the higher
+price, so nothing is left to the order the candidates were walked in.
 
 An order is named by the client order id its participant gave it, and those are unique per participant
 for the session. Uniqueness is the sender's to guarantee. Two participants using the same number are two
