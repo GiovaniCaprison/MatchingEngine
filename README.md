@@ -25,9 +25,12 @@ measured on the same logs.
 Implementing every rung twice is what lets language separate from layout: the step between rungs
 isolates layout, and the step between languages at one rung isolates the runtime.
 
-The naive rung has a second variant carrying limit and market orders only. Comparing it against the
-full one gives the cost of a feature existing, which cannot be measured with a runtime flag, since a
-disabled feature behind a branch still occupies the method and the object layout (P-16).
+Every rung has a lean twin carrying limit and market orders only, named for the rung it shadows:
+`matching-lean-naive` beside `matching-naive`, and so on up the ladder. Comparing a rung against its
+twin gives the cost of the feature set existing at that layout, which cannot be measured with a
+runtime flag, since a disabled feature behind a branch still occupies the method and the object
+layout (P-16). Asking at every layout is the point: whether existence costs less as the
+representation improves is itself a finding.
 
 ## Layout
 
@@ -42,10 +45,10 @@ java/       matching-protocol      the generated codecs
             matching-conformance   the corpus runner and the consumer's book
             matching-gates         the two build gates
             matching-naive         rung zero, the whole remit
-            matching-lean          the limit-and-market arm of the feature cost question (P-16)
+            matching-lean-naive    rung zero's lean twin, the feature cost arm (P-16)
             matching-calibration   a real session measured, and replayed as commands
             matching-benchmarks    the measurement harness and the runner
-cpp/        protocol, api, conformance, naive, lean, benchmarks: the same shapes at matched layouts
+cpp/        protocol, api, conformance, naive, lean-naive, benchmarks: the same shapes, matched
 results/    one directory per run: manifest, histograms, counters
 ```
 
