@@ -22,6 +22,8 @@ import java.util.List;
  * @param isolation whether the engine's core is one the kernel leaves alone, judged for the core
  *     the run chose, or the fact that it chose none
  * @param flow the input, by seed and composition rather than by copy
+ * @param flowSource where the input came from: {@code generated}, or the file a real session was
+ *     converted into, in which case the composition below describes nothing and the file does
  */
 public record Manifest(
     Run run,
@@ -30,7 +32,8 @@ public record Manifest(
     String commandLine,
     Environment environment,
     List<Setting> isolation,
-    FlowParameters flow) {
+    FlowParameters flow,
+    String flowSource) {
 
   /**
    * Whether the numbers from this run can be believed.
@@ -53,9 +56,17 @@ public record Manifest(
       final Path repository,
       final Environment environment,
       final List<Setting> isolation,
-      final FlowParameters flow) {
+      final FlowParameters flow,
+      final String flowSource) {
     return new Manifest(
-        run, implementation, Git.head(repository), invocation(), environment, isolation, flow);
+        run,
+        implementation,
+        Git.head(repository),
+        invocation(),
+        environment,
+        isolation,
+        flow,
+        flowSource);
   }
 
   public String toJson() {
@@ -70,6 +81,7 @@ public record Manifest(
             .field("grade", grade());
 
     json.object("flow")
+        .field("source", flowSource)
         .field("seed", flow.seed())
         .field("commands", flow.commands())
         .field("restingOrders", flow.restingOrders());

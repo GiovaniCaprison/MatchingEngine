@@ -52,6 +52,35 @@ class RunnerTest {
   }
 
   @Test
+  @DisplayName("a run replays a log from a file when asked, which is how a real session runs")
+  void a_run_replays_a_file() throws Exception {
+    final Path logFile = results.resolve("session.log");
+    io.github.giovanicaprison.matching.flow.FlowGenerator.generate(
+            io.github.giovanicaprison.matching.flow.FlowParameters.standard(9, 2_000))
+        .writeTo(logFile);
+
+    Runner.main(
+        new String[] {
+          "--implementation",
+          NAIVE,
+          "--label",
+          "replayed",
+          "--log",
+          logFile.toString(),
+          "--rate",
+          "100000",
+          "--warmup",
+          "0",
+          "--results",
+          results.resolve("runs").toString()
+        });
+
+    final Path run = only(results.resolve("runs"));
+    assertThat(run.resolve("manifest.json")).content().contains("\"source\": \"" + logFile);
+    assertThat(run.resolve("verification.json")).content().contains("OrderAccepted");
+  }
+
+  @Test
   @DisplayName("an implementation that cannot be constructed stops the run before it starts")
   void an_unknown_implementation_is_refused() {
     assertThat(results).isEmptyDirectory();
