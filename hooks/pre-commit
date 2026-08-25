@@ -28,7 +28,12 @@ fi
 
 cpp_files=$(staged 'cpp/*.cpp' 'cpp/*.hpp' | grep -v '^cpp/build/')
 if [ -n "$cpp_files" ]; then
-  if command -v clang-format >/dev/null 2>&1; then
+  # The pinned version first, fetched by pipx, so the hook and the workflow agree to the byte.
+  pinned=$(cat "$(git rev-parse --show-toplevel)/.clang-format-version")
+  if command -v pipx >/dev/null 2>&1; then
+    printf '%s\n' "$cpp_files" | tr '\n' '\0' | xargs -0 pipx run "clang-format==${pinned}" -i || exit 1
+    printf '%s\n' "$cpp_files" | tr '\n' '\0' | xargs -0 git add
+  elif command -v clang-format >/dev/null 2>&1; then
     printf '%s\n' "$cpp_files" | tr '\n' '\0' | xargs -0 clang-format -i || exit 1
     printf '%s\n' "$cpp_files" | tr '\n' '\0' | xargs -0 git add
   else
