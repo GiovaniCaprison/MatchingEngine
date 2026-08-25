@@ -23,7 +23,18 @@ import sys
 from pathlib import Path
 
 MAGIC = b"METIMES1"
+TYPES_MAGIC = b"METYPES1"
 PERCENTILES = (50.0, 99.0, 99.9, 100.0)
+
+# The command templates, by the schema's ids, for the per-type attribution (NFR-4.4).
+COMMAND_NAMES = {
+    1: "instrument",
+    2: "new",
+    3: "cancel",
+    4: "replace",
+    5: "masscancel",
+    6: "session",
+}
 
 
 def read_timings(path):
@@ -58,11 +69,23 @@ def distributions(timings, warmup):
     }
 
 
+def read_types(path):
+    """One byte per recorded command saying what the command was, where a run wrote it."""
+    if not path.exists():
+        return None
+    raw = path.read_bytes()
+    if raw[:8] != TYPES_MAGIC:
+        raise SystemExit(f"{path} is not a types file")
+    (count,) = struct.unpack_from("<i", raw, 8)
+    return list(raw[12 : 12 + count])
+
+
 def load(run_dir):
     run = {"directory": run_dir}
     run["manifest"] = json.loads((run_dir / "manifest.json").read_text())
     run["measurement"] = json.loads((run_dir / "measurement.json").read_text())
     run["timings"] = read_timings(run_dir / "timings.bin")
+    run["types"] = read_types(run_dir / "types.bin")
     return run
 
 
@@ -137,6 +160,25 @@ def detail(run, warmup):
     if moved:
         print()
         print(table(("sample", "before", "after"), moved))
+    if run["types"]:
+        print()
+        print(per_type(run, warmup))
+
+
+def per_type(run, warmup):
+    """Service time attributed per command type (NFR-4.4), by position-for-position join."""
+    kept = list(zip(run["types"][warmup:], run["timings"][warmup:]))
+    rows = []
+    for template in sorted(set(t for t, _ in kept)):
+        service = sorted(f - s for t, (_, _, s, f) in kept if t == template)
+        rows.append(
+            (
+                COMMAND_NAMES.get(template, f"template {template}"),
+                len(service),
+                *(percentile(service, at) for at in PERCENTILES),
+            )
+        )
+    return table(("service by command", "count", "p50", "p99", "p99.9", "max"), rows)
 
 
 def main():

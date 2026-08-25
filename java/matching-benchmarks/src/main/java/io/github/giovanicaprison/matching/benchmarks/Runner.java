@@ -5,7 +5,9 @@ import io.github.giovanicaprison.matching.flow.CommandLog;
 import io.github.giovanicaprison.matching.flow.FlowGenerator;
 import io.github.giovanicaprison.matching.flow.FlowParameters;
 import java.nio.file.Path;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * One run of one implementation, from the command line.
@@ -33,7 +35,8 @@ public final class Runner {
     "results",
     "cores",
     "composition",
-    "auction-every"
+    "auction-every",
+    "counters"
   };
 
   private Runner() {}
@@ -66,6 +69,7 @@ public final class Runner {
 
     final Measurement.Outcome outcome = Measurement.run(log, factoryOf(implementation), parameters);
     outcome.writeTo(run);
+    writeTypes(run, log);
 
     report(run, manifest, environment, parameters, outcome);
   }
@@ -92,7 +96,46 @@ public final class Runner {
         1 << 24,
         1 << 24,
         coresOf(parsed.text("cores", "")),
-        Counter.few());
+        countersOf(parsed.text("counters", "")));
+  }
+
+  /**
+   * Which counters to bracket the reported region with, from the catalogue by name.
+   *
+   * <p>The default set fits any processor's slots. Asking for more is how an investigation run
+   * chases a mechanism, and a set too large to schedule shows up as multiplexed in the record
+   * rather than as a refusal here.
+   */
+  private static Set<Counter> countersOf(final String names) {
+    if (names.isBlank()) {
+      return Counter.few();
+    }
+    final EnumSet<Counter> wanted = EnumSet.noneOf(Counter.class);
+    for (final String name : names.split(",")) {
+      wanted.add(Counter.valueOf(name.strip()));
+    }
+    return wanted;
+  }
+
+  /**
+   * One byte per recorded command saying what the command was, so analysis can attribute latency
+   * per command type (NFR-4.4) by joining position for position with the timings. Written from the
+   * log after the run, so nothing on the measured path knows it exists.
+   */
+  private static void writeTypes(final Run run, final CommandLog log) {
+    final int recorded = log.count() - log.measuredFrom();
+    final java.nio.ByteBuffer out =
+        java.nio.ByteBuffer.allocate(8 + Integer.BYTES + recorded)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN);
+    out.put("METYPES1".getBytes(java.nio.charset.StandardCharsets.UTF_8)).putInt(recorded);
+    for (int command = log.measuredFrom(); command < log.count(); command++) {
+      out.put((byte) log.templateId(command));
+    }
+    try {
+      java.nio.file.Files.write(run.file("types.bin"), out.array());
+    } catch (final java.io.IOException e) {
+      throw new java.io.UncheckedIOException("cannot write the command types", e);
+    }
   }
 
   /**
