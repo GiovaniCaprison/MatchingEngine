@@ -50,6 +50,7 @@ public final class NaiveEngine implements MatchingEngine {
   private Instrument instrument;
   private SessionState state = SessionState.PRE_OPEN;
   private long reference;
+  private long lastExecuted;
   private long nextOrderId = 1;
   private long nextExecutionId = 1;
   private long arrival;
@@ -69,6 +70,16 @@ public final class NaiveEngine implements MatchingEngine {
    */
   List<Order> resting() {
     return book.orders();
+  }
+
+  /** The stops that have not fired, for the invariant that says which ones those are (NFR-3.3). */
+  List<Order> waiting() {
+    return triggers.stops();
+  }
+
+  /** The last price anything executed at, which is what a stop is measured against. */
+  long lastExecutedPrice() {
+    return lastExecuted;
   }
 
   @Override
@@ -155,6 +166,11 @@ public final class NaiveEngine implements MatchingEngine {
   private void admit(final Order order) {
     if (order.stop()) {
       triggers.add(order);
+      // (FR-6.6) A stop whose price the market has already reached is due now. Left waiting it
+      // would
+      // fire on whatever executes next, at a price that has nothing to do with its condition, or
+      // never fire at all if the market does not come back.
+      fireTriggers();
       return;
     }
     if (matching()) {
@@ -170,6 +186,7 @@ public final class NaiveEngine implements MatchingEngine {
       return;
     }
     if (order.restsOnRemainder()) {
+      order.rest(++arrival);
       book.add(order);
       feed.rested(order);
       reportIndicative();
@@ -220,6 +237,7 @@ public final class NaiveEngine implements MatchingEngine {
     final boolean replenishes = resting.take(quantity);
     feed.executed(nextExecutionId++, taker.id(), resting.id(), price, quantity);
     reference = price;
+    lastExecuted = price;
     if (resting.remaining() == 0) {
       // A resting order executed in full gets no removal event: a consumer tracking quantity has
       // already seen it reach zero.
@@ -229,7 +247,7 @@ public final class NaiveEngine implements MatchingEngine {
     if (replenishes) {
       // (FR-5.4) The next tranche joins the back of the queue at its price, which to a consumer is
       // indistinguishable from a new order arriving there. That is what an iceberg is for.
-      resting.replenish(++arrival);
+      resting.rest(++arrival);
       feed.rested(resting);
     }
   }
@@ -285,14 +303,22 @@ public final class NaiveEngine implements MatchingEngine {
    * reaches.
    */
   private void fireTriggers() {
-    final Deque<Order> pending = new ArrayDeque<>(triggers.fire(reference));
+    if (lastExecuted == 0) {
+      // Nothing has executed, so there is no last executed price and no stop can have been reached.
+      // The band's reference price stands in for one when validating a price, and it is not one:
+      // a stop asks what the market has done, not where it was told to start.
+      return;
+    }
+    final Deque<Order> pending = new ArrayDeque<>(triggers.fire(lastExecuted));
     while (!pending.isEmpty()) {
       final Order fired = pending.removeFirst();
       feed.triggered(fired);
       final Order order = fired.triggered(++arrival);
-      match(order);
+      if (matching()) {
+        match(order);
+      }
       settle(order);
-      pending.addAll(triggers.fire(reference));
+      pending.addAll(triggers.fire(lastExecuted));
     }
   }
 
@@ -456,6 +482,7 @@ public final class NaiveEngine implements MatchingEngine {
       }
     }
     reference = price;
+    lastExecuted = price;
     fireTriggers();
   }
 
@@ -486,7 +513,7 @@ public final class NaiveEngine implements MatchingEngine {
     if (order.remaining() == 0) {
       book.remove(order);
     } else if (replenishes) {
-      order.replenish(++arrival);
+      order.rest(++arrival);
       feed.rested(order);
     }
   }

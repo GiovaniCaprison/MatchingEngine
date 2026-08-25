@@ -112,20 +112,45 @@ final class TestSources {
   /**
    * The brace that opens the block, which is not always the next one in the text.
    *
-   * <p>An annotation can carry a brace inside a string, and {@code @ParameterizedTest(name =
-   * "{0}")} is the common case. Taking the next brace there reads the format string as the method
-   * body and calls a perfectly good test hollow.
+   * <p>An annotation can carry braces of its own, in a string as {@code @ParameterizedTest(name =
+   * "{0}")} or in an array as {@code @ValueSource(longs = {1, 2})}. Taking the next brace reads one
+   * of those as the method body and calls a perfectly good test hollow, so whole argument lists are
+   * skipped rather than only the literals inside them.
    */
   private static int openingBrace(final String source, final int from) {
     for (int at = from; at < source.length(); at++) {
       final char character = source.charAt(at);
       if (character == '"' || character == '\'') {
         at = endOfLiteral(source, at, character);
+      } else if (character == '(') {
+        // An annotation's arguments, which can hold braces of their own. A display name of "{0}"
+        // and a
+        // value source of {1, 2, 3} both look like a method body to anything taking the next brace.
+        at = endOfArguments(source, at);
       } else if (character == '{') {
         return at;
       }
     }
     return -1;
+  }
+
+  /** The closing parenthesis matching the one at {@code start}, literals inside it skipped. */
+  private static int endOfArguments(final String source, final int start) {
+    int depth = 0;
+    for (int at = start; at < source.length(); at++) {
+      final char character = source.charAt(at);
+      if (character == '"' || character == '\'') {
+        at = endOfLiteral(source, at, character);
+      } else if (character == '(') {
+        depth++;
+      } else if (character == ')') {
+        depth--;
+        if (depth == 0) {
+          return at;
+        }
+      }
+    }
+    return source.length() - 1;
   }
 
   private static int endOfLiteral(final String source, final int start, final char quote) {

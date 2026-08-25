@@ -27,6 +27,11 @@ import org.agrona.concurrent.UnsafeBuffer;
  * id, so a log is self contained: nothing in it depends on what an engine assigned, and both
  * languages replay the same bytes with no patching at all.
  *
+ * <p>The session moves when the parameters say so, alternating a call phase with continuous
+ * trading. Nothing matches during a call phase, so what the generator believes is resting drifts
+ * further from the truth across an uncrossing than it does the rest of the time, and the cancels
+ * that miss are counted like any other.
+ *
  * <p>Prices stay inside the instrument's band, so a flow does not spend itself on refusals that
  * measure the validation path and nothing else. Parameters that would reach outside it are refused
  * here rather than producing a log that measures the wrong thing.
@@ -71,6 +76,8 @@ public final class FlowGenerator {
   private int at;
   private long inputSequence;
   private int orders;
+  private int sinceStateChange;
+  private boolean inCallPhase;
 
   private FlowGenerator(final FlowParameters parameters) {
     this.parameters = parameters;
@@ -112,6 +119,13 @@ public final class FlowGenerator {
    * can set.
    */
   private void command() {
+    if (dueToChangeState()) {
+      inCallPhase = !inCallPhase;
+      session(inCallPhase ? SessionState.CLOSING_AUCTION : SessionState.CONTINUOUS);
+      sinceStateChange = 0;
+      return;
+    }
+    sinceStateChange++;
     final int draw = sequence.nextInt(Sequence.SCALE);
     int upTo = thresholds.massCancel();
     if (resting.any() && draw < upTo) {
@@ -222,10 +236,29 @@ public final class FlowGenerator {
     complete(definition.encodedLength());
   }
 
+  /**
+   * Whether the session is due to move, alternating a call phase with continuous trading.
+   *
+   * <p>The engine has no clock, so a venue's schedule reaches it as commands like everything else.
+   * A flow with no call phases never exercises an uncrossing, and an uncrossing is where the
+   * features interact most.
+   */
+  private boolean dueToChangeState() {
+    if (parameters.auctionEvery() == 0) {
+      return false;
+    }
+    return sinceStateChange
+        >= (inCallPhase ? parameters.callPhaseLength() : parameters.auctionEvery());
+  }
+
   private void open() {
+    session(SessionState.CONTINUOUS);
+  }
+
+  private void session(final SessionState state) {
     session.wrapAndApplyHeader(out, at, header);
     session.frame().instrumentId(INSTRUMENT_ID).sequence(++inputSequence);
-    session.state(SessionState.CONTINUOUS);
+    session.state(state);
     complete(session.encodedLength());
   }
 

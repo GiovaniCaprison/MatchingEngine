@@ -1,0 +1,24 @@
+# FR-5.6 an order that crossed on the way in displays a tranche of what is left
+#
+# An iceberg of a hundred showing ten, priced to take thirty on the way in. What it shows once it
+# rests follows from the seventy it has left, not from the tranche it spent taking. Subtracting
+# each execution from what it was showing would leave it displaying a negative quantity.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    CONTINUOUS
+STATE      CONTINUOUS
+
+NEW        SELL LIMIT GTC 100000 10 p=2
+ACCEPTED   #1
+RESTED     #1 SELL 100000 10
+
+NEW        SELL LIMIT GTC 100005 20 p=3
+ACCEPTED   #2
+RESTED     #2 SELL 100005 20
+
+NEW        BUY LIMIT GTC 100005 100 display=10 p=4
+ACCEPTED   #3
+EXECUTED   @1 aggressor=#3 resting=#1 100000 10
+EXECUTED   @2 aggressor=#3 resting=#2 100005 20
+RESTED     #3 BUY 100005 10

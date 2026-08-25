@@ -12,6 +12,8 @@ import io.github.giovanicaprison.matching.protocol.AllocationAlgorithm;
  * @param instrument the definition the log opens with
  * @param composition what fraction of commands is what
  * @param placement where orders go and how large they are
+ * @param auctionEvery commands between call phases, or zero to stay in continuous trading
+ *     throughout
  */
 public record FlowParameters(
     long seed,
@@ -19,7 +21,8 @@ public record FlowParameters(
     int restingOrders,
     Instrument instrument,
     Composition composition,
-    Placement placement) {
+    Placement placement,
+    int auctionEvery) {
 
   public FlowParameters {
     if (commands <= 0) {
@@ -28,6 +31,19 @@ public record FlowParameters(
     if (restingOrders < 0) {
       throw new IllegalArgumentException("resting orders cannot be negative: " + restingOrders);
     }
+    if (auctionEvery < 0) {
+      throw new IllegalArgumentException("a period cannot be negative: " + auctionEvery);
+    }
+  }
+
+  /**
+   * How long a call phase lasts, which is a tenth of the gap between them.
+   *
+   * <p>Short on purpose. Nothing matches during a call phase, so a long one is a book that only
+   * grows, and the uncrossing at the end of it stops resembling anything a venue sees.
+   */
+  public int callPhaseLength() {
+    return Math.max(1, auctionEvery / 10);
   }
 
   /**
@@ -127,6 +143,30 @@ public record FlowParameters(
 
   public static FlowParameters standard(final long seed, final int commands) {
     return new FlowParameters(
-        seed, commands, 5_000, Instrument.standard(), Composition.standard(), Placement.standard());
+        seed,
+        commands,
+        5_000,
+        Instrument.standard(),
+        Composition.standard(),
+        Placement.standard(),
+        0);
+  }
+
+  /**
+   * Continuous trading interrupted by call phases, which is what a session actually looks like.
+   *
+   * <p>Far more auctions than a day holds, because this is for finding out whether the auction path
+   * survives contact with the other features rather than for measuring anything.
+   */
+  public static FlowParameters withAuctions(
+      final long seed, final int commands, final int restingOrders) {
+    return new FlowParameters(
+        seed,
+        commands,
+        restingOrders,
+        Instrument.standard(),
+        Composition.standard(),
+        Placement.standard(),
+        commands / 20 + 1);
   }
 }

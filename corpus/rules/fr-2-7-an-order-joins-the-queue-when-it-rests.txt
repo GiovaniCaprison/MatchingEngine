@@ -1,0 +1,30 @@
+# FR-2.7 an order that crossed on the way in queues behind whatever joined while it was matching
+#
+# The buy takes the offer, which fires a stop, and the stop rests before the buy's own remainder
+# does. Both end up at the same price on the same side, and the sell that follows reaches the stop
+# first because that is the order the feed announced them in. Queueing by when the command arrived
+# rather than by when the order joined would put the remainder in front of an order the feed
+# already said was ahead of it.
+
+INSTRUMENT tick=5 lot=1 scale=4 min=1 max=1000000 band=500 open=100000 alloc=PRICE_TIME
+
+SESSION    CONTINUOUS
+STATE      CONTINUOUS
+
+NEW        SELL LIMIT GTC 100010 10 p=2
+ACCEPTED   #1
+RESTED     #1 SELL 100010 10
+
+NEW        BUY LIMIT GTC 100010 20 trigger=100010 p=3
+ACCEPTED   #2
+
+NEW        BUY LIMIT GTC 100010 30 p=4
+ACCEPTED   #3
+EXECUTED   @1 aggressor=#3 resting=#1 100010 10
+TRIGGERED  #2
+RESTED     #2 BUY 100010 20
+RESTED     #3 BUY 100010 20
+
+NEW        SELL LIMIT GTC 100010 20 p=5
+ACCEPTED   #4
+EXECUTED   @2 aggressor=#4 resting=#2 100010 20
