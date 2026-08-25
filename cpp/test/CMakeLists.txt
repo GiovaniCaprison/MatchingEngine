@@ -24,8 +24,13 @@ add_executable(corpus-subset-lean corpus_subset_lean.cpp)
 target_link_libraries(corpus-subset-lean
   PRIVATE matching-conformance matching-lean Catch2::Catch2WithMain)
 
+add_executable(harness harness.cpp)
+target_link_libraries(harness
+  PRIVATE matching-benchmarks matching-naive Catch2::Catch2WithMain)
+
 include(Catch)
 catch_discover_tests(schema-round-trip)
 catch_discover_tests(conformance-format)
 catch_discover_tests(corpus-conformance)
 catch_discover_tests(corpus-subset-lean)
+catch_discover_tests(harness)
