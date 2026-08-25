@@ -24,6 +24,7 @@
 #include "lean-indexed/lean_engine.hpp"
 #include "lean-naive/lean_engine.hpp"
 #include "naive/naive_engine.hpp"
+#include "pooled/pooled_engine.hpp"
 
 namespace {
 
@@ -46,6 +47,11 @@ benchmarks::Measurement::EngineFactory factoryOf(const std::string& name) {
   if (name == "lean-indexed") {
     return [](matching::api::EventPublisher& events) {
       return std::make_unique<matching::lean::indexed::LeanEngine>(events);
+    };
+  }
+  if (name == "pooled") {
+    return [](matching::api::EventPublisher& events) {
+      return std::make_unique<matching::pooled::PooledEngine>(events);
     };
   }
   if (name == "lean-naive") {
@@ -121,10 +127,11 @@ int main(const int count, char** arguments) {
   const std::string implementation = argument(count, arguments, "--implementation", "");
   const std::string logFile = argument(count, arguments, "--log", "");
   if (implementation.empty() || logFile.empty()) {
-    std::cerr << "usage: benchmarks --implementation naive|indexed|lean-naive|lean-indexed|decode "
-                 "--log FILE"
-              << " [--label L] [--rate N] [--warmup N] [--cores a,b,c] [--counters NAMES]"
-              << " [--results DIR]\n";
+    std::cerr
+        << "usage: benchmarks --implementation naive|indexed|pooled|lean-naive|lean-indexed|decode "
+           "--log FILE"
+        << " [--label L] [--rate N] [--warmup N] [--cores a,b,c] [--counters NAMES]"
+        << " [--results DIR]\n";
     return 2;
   }
   const std::string label = argument(count, arguments, "--label", implementation + "-cpp");

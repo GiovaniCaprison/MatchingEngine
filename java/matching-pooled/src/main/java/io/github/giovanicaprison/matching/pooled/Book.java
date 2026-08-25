@@ -146,12 +146,12 @@ final class Book {
   private int names;
 
   Book() {
-    for (int i = 0; i < 128; i++) {
+    for (int i = 0; i < 4096; i++) {
       final Level level = new Level();
       level.left = freeLevels;
       freeLevels = level;
     }
-    allocateNames(1024);
+    allocateNames(1 << 16);
   }
 
   void add(final Order order) {
