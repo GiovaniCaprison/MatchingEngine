@@ -25,6 +25,7 @@ from pathlib import Path
 
 IMPLEMENTATIONS = {
     "naive-java": "io.github.giovanicaprison.matching.naive.NaiveEngineFactory",
+    "indexed-java": "io.github.giovanicaprison.matching.indexed.IndexedEngineFactory",
     "lean-naive-java": "io.github.giovanicaprison.matching.lean.naive.LeanEngineFactory",
     "decode-java": "io.github.giovanicaprison.matching.benchmarks.DecodeOnlyEngine$Factory",
 }
@@ -35,6 +36,8 @@ IMPLEMENTATIONS = {
 CELLS = [
     ("naive-java", "standard"),
     ("naive-java", "limit-and-market"),
+    ("indexed-java", "standard"),
+    ("indexed-java", "limit-and-market"),
     ("lean-naive-java", "limit-and-market"),
     # Decode alone, on both flows, so matching cost is an engine's number minus this one
     # (NFR-4.6).
