@@ -84,7 +84,7 @@ public final class CommandLog {
   /**
    * What the command at this position is, read from its own header rather than from a side table
    * that could disagree with the messages. Tests ask this; a measurement never does, so nothing is
-   * decoded or held for it on the production path.
+   * decoded or held for it on the measured path.
    */
   public int templateId(final int command) {
     return new MessageHeaderDecoder().wrap(buffer, offsets[command]).templateId();

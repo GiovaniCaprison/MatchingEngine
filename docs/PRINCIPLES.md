@@ -193,9 +193,10 @@ A new interface needs a named second implementation. Without one, write the clas
 A field, a check or an indirection on the hot path has to exist in a real engine or earn its place
 against measurement. Convenience for the study is not a reason.
 
-The engine is both a research subject and a component intended for production, and those pull the
-same way more often than not. Where they conflict the production shape wins, because a measurement
-taken on something nobody would ship measures nothing anybody needs.
+The engine is a research subject, and the research is about engines a real venue would run, so the
+shape under measurement is the shape a real engine carries. Where convenience for the study and
+that shape conflict, the real shape wins, because a measurement taken on something nobody would
+ship measures nothing anybody needs.
 
 Two decisions this has already settled. An event carries its own sequence and nothing about its
 cause, which is how ITCH works and saves eight bytes and a store on every event published. And
@@ -217,7 +218,7 @@ only while the surrounding code treats representation as an implementation detai
 identity as meaningful, keep the level container and the order node as separate concepts, and prefer
 returning counts and indices over returning objects.
 
-Here the successors are scheduled work, and comparing them is the study.
+Here the successors are the upper rungs of the ladder, and comparing them is the study.
 
 ## Applying this
 

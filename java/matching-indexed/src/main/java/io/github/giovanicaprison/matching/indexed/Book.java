@@ -32,9 +32,9 @@ final class Book {
    * always sum to.
    *
    * <p>Intrusive because the orders carry their own links, so joining, leaving and re-queueing are
-   * each a handful of pointer writes with nothing searched and nothing allocated. That is the
-   * production shape of an indexed book, and it is more bookkeeping that can drift, which is what
-   * the invariants walk both directions to catch (NFR-3.1, NFR-3.2).
+   * each a handful of pointer writes with nothing searched and nothing allocated. That is the shape
+   * a real indexed book carries, and it is more bookkeeping that can drift, which is what the
+   * invariants walk both directions to catch (NFR-3.1, NFR-3.2).
    */
   static final class Level {
 

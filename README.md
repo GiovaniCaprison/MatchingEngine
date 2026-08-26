@@ -2,12 +2,12 @@
 
 A limit order book matching engine, and a study of how much its implementation matters.
 
-The engine is scoped to what a real matching engine owns, so it can later be a component of a larger
-exchange. Where that boundary falls, and what sits either side of it, is in
+The engine is scoped to what a real matching engine owns, so the measurements price matching work
+and nothing else. Where that boundary falls, and what sits either side of it, is in
 [SCOPE.md](docs/SCOPE.md).
 
 The study crosses the implementations below against how much of the engine's feature set the input
-actually uses, and asks whether a structural advantage survives a production one. The questions, the
+actually uses, and asks whether a structural advantage survives the full one. The questions, the
 design and what is not claimed are in [METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## Implementations
@@ -75,7 +75,7 @@ cannot reach inside one, so black box testing holds without relying on disciplin
 
 ## Documentation
 
-- [SCOPE.md](docs/SCOPE.md), where the engine ends and the exchange begins
+- [SCOPE.md](docs/SCOPE.md), where the engine ends and the rest of a venue begins
 - [PROTOCOL.md](docs/PROTOCOL.md), the commands and events that cross the boundary
 - [REQUIREMENTS.md](docs/REQUIREMENTS.md), what the engine must do, and how each line is shown to hold
 - [PRINCIPLES.md](docs/PRINCIPLES.md), why the code is shaped as it is. Read before changing a

@@ -22,7 +22,7 @@
     <googlejavaformat.version>1.35.0</googlejavaformat.version>
     <jvm.access.flags>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED --enable-native-access=ALL-UNNAMED</jvm.access.flags>
   </properties>
-  <!-- Rungs land one at a time: indexed, pooled, flyweight. -->
+  <!-- The shared machinery, one module per rung and twin, and the measurement at the end. -->
   <modules>
     <module>matching-protocol</module>
     <module>matching-api</module>
