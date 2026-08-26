@@ -122,6 +122,8 @@ class Book {
   }
 
   static void unlink(Level& level, const OrderPtr& order) {
+    // The copy is the point: it keeps the order alive while the owning forward chain lets go.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     const OrderPtr keep = order;
     if (order->previous_ == nullptr) {
       level.head = order->next_;

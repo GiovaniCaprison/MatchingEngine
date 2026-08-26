@@ -4,6 +4,11 @@ project(matching-engine CXX)
 # One rung per target as they arrive, plus conformance and benchmarks. The schema and the corpus sit
 # above this directory, so neither language owns the contract.
 
+# The compile database is how an editor's language server learns the include roots, the
+# generated headers and the language standard, so configuring once makes every file readable
+# in place. clangd finds it through .clangd beside this file.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

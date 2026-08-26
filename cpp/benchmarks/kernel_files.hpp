@@ -62,7 +62,7 @@ inline std::optional<std::string> keyed(const std::filesystem::path& root, const
   std::istringstream lines(*content);
   std::string line;
   while (std::getline(lines, line)) {
-    if (line.rfind(key, 0) == 0) {
+    if (line.starts_with(key)) {
       const auto colon = line.find(':');
       if (colon != std::string::npos) {
         return stripped(line.substr(colon + 1));

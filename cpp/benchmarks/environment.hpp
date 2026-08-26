@@ -118,7 +118,7 @@ class Environment {
     std::string line;
     long count = 0;
     while (std::getline(lines, line)) {
-      if (line.rfind("processor\t", 0) == 0) {
+      if (line.starts_with("processor\t")) {
         count++;
       }
     }
@@ -133,7 +133,7 @@ class Environment {
     std::istringstream words(*cmdline);
     std::string word;
     while (words >> word) {
-      if (word.rfind(name + "=", 0) == 0) {
+      if (word.starts_with(name + "=")) {
         return word.substr(name.size() + 1);
       }
     }
@@ -142,7 +142,7 @@ class Environment {
 
   // Paranoia at or below one is what the instruments need, so a lower value is not a failure.
   std::optional<std::string> atMostOne(const std::string& path) const {
-    const auto value = kernel_files::firstLine(root_, path);
+    auto value = kernel_files::firstLine(root_, path);
     if (!value.has_value()) {
       return std::nullopt;
     }

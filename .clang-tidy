@@ -1,0 +1,53 @@
+# The linter's remit, one file for every consumer: clangd shows these checks in the editor, and
+# the workflow runs the version of clang-tidy that .clang-format-version pins, so a finding means
+# the same thing everywhere. The groups are the ones that find bugs and pessimisations; each
+# exclusion is a check whose advice this codebase deliberately rejects, for the stated reason.
+Checks: >
+  bugprone-*,
+  performance-*,
+  portability-*,
+  modernize-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-empty-catch,
+  -bugprone-exception-escape,
+  -bugprone-nondeterministic-pointer-iteration-order,
+  -bugprone-throwing-static-initialization,
+  -bugprone-unchecked-optional-access,
+  -modernize-avoid-c-arrays,
+  -modernize-min-max-use-initializer-list,
+  -modernize-return-braced-init-list,
+  -modernize-use-auto,
+  -modernize-use-designated-initializers,
+  -modernize-use-nodiscard,
+  -modernize-use-ranges,
+  -modernize-use-trailing-return-type,
+  -performance-enum-size,
+  -portability-avoid-pragma-once
+
+# Swappable parameters: a matching engine's vocabulary is prices and quantities, which are all
+# the same integer type on purpose (the protocol's), so the check flags the hot path for being a
+# matching engine.
+# Empty catch: the one empty catch probes kernel files that may not exist and explains itself
+# inline; the outcome it swallows is recorded verbatim elsewhere.
+# Exception escape: an exception leaving main is the design (P-6): a binary fed a broken log
+# should die loudly, and catching to re-report would say the same thing with more code.
+# Nondeterministic pointer iteration: every flagged sort orders pointers by the arrival
+# comparator, and arrivals are unique, so the order is deterministic by construction.
+# Throwing static initialization: the flagged statics are the test framework's own case
+# registrars, and a throw there dies at process start, where it is wanted.
+# Unchecked optional access: the check's flow analysis cannot follow the engine's guards and
+# flags accesses the surrounding branch already proves.
+# C arrays: the fixed-size stacks and bitmap words in the hot structures are deliberate; a
+# std::array says the same thing with one more include and no more safety at these sites.
+# Min-max initializer lists, braced return, auto, designated initializers, ranges: the tree is
+# written with explicit types, explicit fields and the classic algorithms throughout, to read
+# beside its Java twin; these five ask for a different book, not a safer one.
+# Nodiscard: an attribute on every trivial accessor is noise, and nothing here returns a value
+# whose loss the type system should have to police.
+# Trailing return types: the tree is written in the leading style throughout.
+# Enum size: no enum here is stored in bulk, so a narrow base buys nothing and costs casts.
+# Pragma once: the tree's include guard convention throughout, supported by every compiler the
+# build accepts.
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(api|benchmarks|conformance|flyweight|indexed|lean-.*|naive|pooled|protocol|test)/.*\.hpp$'

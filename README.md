@@ -113,6 +113,12 @@ pre-commit hook formats what is being committed in either language, and the firs
 installs it by pointing `core.hooksPath` at `hooks/`. A machine that only ever builds the C++ side
 runs `git config core.hooksPath hooks` once by hand.
 
+The C++ side is linted by `clang-tidy` at the same pinned LLVM version, reading `.clang-tidy` at the
+root, which names each enabled group and the reason behind each exclusion. Configuring also writes
+the compile database, and `cpp/.clangd` points an editor's language server at it, so clangd compiles
+each file with the build's own flags and shows the same findings the workflow enforces. An editor
+opened before the first configure has nothing to read; `cmake -B build` fixes that.
+
 Agrona reaches `jdk.internal.misc.Unsafe` for buffer access, so the build passes
 `--add-exports java.base/jdk.internal.misc=ALL-UNNAMED`, and the harness places its threads and reads
 counters through the foreign function API, which needs `--enable-native-access=ALL-UNNAMED`. Both are
