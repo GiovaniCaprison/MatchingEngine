@@ -90,8 +90,11 @@ benchmarks::Cores coresOf(const std::string& cores) {
     return benchmarks::Cores{};
   }
   benchmarks::Cores parsed;
-  if (std::sscanf(cores.c_str(), "%d,%d,%d", &parsed.driver, &parsed.engine, &parsed.verifier) !=
-      3) {
+  std::istringstream in(cores);
+  char first = 0;
+  char second = 0;
+  if (!(in >> parsed.driver >> first >> parsed.engine >> second >> parsed.verifier) ||
+      first != ',' || second != ',') {
     throw std::invalid_argument("--cores wants three, driver first: " + cores);
   }
   return parsed;

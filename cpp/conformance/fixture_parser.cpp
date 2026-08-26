@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <utility>
 
 namespace io::github::giovanicaprison::matching::conformance {
 
@@ -11,7 +12,6 @@ namespace {
 int minimumArity(const Directive directive) {
   switch (directive) {
     case Directive::INSTRUMENT:
-      return 1;
     case Directive::SESSION:
       return 1;
     case Directive::NEW:
@@ -69,7 +69,7 @@ Element element(const std::string& name, const int number, const std::string& li
   if (const auto directive = directiveOf(first)) {
     const std::vector<std::string> arguments(parts.begin() + 1, parts.end());
     const int arity = minimumArity(*directive);
-    if (static_cast<int>(arguments.size()) < arity) {
+    if (std::cmp_less(arguments.size(), arity)) {
       throw MalformedFixture(name, number,
                              std::string(directiveName(*directive)) + " needs at least " +
                                  std::to_string(arity) + " words");

@@ -180,11 +180,13 @@ class Ladder {
 
   void clear(const std::int32_t rank) {
     const std::size_t word0 = static_cast<std::size_t>(rank) >> 6;
-    if ((bits0_[word0] &= ~(std::uint64_t{1} << (rank & 63))) != 0) {
+    bits0_[word0] &= ~(std::uint64_t{1} << (rank & 63));
+    if (bits0_[word0] != 0) {
       return;
     }
     const std::size_t word1 = word0 >> 6;
-    if ((bits1_[word1] &= ~(std::uint64_t{1} << (word0 & 63))) != 0) {
+    bits1_[word1] &= ~(std::uint64_t{1} << (word0 & 63));
+    if (bits1_[word1] != 0) {
       return;
     }
     bits2_[word1 >> 6] &= ~(std::uint64_t{1} << (word1 & 63));

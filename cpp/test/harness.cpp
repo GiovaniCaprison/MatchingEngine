@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "benchmarks/environment.hpp"
@@ -31,6 +32,7 @@ TEST_CASE("the ring carries every record across two threads, in order, wraps inc
   constexpr int MESSAGES = 200'000;
 
   std::thread producer([&ring] {
+    // NOLINTNEXTLINE(bugprone-random-generator-seed): a test wants the same sizes every run.
     std::mt19937 sizes(7);
     for (int at = 0; at < MESSAGES; at++) {
       char payload[64];
@@ -137,7 +139,7 @@ TEST_CASE("a measurement applies every command once and accounts for every event
   CHECK(outcome.harnessKeptUp());
   CHECK(outcome.verification.events() > 0);
   CHECK(outcome.verification.digest() != benchmarks::VerificationRecord::FNV_OFFSET);
-  CHECK(outcome.service.count == static_cast<std::int64_t>(log.count()));
+  CHECK(std::cmp_equal(outcome.service.count, log.count()));
   const auto counts = outcome.verification.countsByName();
   CHECK(counts.at("OrderAccepted") == 3);
   CHECK(counts.at("OrderExecuted") == 1);

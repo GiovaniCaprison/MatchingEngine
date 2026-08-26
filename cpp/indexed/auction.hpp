@@ -25,7 +25,6 @@ class Auction {
 
   static Uncrossing uncrossing(const Book& book, std::int64_t reference);
 
- private:
   Auction() = delete;
 };
 

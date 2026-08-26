@@ -31,7 +31,7 @@ inline std::optional<std::string> token(const std::filesystem::path& root, const
   std::istringstream lines(*content);
   std::string line;
   while (std::getline(lines, line)) {
-    if (line.rfind(wanted, 0) == 0) {
+    if (line.starts_with(wanted)) {
       std::istringstream words(line);
       std::string word;
       for (std::size_t at = 0; words >> word; at++) {

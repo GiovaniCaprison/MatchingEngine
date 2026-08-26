@@ -53,9 +53,9 @@ struct Manifest {
         .field("grade", grade());
     json.object("flow")
         .field("source", flowSource)
-        .field("seed", std::int64_t(0))
+        .field("seed", static_cast<std::int64_t>(0))
         .field("commands", flowCommands)
-        .field("restingOrders", std::int64_t(0))
+        .field("restingOrders", static_cast<std::int64_t>(0))
         .end();
     json.array("environment");
     for (const Setting& setting : environment.settings()) {

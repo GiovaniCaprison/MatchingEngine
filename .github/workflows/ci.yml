@@ -89,3 +89,9 @@ jobs:
           find . -path ./build -prune -o \( -name '*.cpp' -o -name '*.hpp' \) -print0 \
             | xargs -0 pipx run clang-format==$(cat ../.clang-format-version) --dry-run --Werror
         working-directory: cpp
+      # The linter at the same pinned LLVM version, reading .clang-tidy and the compile database
+      # the configure step wrote, so the runner, a laptop and an editor's clangd agree on every
+      # finding. Sources only: headers are checked through their includers via HeaderFilterRegex.
+      - run: |
+          git ls-files '*.cpp' \
+            | xargs pipx run clang-tidy==$(cat .clang-format-version) -p cpp/build --quiet

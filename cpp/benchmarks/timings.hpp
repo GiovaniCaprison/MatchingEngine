@@ -80,8 +80,9 @@ class Timings {
       return out;
     }
     const auto at = [&values](const double percentile) {
-      const std::size_t index =
-          std::min(values.size() - 1, static_cast<std::size_t>(percentile / 100.0 * values.size()));
+      const std::size_t index = std::min(
+          values.size() - 1,
+          static_cast<std::size_t>(percentile / 100.0 * static_cast<double>(values.size())));
       return values[index];
     };
     out.p50 = at(50.0);

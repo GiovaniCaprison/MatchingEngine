@@ -165,7 +165,7 @@ class Book {
   }
 
   template <typename Iterator>
-  std::int64_t fillableOver(Iterator at, const Iterator end, const protocol::Side::Value takerSide,
+  std::int64_t fillableOver(Iterator at, const Iterator& end, const protocol::Side::Value takerSide,
                             const std::int64_t limit, const std::uint64_t smpId) const {
     std::int64_t total = 0;
     for (; at != end; ++at) {
@@ -199,7 +199,9 @@ class Book {
   }
 
   static void unlink(Level& level, const OrderPtr& order) {
-    const OrderPtr keep = order;  // The forward chain owns; hold on while relinking.
+    // The copy is the point: it keeps the order alive while the owning forward chain lets go.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+    const OrderPtr keep = order;
     if (order->previous_ == nullptr) {
       level.head = order->next_;
     } else {

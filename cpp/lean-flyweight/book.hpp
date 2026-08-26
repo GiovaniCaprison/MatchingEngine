@@ -186,12 +186,14 @@ class Book {
   void clear(const std::int32_t side, const std::int32_t rank) {
     std::vector<std::uint64_t>& bits0 = side == 0 ? bidBits0_ : askBits0_;
     const std::size_t word0 = static_cast<std::size_t>(rank) >> 6;
-    if ((bits0[word0] &= ~(std::uint64_t{1} << (rank & 63))) != 0) {
+    bits0[word0] &= ~(std::uint64_t{1} << (rank & 63));
+    if (bits0[word0] != 0) {
       return;
     }
     std::vector<std::uint64_t>& bits1 = side == 0 ? bidBits1_ : askBits1_;
     const std::size_t word1 = word0 >> 6;
-    if ((bits1[word1] &= ~(std::uint64_t{1} << (word0 & 63))) != 0) {
+    bits1[word1] &= ~(std::uint64_t{1} << (word0 & 63));
+    if (bits1[word1] != 0) {
       return;
     }
     (side == 0 ? bidBits2_ : askBits2_)[word1 >> 6] &= ~(std::uint64_t{1} << (word1 & 63));
