@@ -1,4 +1,5 @@
 # Points clangd at the compile database the configure step writes, so the editor compiles each
 # file with the flags the build uses. Run cmake -B build once after a fresh clone or the editor
 # has nothing to read.
-CompilationDatabase: build
+CompileFlags:
+  CompilationDatabase: build
