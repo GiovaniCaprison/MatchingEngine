@@ -207,7 +207,7 @@ public final class Environment {
     if (cmdline == null) {
       return null;
     }
-    for (final String token : cmdline.split("\\s+")) {
+    for (final String token : cmdline.split("\\s+", -1)) {
       if (token.startsWith(name + "=")) {
         return token.substring(name.length() + 1);
       }

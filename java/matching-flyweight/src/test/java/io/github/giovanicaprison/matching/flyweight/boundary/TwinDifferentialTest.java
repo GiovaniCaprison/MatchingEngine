@@ -8,6 +8,7 @@ import io.github.giovanicaprison.matching.flow.CommandLog;
 import io.github.giovanicaprison.matching.flow.FlowGenerator;
 import io.github.giovanicaprison.matching.flow.FlowParameters;
 import io.github.giovanicaprison.matching.flyweight.FlyweightEngineFactory;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -41,7 +42,7 @@ class TwinDifferentialTest {
         new ProcessBuilder(binary.toString(), logFile.toString(), eventsFile.toString())
             .redirectErrorStream(true)
             .start();
-    final String said = new String(process.getInputStream().readAllBytes());
+    final String said = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     assertThat(process.waitFor()).as("the C++ replay has to finish cleanly: %s", said).isZero();
 
     final byte[] ours = DifferentialReplay.replay(log, new FlyweightEngineFactory());

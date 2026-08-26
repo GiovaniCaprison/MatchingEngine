@@ -113,7 +113,10 @@ pre-commit hook formats what is being committed in either language, and the firs
 installs it by pointing `core.hooksPath` at `hooks/`. A machine that only ever builds the C++ side
 runs `git config core.hooksPath hooks` once by hand.
 
-The C++ side is linted by `clang-tidy` at the same pinned LLVM version, reading `.clang-tidy` at the
+The Java side is linted by Error Prone riding inside javac, pinned in the parent pom, with findings
+promoted to compile errors, so a bug pattern it can prove fails the build the moment it is written. A
+deliberate exception is a `SuppressWarnings` at the site with its reason beside it. The C++ side is
+linted by `clang-tidy` at the same pinned LLVM version, reading `.clang-tidy` at the
 root, which names each enabled group and the reason behind each exclusion. Configuring also writes
 the compile database, and `cpp/.clangd` points an editor's language server at it, so clangd compiles
 each file with the build's own flags and shows the same findings the workflow enforces. An editor

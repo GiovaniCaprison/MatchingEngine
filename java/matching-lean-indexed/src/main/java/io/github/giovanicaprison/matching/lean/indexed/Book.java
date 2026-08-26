@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 
 /**
@@ -17,7 +18,12 @@ import java.util.TreeMap;
  */
 final class Book {
 
-  /** One price: its queue as an intrusive chain, and the running total of what it shows. */
+  /**
+   * One price: its queue as an intrusive chain, and the running total of what it shows. The unread
+   * fields stay: the twin carries the full rung's level shape so the comparison isolates the
+   * feature set, and what the features would have read is part of the shape (P-16).
+   */
+  @SuppressWarnings("UnusedVariable")
   static final class Level {
 
     private final long price;
@@ -115,7 +121,7 @@ final class Book {
     return found;
   }
 
-  private TreeMap<Long, Level> side(final Side side) {
+  private NavigableMap<Long, Level> side(final Side side) {
     return side == Side.BUY ? bids : asks;
   }
 

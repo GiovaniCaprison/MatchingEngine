@@ -126,7 +126,7 @@ public final class Runner {
       return Counter.few();
     }
     final EnumSet<Counter> wanted = EnumSet.noneOf(Counter.class);
-    for (final String name : names.split(",")) {
+    for (final String name : names.split(",", -1)) {
       wanted.add(Counter.valueOf(name.strip()));
     }
     return wanted;
@@ -171,7 +171,7 @@ public final class Runner {
     if (cores.isBlank()) {
       return MeasurementParameters.Cores.anywhere();
     }
-    final String[] parts = cores.split(",");
+    final String[] parts = cores.split(",", -1);
     if (parts.length != 3) {
       throw new IllegalArgumentException("--cores wants three, driver first: " + cores);
     }
@@ -182,7 +182,10 @@ public final class Runner {
   }
 
   private static MatchingEngineFactory factoryOf(final String name) throws Exception {
-    return (MatchingEngineFactory) Class.forName(name).getDeclaredConstructor().newInstance();
+    return Class.forName(name)
+        .asSubclass(MatchingEngineFactory.class)
+        .getDeclaredConstructor()
+        .newInstance();
   }
 
   private static String simpleName(final String implementation) {
@@ -202,7 +205,7 @@ public final class Runner {
       final Environment environment,
       final MeasurementParameters parameters,
       final Measurement.Outcome outcome) {
-    final long commands = outcome.timings().recorded() - parameters.compilationWarmup();
+    final long commands = (long) outcome.timings().recorded() - parameters.compilationWarmup();
     System.out.printf("run          %s%n", run.id());
     System.out.printf("grade        %s%n", manifest.grade());
     System.out.printf(

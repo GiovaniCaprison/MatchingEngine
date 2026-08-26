@@ -20,7 +20,7 @@ final class CpuList {
     if (list == null || list.isBlank()) {
       return parsed;
     }
-    for (final String part : list.strip().split(",")) {
+    for (final String part : list.strip().split(",", -1)) {
       final int dash = part.indexOf('-');
       try {
         if (dash < 0) {

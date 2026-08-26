@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 
 /**
@@ -216,7 +217,7 @@ public final class Calibration {
   }
 
   private void take(final long side, final long price, final long shares) {
-    final TreeMap<Long, Long> levels = levels((char) side);
+    final NavigableMap<Long, Long> levels = levels((char) side);
     final Long standing = levels.get(price);
     if (standing == null) {
       return;
@@ -242,7 +243,7 @@ public final class Calibration {
     }
   }
 
-  private TreeMap<Long, Long> levels(final char side) {
+  private NavigableMap<Long, Long> levels(final char side) {
     return side == 'B' ? bids : asks;
   }
 

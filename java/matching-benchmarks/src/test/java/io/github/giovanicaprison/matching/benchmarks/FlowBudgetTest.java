@@ -67,6 +67,9 @@ class FlowBudgetTest {
   }
 
   private static MatchingEngineFactory factory() throws Exception {
-    return (MatchingEngineFactory) Class.forName(NAIVE).getDeclaredConstructor().newInstance();
+    return Class.forName(NAIVE)
+        .asSubclass(MatchingEngineFactory.class)
+        .getDeclaredConstructor()
+        .newInstance();
   }
 }

@@ -176,6 +176,30 @@
         </executions>
       </plugin>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <!--
+            Error Prone rides inside javac and refuses the bug patterns it can prove, so linting
+            is part of compiling rather than a separate opinion. A finding fails the build; a
+            deliberate exception is a SuppressWarnings at the site with its reason beside it.
+            Generated codecs are exempt: their shape belongs to the schema, not to this build.
+          -->
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.errorprone</groupId>
+              <artifactId>error_prone_core</artifactId>
+              <version>2.50.0</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-XDcompilePolicy=simple</arg>
+            <arg>--should-stop=ifError=FLOW</arg>
+            <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-sources/.*</arg>
+            <arg>-Werror</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>

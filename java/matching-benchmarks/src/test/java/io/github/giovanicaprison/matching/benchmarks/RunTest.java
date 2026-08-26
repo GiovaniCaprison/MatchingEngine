@@ -44,8 +44,10 @@ class RunTest {
     Files.writeString(repository.resolve(".git/HEAD"), "ref: refs/heads/main\n");
     Files.writeString(
         repository.resolve(".git/packed-refs"),
-        "# pack-refs with: peeled fully-peeled sorted\n"
-            + "1111111111111111111111111111111111111111 refs/heads/main\n");
+        """
+        # pack-refs with: peeled fully-peeled sorted
+        1111111111111111111111111111111111111111 refs/heads/main
+        """);
 
     assertThat(Git.head(repository)).isEqualTo("1111111111111111111111111111111111111111");
     assertThat(Git.head(results.resolve("nowhere"))).isEqualTo(Git.UNKNOWN);

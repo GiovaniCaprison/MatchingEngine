@@ -34,6 +34,8 @@ public final class FlowReplay implements io.github.giovanicaprison.matching.api.
   public interface Invariants {
 
     /**
+     * Holds whatever the caller wants to be true after every command.
+     *
      * @param command which command has just been applied, counting from zero
      * @param rebuilt the book a consumer would be holding
      */
