@@ -97,9 +97,9 @@ mvn test        unit tests, the corpus, and the gates
 
 ```
 cd cpp
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-ctest --test-dir build
+cmake -B build -DCMAKE_BUILD_TYPE=Release    configure, fetching the pinned tools on first run
+cmake --build build                          build everything, generating the codecs first
+ctest --test-dir build                       the corpus, the differentials, and the unit tests
 ```
 
 Configuring fetches the codec generator and the test framework by exact version and checksum into the
