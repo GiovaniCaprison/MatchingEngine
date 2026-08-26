@@ -165,7 +165,7 @@ class Book {
   }
 
   template <typename Iterator>
-  std::int64_t fillableOver(Iterator at, const Iterator end, const protocol::Side::Value takerSide,
+  std::int64_t fillableOver(Iterator at, const Iterator& end, const protocol::Side::Value takerSide,
                             const std::int64_t limit, const std::uint64_t smpId) const {
     std::int64_t total = 0;
     for (; at != end; ++at) {
