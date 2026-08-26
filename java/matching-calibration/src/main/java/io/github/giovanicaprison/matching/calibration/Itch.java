@@ -78,6 +78,7 @@ final class Itch {
     return decode(length);
   }
 
+  @SuppressWarnings("UnusedVariable") // Every decoder takes the frame the feed hands it.
   private Message decode(final int length) {
     message.clear();
     message.type = (char) (body[0] & 0xFF);
@@ -139,7 +140,7 @@ final class Itch {
   private long unsigned(final int offset, final int bytes) {
     long value = 0;
     for (int at = 0; at < bytes; at++) {
-      value = value << 8 | body[offset + at] & 0xFFL;
+      value = (value << 8) | (body[offset + at] & 0xFFL);
     }
     return value;
   }

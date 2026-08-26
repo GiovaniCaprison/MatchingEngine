@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 
 /**
@@ -211,7 +212,7 @@ final class Book {
     return side(side).values();
   }
 
-  private TreeMap<Long, Level> side(final Side side) {
+  private NavigableMap<Long, Level> side(final Side side) {
     return side == Side.BUY ? bids : asks;
   }
 

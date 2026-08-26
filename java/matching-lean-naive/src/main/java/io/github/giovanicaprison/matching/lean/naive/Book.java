@@ -44,7 +44,7 @@ final class Book {
       }
       if (best == null
           || better(restingSide, order.price(), best.price())
-          || order.price() == best.price() && order.arrival() < best.arrival()) {
+          || (order.price() == best.price() && order.arrival() < best.arrival())) {
         best = order;
       }
     }

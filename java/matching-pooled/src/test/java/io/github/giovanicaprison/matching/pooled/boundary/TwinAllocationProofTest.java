@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import io.github.giovanicaprison.matching.flow.CommandLog;
 import io.github.giovanicaprison.matching.flow.FlowGenerator;
 import io.github.giovanicaprison.matching.flow.FlowParameters;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +35,7 @@ class TwinAllocationProofTest {
 
     final Process process =
         new ProcessBuilder(binary.toString(), logFile.toString()).redirectErrorStream(true).start();
-    final String said = new String(process.getInputStream().readAllBytes());
+    final String said = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     assertThat(process.waitFor())
         .as("the probe's allocator was asked during the session: %s", said)
         .isZero();

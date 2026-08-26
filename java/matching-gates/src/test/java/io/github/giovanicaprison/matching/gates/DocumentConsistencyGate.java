@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -196,7 +197,7 @@ class DocumentConsistencyGate {
    * renames and removals and not on spelling.
    */
   private static boolean containsWord(final String message, final String word) {
-    return message.toLowerCase().contains(word.toLowerCase());
+    return message.toLowerCase(Locale.ROOT).contains(word.toLowerCase(Locale.ROOT));
   }
 
   /** The leading words of the example fixture in the corpus format section of TESTING.md. */

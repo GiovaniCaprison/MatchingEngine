@@ -52,7 +52,6 @@ final class Slab {
   private static final int DISPLAY_SIZE = 12;
 
   private static final int STRIDE_SHIFT = 4;
-  private static final int STRIDE = 1 << STRIDE_SHIFT;
 
   private long[] cells;
   private int capacity;

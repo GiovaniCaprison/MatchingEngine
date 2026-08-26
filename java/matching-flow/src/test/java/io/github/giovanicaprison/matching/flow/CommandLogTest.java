@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +41,7 @@ class CommandLogTest {
   @DisplayName("a file that is not a log is refused")
   void something_else_is_refused() throws IOException {
     final Path file = directory.resolve("not-a-log");
-    Files.write(file, "MEFLOW99 and then some".getBytes());
+    Files.write(file, "MEFLOW99 and then some".getBytes(StandardCharsets.UTF_8));
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> CommandLog.readFrom(file))

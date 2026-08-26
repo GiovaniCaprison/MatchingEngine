@@ -135,7 +135,7 @@ final class CommandWriter {
     cancel.frame().instrumentId(INSTRUMENT_ID).sequence(sequence);
     cancel
         .clientOrderId(reference)
-        .participantId((int) number(options, "p", references.participant(reference)));
+        .participantId(number(options, "p", references.participant(reference)));
     return length(cancel.encodedLength());
   }
 
@@ -155,7 +155,7 @@ final class CommandWriter {
     final Map<String, String> options = options(arguments);
     massCancel.wrapAndApplyHeader(buffer, 0, header);
     massCancel.frame().instrumentId(INSTRUMENT_ID).sequence(sequence);
-    massCancel.clientOrderId(0).participantId((int) number(options, "p"));
+    massCancel.clientOrderId(0).participantId(number(options, "p"));
     return length(massCancel.encodedLength());
   }
 

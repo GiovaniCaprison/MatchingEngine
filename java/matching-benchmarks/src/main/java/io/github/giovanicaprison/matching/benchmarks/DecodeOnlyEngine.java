@@ -25,6 +25,9 @@ import org.agrona.DirectBuffer;
  * dead-code eliminated into measuring nothing. No event is published: an output would put encode
  * cost inside a number that exists to isolate decode.
  */
+// Counting by ordinal into a flat array is deliberate: this engine exists to price decode
+// alone, so nothing heavier than an index stands between it and the tally.
+@SuppressWarnings("EnumOrdinal")
 public final class DecodeOnlyEngine implements MatchingEngine {
 
   private final MessageHeaderDecoder header = new MessageHeaderDecoder();
