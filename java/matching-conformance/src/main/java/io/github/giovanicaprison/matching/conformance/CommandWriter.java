@@ -26,8 +26,8 @@ import org.agrona.MutableDirectBuffer;
  * against any implementation without knowing how it numbers anything.
  *
  * <p>The instrument id and the input sequence are the harness's, not the fixture's. Nothing a
- * fixture writes decides them, which is the same arrangement the engine has in production: input
- * arrives already sequenced.
+ * fixture writes decides them, which is the arrangement the engine always has: input arrives
+ * already sequenced.
  *
  * <p>A refusal is rendered by the client order id, so {@code REJECTED #1 UNKNOWN_ORDER} names the
  * order the command meant rather than the position in the file it occupied.

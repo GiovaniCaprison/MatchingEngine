@@ -3,8 +3,9 @@
 A matching engine is a deterministic function from an ordered stream of commands for one instrument
 to an ordered stream of events sufficient to rebuild its book.
 
-The engine is built to be a component of an exchange, so its boundary matters more than its feature
-list. The components either side of it are a separate project.
+The engine is scoped to what a real venue's matching engine owns, so its boundary matters more than
+its feature list: a study that cannot say where matching ends cannot say what matching costs. The
+components either side of it appear here only as the shape of the input and the output.
 
 ## Where the engine sits
 

@@ -1,8 +1,7 @@
 // Turns a fixture command into the bytes an engine receives. An order reference is the client
 // order id the harness gave that order, so a cancel or a replace needs nothing an engine has to
 // report first, and the instrument id and input sequence are the harness's rather than the
-// fixture's, which is the arrangement the engine has in production: input arrives already
-// sequenced.
+// fixture's, which is the arrangement the engine always has: input arrives already sequenced.
 
 #pragma once
 

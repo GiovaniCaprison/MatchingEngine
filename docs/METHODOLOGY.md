@@ -20,12 +20,13 @@ producing a ratio. With a C++ implementation at a matched layout, language separ
 step between implementations isolates layout, and the step between languages at a fixed layout
 isolates the runtime.
 
-Does a structural advantage survive a production feature set. This is the primary question and its
-answer is not predictable. A flat price ladder's advantage may shrink once a trigger book must be
+Does a structural advantage survive a venue's whole feature set. This is the primary question and
+its answer is not predictable. A flat price ladder's advantage may shrink once a trigger book must be
 consulted after every execution and iceberg replenishment forces indirection the layout cannot
 remove.
 
-A fifth result comes from the same harness and is the most relevant to a production operator. An
+A fifth result comes from the same harness and is the one the operator of a real venue would read
+first. An
 engine warmed on one market regime, tight spread and shallow book, and then given another, wide and
 deep and bursty, may deoptimise or continue on a badly specialised profile. A native implementation
 has no equivalent failure, so it serves as a control. A single ratio conceals this entirely.
@@ -326,8 +327,8 @@ of them. Findings are conditional on all of it.
 One instrument, one book, one machine. Nothing here measures a multi-instrument deployment, cross
 core publication, or contention, because the engine is single writer by construction.
 
-The runtime's steady state under a benchmark may not be its steady state in production, where the
-flow mix shifts through a session. The regime change result exists because of this, and it bounds
+The runtime's steady state under a benchmark may not be its steady state under real flow, where
+the mix shifts through a session. The regime change result exists because of this, and it bounds
 rather than removes the concern.
 
 Both language implementations are written by the same person. That controls for algorithm and
@@ -335,7 +336,7 @@ familiarity and introduces a uniform skill ceiling. Where the two cannot be made
 equivalent, the difference is recorded: a virtual call in one language against a
 devirtualised interface in the other is not a language finding.
 
-Buffer bounds checking is on by default in the buffer library and off in a production deployment.
+Buffer bounds checking is on by default in the buffer library and off in a real deployment.
 Every number names the setting it was taken under, and the difference between the two is reported as
 a result.
 
