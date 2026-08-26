@@ -1,5 +1,9 @@
-# Every change runs the whole build on a runner. The gates in matching-gates only bite when
-# something runs them, and a gate that waits for somebody to remember is a gate that fires late.
+# What runs is what the diff can reach. A pull request verifies the modules it names and their
+# dependents, a diff that stays inside one language leaves the other job untouched, and a change
+# to shared ground, the schema, the corpus, the docs, the build itself, verifies everything. Every
+# push to main verifies everything in both languages, so the scoping can only ever delay a
+# discovery to the merge, never past it. scripts/scope.py is the map and says why it is shaped the
+# way it is.
 name: ci
 
 on:
@@ -14,7 +18,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      java: ${{ steps.decide.outputs.java }}
+      cpp: ${{ steps.decide.outputs.cpp }}
+      modules: ${{ steps.decide.outputs.modules }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history, so the base of the diff is present to diff against.
+          fetch-depth: 0
+      - id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            git diff --name-only "$BASE"...HEAD | python3 scripts/scope.py "$EVENT"
+          else
+            python3 scripts/scope.py "$EVENT" </dev/null
+          fi >> "$GITHUB_OUTPUT"
+
   java:
+    needs: scope
+    if: needs.scope.outputs.java == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,10 +56,23 @@ jobs:
       # One reactor thread per core: the modules are independent and surefire forks one JVM per
       # module, so the engines still run one to a process and the heavy invariants suites run
       # beside each other instead of after each other.
-      - run: mvn --batch-mode -T 1C verify
+      - if: needs.scope.outputs.modules == ''
+        run: mvn --batch-mode -T 1C verify
+        working-directory: java
+      # The narrowed build still installs the whole reactor first, without tests, so the format
+      # check covers every file and the scoped modules resolve their dependencies; then the named
+      # modules and everything depending on them verify in full.
+      - if: needs.scope.outputs.modules != ''
+        env:
+          MODULES: ${{ needs.scope.outputs.modules }}
+        run: |
+          mvn --batch-mode -T 1C install -DskipTests
+          mvn --batch-mode -T 1C -pl "$MODULES" -amd verify
         working-directory: java
 
   cpp:
+    needs: scope
+    if: needs.scope.outputs.cpp == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

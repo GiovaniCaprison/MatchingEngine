@@ -140,6 +140,11 @@ for one are in [METHODOLOGY.md](docs/METHODOLOGY.md).
 ## Conventions
 
 Commit messages read `(category): what I am actually doing`. Branches are one change each and land
-through a pull request, and every pull request runs the whole build on a runner: `mvn verify` on the
-Java side, then the CMake build, `ctest` and `clang-format` on the C++ side. What lands is what
-passed on a machine nobody's editor had prepared.
+through a pull request. A pull request verifies what its diff can reach: a change inside one engine
+module runs that module and everything depending on it, a change to shared ground, the schema, the
+corpus, the docs or the build itself, runs everything, and a diff that stays inside one language
+leaves the other side's job untouched. `scripts/scope.py` is the map. Every merge to main runs the
+whole build in both languages: `mvn verify` on the Java side, then the CMake build, `ctest` and
+`clang-format` on the C++ side. What lands is what passed on a machine nobody's editor had
+prepared, and the full run on main means a hole in the scoping is caught one merge later rather
+than never.
