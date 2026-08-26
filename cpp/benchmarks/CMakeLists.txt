@@ -25,8 +25,10 @@ elseif(MATCHING_PGO STREQUAL "use")
   target_link_options(benchmarks PRIVATE -fprofile-use)
 endif()
 
+# CMAKE_CXX_FLAGS joins the record because campaign builds pass -march through it, and the
+# architecture a binary was tuned for belongs in every manifest it writes.
 target_compile_definitions(benchmarks PRIVATE
-  MATCHING_BUILD_FLAGS="${CMAKE_BUILD_TYPE} LTO=${MATCHING_LTO} PGO=${MATCHING_PGO}")
+  MATCHING_BUILD_FLAGS="${CMAKE_BUILD_TYPE} LTO=${MATCHING_LTO} PGO=${MATCHING_PGO} CXXFLAGS=${CMAKE_CXX_FLAGS}")
 
 # The harness headers as a library for the tests, carrying the same build flag record.
 add_library(matching-benchmarks INTERFACE)
