@@ -36,6 +36,7 @@
     <module>matching-pooled</module>
     <module>matching-lean-pooled</module>
     <module>matching-flyweight</module>
+    <module>matching-lean-flyweight</module>
     <module>matching-calibration</module>
     <module>matching-benchmarks</module>
   </modules>
@@ -104,6 +105,11 @@
       <dependency>
         <groupId>io.github.giovanicaprison</groupId>
         <artifactId>matching-flyweight</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.giovanicaprison</groupId>
+        <artifactId>matching-lean-flyweight</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

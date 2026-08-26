@@ -30,6 +30,8 @@ IMPLEMENTATIONS = {
     "lean-indexed-java": "io.github.giovanicaprison.matching.lean.indexed.LeanEngineFactory",
     "pooled-java": "io.github.giovanicaprison.matching.pooled.PooledEngineFactory",
     "lean-pooled-java": "io.github.giovanicaprison.matching.lean.pooled.LeanEngineFactory",
+    "flyweight-java": "io.github.giovanicaprison.matching.flyweight.FlyweightEngineFactory",
+    "lean-flyweight-java": "io.github.giovanicaprison.matching.lean.flyweight.LeanEngineFactory",
     "decode-java": "io.github.giovanicaprison.matching.benchmarks.DecodeOnlyEngine$Factory",
 }
 
@@ -46,6 +48,9 @@ CELLS = [
     ("pooled-java", "standard"),
     ("pooled-java", "limit-and-market"),
     ("lean-pooled-java", "limit-and-market"),
+    ("flyweight-java", "standard"),
+    ("flyweight-java", "limit-and-market"),
+    ("lean-flyweight-java", "limit-and-market"),
     # Decode alone, on both flows, so matching cost is an engine's number minus this one
     # (NFR-4.6).
     ("decode-java", "standard"),
