@@ -50,6 +50,8 @@ java/       matching-protocol      the generated codecs
             matching-lean-indexed  rung one's lean twin
             matching-pooled        rung two, the allocation taken out
             matching-lean-pooled   rung two's lean twin
+            matching-flyweight     rung three, a flat ladder and orders in a slab
+            matching-lean-flyweight  rung three's lean twin
             matching-calibration   a real session measured, and replayed as commands
             matching-benchmarks    the measurement harness and the runner
 cpp/        protocol, api, conformance, benchmarks, and one directory per rung and twin: the same
