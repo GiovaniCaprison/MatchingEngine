@@ -22,6 +22,7 @@
 #include "flyweight/flyweight_engine.hpp"
 #include "indexed/indexed_engine.hpp"
 #include "io_github_giovanicaprison_matching_protocol/MessageHeader.h"
+#include "lean-flyweight/lean_engine.hpp"
 #include "lean-indexed/lean_engine.hpp"
 #include "lean-naive/lean_engine.hpp"
 #include "lean-pooled/lean_engine.hpp"
@@ -64,6 +65,11 @@ benchmarks::Measurement::EngineFactory factoryOf(const std::string& name) {
   if (name == "lean-pooled") {
     return [](matching::api::EventPublisher& events) {
       return std::make_unique<matching::lean::pooled::LeanEngine>(events);
+    };
+  }
+  if (name == "lean-flyweight") {
+    return [](matching::api::EventPublisher& events) {
+      return std::make_unique<matching::lean::flyweight::LeanEngine>(events);
     };
   }
   if (name == "lean-naive") {
@@ -140,7 +146,8 @@ int main(const int count, char** arguments) {
   const std::string logFile = argument(count, arguments, "--log", "");
   if (implementation.empty() || logFile.empty()) {
     std::cerr << "usage: benchmarks --implementation "
-                 "naive|indexed|pooled|flyweight|lean-naive|lean-indexed|lean-pooled|decode "
+                 "naive|indexed|pooled|flyweight|lean-naive|lean-indexed|lean-pooled|lean-"
+                 "flyweight|decode "
                  "--log FILE"
               << " [--label L] [--rate N] [--warmup N] [--cores a,b,c] [--counters NAMES]"
               << " [--results DIR]\n";

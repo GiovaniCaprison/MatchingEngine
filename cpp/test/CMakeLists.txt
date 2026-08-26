@@ -44,6 +44,10 @@ add_executable(corpus-subset-lean-indexed corpus_subset_lean_indexed.cpp)
 target_link_libraries(corpus-subset-lean-indexed
   PRIVATE matching-conformance matching-lean-indexed Catch2::Catch2WithMain)
 
+add_executable(corpus-subset-lean-flyweight corpus_subset_lean_flyweight.cpp)
+target_link_libraries(corpus-subset-lean-flyweight
+  PRIVATE matching-conformance matching-lean-flyweight Catch2::Catch2WithMain)
+
 add_executable(harness harness.cpp)
 target_link_libraries(harness
   PRIVATE matching-benchmarks matching-naive Catch2::Catch2WithMain)
@@ -58,4 +62,5 @@ catch_discover_tests(corpus-subset-lean-indexed)
 catch_discover_tests(corpus-pooled)
 catch_discover_tests(corpus-flyweight)
 catch_discover_tests(corpus-subset-lean-pooled)
+catch_discover_tests(corpus-subset-lean-flyweight)
 catch_discover_tests(harness)
