@@ -25,7 +25,10 @@ jobs:
           cache: maven
       # verify rather than test, because the format check binds there. This is the command a
       # working tree is held to, so the runner and a laptop can only disagree about the machine.
-      - run: mvn --batch-mode verify
+      # One reactor thread per core: the modules are independent and surefire forks one JVM per
+      # module, so the engines still run one to a process and the heavy invariants suites run
+      # beside each other instead of after each other.
+      - run: mvn --batch-mode -T 1C verify
         working-directory: java
 
   cpp:
