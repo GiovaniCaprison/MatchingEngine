@@ -37,7 +37,7 @@ representation improves is itself a finding.
 ```
 schema/     the SBE schema, generated into both languages
 corpus/     rules and scenarios with their blessed output, language neutral
-docs/       scope, protocol, requirements, principles, testing, methodology
+docs/       scope, protocol, requirements, principles, testing, methodology, campaign
 scripts/    the analysis, the campaign matrix, and the metal box setup
 java/       matching-protocol      the generated codecs
             matching-api           the three-method boundary
@@ -81,6 +81,8 @@ cannot reach inside one, so black box testing holds without relying on disciplin
 - [PRINCIPLES.md](docs/PRINCIPLES.md), why the code is shaped as it is. Read before changing a
   signature.
 - [TESTING.md](docs/TESTING.md), the correctness mechanisms and the corpus format
+- [CAMPAIGN.md](docs/CAMPAIGN.md), the runbook: how a measurement campaign is conducted on the
+  box, step by step, with the reason for every step
 - [METHODOLOGY.md](docs/METHODOLOGY.md), how performance is measured, with what, and what is recorded
 
 ## Build
