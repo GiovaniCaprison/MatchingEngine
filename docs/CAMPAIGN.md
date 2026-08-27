@@ -6,10 +6,13 @@ step names its reason, because the discipline is the research as much as the num
 
 ## The box
 
-The reference machine is a c6i.metal, two sockets of Ice Lake with the full performance counter
-unit exposed, and everything below adapts to any Intel bare metal: rehearse the whole process on
-a cheaper instance freely, but take one campaign's numbers from one instance type only, because
-latency does not compare across microarchitectures. Virtualised instances have no counters and a
+The reference machine is an m5zn.metal, two sockets of Cascade Lake at the highest all-core
+clocks EC2 sells, with the full performance counter unit exposed. The research is single-engine
+latency on three pinned cores per cell, so the clock matters and the core count does not, which
+makes the high-frequency family the right box as well as the cheaper one. Everything below
+adapts to any Intel bare metal: rehearse the whole process on another instance freely, but take
+one campaign's numbers from one instance type only, because latency does not compare across
+microarchitectures. Virtualised instances have no counters and a
 hypervisor's jitter and are only good for correctness, which the deterministic suites pass
 anywhere; ARM is a different instruction set and none of the x86 reasoning carries.
 

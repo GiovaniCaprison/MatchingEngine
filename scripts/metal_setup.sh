@@ -3,7 +3,7 @@
 # every setting took. The harness re-verifies all of this from the kernel's own files at run time
 # and grades the run on what it finds, so this script existing is convenience and not evidence.
 #
-# Usage, on the instance (c6i.metal or similar), as root:
+# Usage, on the instance (m5zn.metal or similar), as root:
 #
 #   metal_setup.sh boot ISOLATED        write kernel parameters for the isolated cores, then reboot
 #   metal_setup.sh runtime ISOLATED     the settings that do not need a reboot, after it
